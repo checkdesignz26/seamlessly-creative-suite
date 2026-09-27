@@ -3,11 +3,30 @@
  *
  * Owns: the project list, the persistent top bar (project name / save
  * status / project switcher / Download Project Backup), and which
- * studio is currently loaded in the iframe. The shell itself never
- * touches a studio's assets directly — it only creates/selects
- * projects and swaps the iframe's src; each studio's own adapter
- * (loaded inside that iframe) does the actual reading/writing via
+ * studio is currently visible. The shell itself never touches a
+ * studio's assets directly — it only creates/selects projects and
+ * shows/hides each studio's iframe; each studio's own adapter (loaded
+ * inside that iframe) does the actual reading/writing via
  * window.SCLibrary.
+ *
+ * IMPORTANT (found via real iPad testing): switching studios must NOT
+ * reload a studio's iframe. Pattern Playground's own boot sequence
+ * (index.html: hydrateSavedItemsFromIDB -> archiveAutosaveIfAny ->
+ * setPreset('grid')) deliberately archives whatever pattern was live
+ * into a new "unsaved work - ..." card and resets to a blank canvas on
+ * EVERY load — by design in the standalone app ("every launch starts
+ * on a genuinely blank canvas"), where "launch" only ever means
+ * actually opening the app. An earlier version of this shell
+ * reassigned one shared iframe's `src` on every studio switch, which
+ * is indistinguishable from closing and reopening Playground - so
+ * going Playground -> Mock-up Studio -> Playground silently archived
+ * and blanked whatever pattern was on screen. Each studio now gets
+ * its OWN iframe, created once and kept alive (just hidden, never
+ * reloaded) for as long as the current project stays open, exactly
+ * like switching tabs in a real app rather than closing and reopening
+ * one. A studio's iframe IS torn down and recreated when the PROJECT
+ * itself changes (a genuinely different project's data), since a
+ * studio adapter only reads ?project= once, at load.
  *
  * "Last open project" / "last open studio" are a UI convenience,
  * stored under one localStorage key of the shell's own — not part of
@@ -34,7 +53,7 @@
     statusText: document.getElementById('scStatusText'),
     backupBtn: document.getElementById('scBackupBtn'),
     studioTabs: document.getElementById('scStudioTabs'),
-    frame: document.getElementById('scStudioFrame'),
+    frameHost: document.getElementById('scFrameHost'),
     emptyState: document.getElementById('scEmptyState'),
     createFirstBtn: document.getElementById('scCreateFirstBtn'),
   };
@@ -42,6 +61,11 @@
   let currentProjectId = null;
   let currentStudioId = null;
   let statusTimer = null;
+  // studioId -> { iframe, projectId } — the iframe currently mounted
+  // for that studio, and which project it was opened for. Cleared and
+  // rebuilt whenever the open PROJECT changes; left completely alone
+  // when only the visible STUDIO changes.
+  const mountedFrames = new Map();
 
   function readLastState() {
     try {
@@ -93,15 +117,28 @@
     return projects;
   }
 
+  function teardownAllFrames() {
+    mountedFrames.forEach(({ iframe }) => iframe.remove());
+    mountedFrames.clear();
+  }
+
   async function openProject(projectId) {
     const project = await window.SCLibrary.getProject(projectId);
     if (!project) return;
+    const projectChanged = projectId !== currentProjectId;
     currentProjectId = projectId;
     el.projectName.textContent = project.name;
     writeLastState({ projectId });
     setStatus('saved', 'saved');
     el.emptyState.hidden = true;
-    el.frame.hidden = false;
+    el.frameHost.hidden = false;
+    // A genuinely different project's studios must reload (each
+    // adapter only reads ?project= once, at load) — but switching
+    // projects is a deliberate, occasional action, not the routine
+    // back-and-forth a studio switch is, so losing in-progress work
+    // here is expected the same way it would be opening a different
+    // document.
+    if (projectChanged) teardownAllFrames();
     await refreshProjectSwitcher();
     openStudio(currentStudioId || 'playground');
   }
@@ -114,7 +151,20 @@
     [...el.studioTabs.children].forEach((btn) => {
       btn.classList.toggle('active', btn.dataset.studio === studio.id);
     });
-    el.frame.src = studio.path + '?project=' + encodeURIComponent(currentProjectId);
+
+    let mounted = mountedFrames.get(studio.id);
+    if (!mounted) {
+      const iframe = document.createElement('iframe');
+      iframe.className = 'sc-studio-frame';
+      iframe.title = studio.name;
+      iframe.src = studio.path + '?project=' + encodeURIComponent(currentProjectId);
+      el.frameHost.appendChild(iframe);
+      mounted = { iframe, projectId: currentProjectId };
+      mountedFrames.set(studio.id, mounted);
+    }
+    mountedFrames.forEach((m, id) => {
+      m.iframe.classList.toggle('active', id === studio.id);
+    });
   }
 
   function buildStudioTabs() {
@@ -176,7 +226,7 @@
       return;
     }
     el.emptyState.hidden = false;
-    el.frame.hidden = true;
+    el.frameHost.hidden = true;
   }
 
   boot();
