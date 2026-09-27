@@ -132,17 +132,20 @@
       const img = document.createElement('img');
       img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
       let triedFallback = false;
-      function setSrcFrom(blob) {
-        window.SCLibrary.blobToDataUrl(blob).then((dataUrl) => { img.src = dataUrl; });
-      }
-      img.addEventListener('error', () => {
-        if (!triedFallback && asset.thumb) {
-          triedFallback = true;
-          console.warn('[suite] thumb data URL failed to decode, retrying with full-res file', asset.name);
-          setSrcFrom(asset.file);
-          return;
-        }
-        console.error('[suite] project asset image failed to load entirely', asset.name, {
+
+      // REAL BUG found from a live screenshot: 4 tiles stuck as plain
+      // grey squares forever — not slow, permanently stuck, no letter
+      // fallback and no broken-image icon either. Root cause: this had
+      // no .catch() on the blobToDataUrl() promise. When reading a
+      // Blob back out of IndexedDB fails (same class of iPad Safari
+      // issue already hit once with object URLs), the promise just
+      // rejects silently — img.src is never set, so img's own 'error'
+      // event (the ONLY thing the old code listened for) never fires
+      // either, since nothing was ever assigned to fail. Both failure
+      // modes — a rejected promise, and an <img> that fails to decode
+      // a successfully-set src — now go through this one place.
+      function showFallback(reason) {
+        console.error('[suite] project asset image failed to load entirely', asset.name, reason, {
           thumbBytes: asset.thumb ? asset.thumb.size : null,
           fileBytes: asset.file ? asset.file.size : null,
         });
@@ -153,8 +156,36 @@
         tile.style.justifyContent = 'center';
         tile.style.fontSize = '20px';
         tile.textContent = (asset.name || '?').trim().charAt(0).toUpperCase();
+      }
+      function trySrcFrom(blob) {
+        if (!blob) {
+          if (!triedFallback && asset.thumb) { triedFallback = true; return trySrcFrom(asset.file); }
+          showFallback('no blob available');
+          return;
+        }
+        window.SCLibrary.blobToDataUrl(blob).then(
+          (dataUrl) => { img.src = dataUrl; },
+          (err) => {
+            if (!triedFallback && asset.thumb) {
+              triedFallback = true;
+              console.warn('[suite] reading thumb blob failed, retrying with full-res file', asset.name, err);
+              trySrcFrom(asset.file);
+              return;
+            }
+            showFallback(err);
+          }
+        );
+      }
+      img.addEventListener('error', () => {
+        if (!triedFallback && asset.thumb) {
+          triedFallback = true;
+          console.warn('[suite] thumb data URL failed to decode, retrying with full-res file', asset.name);
+          trySrcFrom(asset.file);
+          return;
+        }
+        showFallback('img decode failed');
       });
-      setSrcFrom(asset.thumb || asset.file);
+      trySrcFrom(asset.thumb || asset.file);
       tile.appendChild(img);
 
       tile.addEventListener('click', async () => {
