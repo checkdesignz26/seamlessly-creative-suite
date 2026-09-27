@@ -9144,25 +9144,72 @@ setTimeout(init,500);setTimeout(init,1500);
     });
   })();
 
-  // --- swap background <-> selected layer colour (Classics Studio) ---
-  // Named "swap", not "invert" — invert already means something else
-  // (colour inversion) in design tools; this just exchanges the two
-  // values, nothing tonal.
-  var textureOverlay = document.getElementById('textureStudioOverlay');
-  var topActions = textureOverlay && textureOverlay.querySelector('.tsHeader .topActions');
-  if (topActions && window.tsGetWorkingBgSnapshot && window.tsSetBackgroundColour && window.tsApplyColourToSelected) {
+  // --- swap background <-> layer colour ---
+  // Moved here (was in Classics Studio's own toolbar) after real user
+  // feedback: "I thought it would live in this panel" — the
+  // "background colours" box (#cmTargetBase / #cmTargetTex, the
+  // background/selected-layer toggle) is exactly where a colour-swap
+  // action reads naturally, right next to the two colours it swaps.
+  // That toolbar copy also added to the toolbar-overflow bug fixed
+  // earlier, so it isn't kept as a second copy — one clear place.
+  //
+  // This one panel is shared/re-parented into THREE different
+  // contexts (see mountColourMode/cmSyncBgColourUI above) — Classics
+  // Studio, Background Studio, and the main Playground's own hero-
+  // colour tool. Swap only makes sense for the first two (a genuine
+  // background+layer pair); the main tool's "hero swatches" isn't
+  // that kind of pair, so the button hides itself there rather than
+  // doing something confusing. Named "swap", not "invert" — invert
+  // already means something else (colour inversion) in design tools.
+  var cmTargetRow = document.getElementById('cmTargetTex') && document.getElementById('cmTargetTex').closest('.grid2');
+  if (cmTargetRow) {
     var swapBtn = document.createElement('button');
     swapBtn.type = 'button';
-    swapBtn.className = 'small';
-    swapBtn.title = 'Swap the background colour with the selected layer\'s colour';
+    swapBtn.className = 'small full';
+    swapBtn.style.marginTop = '6px';
     swapBtn.textContent = '⇄ swap colours';
-    topActions.appendChild(swapBtn);
+    swapBtn.title = 'Swap the background colour with the layer colour';
+    cmTargetRow.insertAdjacentElement('afterend', swapBtn);
+
+    function classicsOpen() { return !!document.getElementById('textureStudioOverlay')?.classList.contains('open'); }
+    function backgroundStudioOpen() { return !!document.getElementById('backgroundStudioOverlay')?.classList.contains('open'); }
+
+    // Only visible where the swap actually makes sense — checked right
+    // before showing the panel each time, since mountColourMode()
+    // re-parents this same panel into a new context on every open.
+    function refreshVisibility() {
+      swapBtn.hidden = !(classicsOpen() || backgroundStudioOpen());
+    }
+    refreshVisibility();
+    new MutationObserver(refreshVisibility).observe(document.body, { attributes: true, attributeFilter: ['class'], subtree: true });
+
+    // Updates this shared panel's own chip/hex readouts directly
+    // rather than calling the app's cmSyncBgColourUI() — that
+    // function lives in a wrapped scope this script can't reliably
+    // reach, whereas these four elements are plain, stable ids.
+    function paintReadout(base, tex) {
+      var bc = document.getElementById('cmBaseChip'), tc = document.getElementById('cmTexChip');
+      var bh = document.getElementById('cmBaseHex'), th = document.getElementById('cmTexHex');
+      if (bc) bc.style.background = base;
+      if (tc) tc.style.background = tex;
+      if (bh) bh.textContent = base.toUpperCase();
+      if (th) th.textContent = tex.toUpperCase();
+    }
+
     swapBtn.addEventListener('click', function () {
-      var snap = window.tsGetWorkingBgSnapshot();
-      if (!snap) return;
-      if (window.tsPushHistory) window.tsPushHistory(); // one undo step, matching every other colour edit
-      window.tsSetBackgroundColour(snap.tex);
-      window.tsApplyColourToSelected(snap.base);
+      if (classicsOpen() && window.tsGetWorkingBgSnapshot && window.tsSetBackgroundColour && window.tsApplyColourToSelected) {
+        var snap = window.tsGetWorkingBgSnapshot();
+        if (!snap) return;
+        if (window.tsPushHistory) window.tsPushHistory(); // one undo step, matching every other colour edit in Classics
+        window.tsSetBackgroundColour(snap.tex);
+        window.tsApplyColourToSelected(snap.base);
+        paintReadout(snap.tex, snap.base);
+      } else if (backgroundStudioOpen() && window.bgGetWorkingSnapshot && window.bgSetRoleColours) {
+        var bgSnap = window.bgGetWorkingSnapshot();
+        if (!bgSnap) return;
+        window.bgSetRoleColours(bgSnap.tex, bgSnap.base);
+        paintReadout(bgSnap.tex, bgSnap.base);
+      }
     });
   }
 })();
