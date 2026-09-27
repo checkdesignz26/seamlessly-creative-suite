@@ -99,14 +99,51 @@
     statusEl.textContent = `${assets.length} available — tap one to add it to your collection`;
 
     for (const asset of assets) {
-      const thumbUrl = URL.createObjectURL(asset.thumb || asset.file);
       const tile = document.createElement('button');
       tile.type = 'button';
       tile.title = asset.name;
       tile.style.cssText =
         'width:64px;height:64px;padding:0;border-radius:8px;overflow:hidden;' +
         'border:2px solid transparent;cursor:pointer;position:relative;background:#0002;';
-      tile.innerHTML = `<img src="${thumbUrl}" style="width:100%;height:100%;object-fit:cover;display:block;">`;
+
+      // Thumb blobs coming back out of IndexedDB have occasionally shown
+      // up broken on iPad Safari under memory pressure (a known class of
+      // iOS IndexedDB/Blob issue, not something specific to this app) —
+      // rather than a bare broken-image icon, fall back to the full-res
+      // file, and if that ALSO fails, show a plain letter tile instead of
+      // a dead end. Revokes each object URL once the <img> is done with
+      // it, so repeatedly hitting "refresh" doesn't leak blob URLs.
+      const img = document.createElement('img');
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+      let triedFallback = false;
+      let currentUrl = null;
+      function setSrcFrom(blob) {
+        if (currentUrl) URL.revokeObjectURL(currentUrl);
+        currentUrl = URL.createObjectURL(blob);
+        img.src = currentUrl;
+      }
+      img.addEventListener('error', () => {
+        if (!triedFallback && asset.thumb) {
+          triedFallback = true;
+          console.warn('[suite] thumb blob failed to decode, retrying with full-res file', asset.name);
+          setSrcFrom(asset.file);
+          return;
+        }
+        console.error('[suite] project asset image failed to load entirely', asset.name, {
+          thumbBytes: asset.thumb ? asset.thumb.size : null,
+          fileBytes: asset.file ? asset.file.size : null,
+        });
+        tile.innerHTML = '';
+        tile.style.background = '#463a66';
+        tile.style.display = 'flex';
+        tile.style.alignItems = 'center';
+        tile.style.justifyContent = 'center';
+        tile.style.fontSize = '20px';
+        tile.textContent = (asset.name || '?').trim().charAt(0).toUpperCase();
+      });
+      setSrcFrom(asset.thumb || asset.file);
+      tile.appendChild(img);
+
       tile.addEventListener('click', async () => {
         tile.disabled = true;
         tile.style.opacity = '0.5';

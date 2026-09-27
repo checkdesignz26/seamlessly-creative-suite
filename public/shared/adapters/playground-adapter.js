@@ -48,28 +48,35 @@
   }
 
   function init() {
-    const bar = document.createElement('div');
-    bar.id = 'scSendBar';
-    bar.innerHTML = `
-      <span id="scSendLabel">Seamlessly Creative</span>
-      <button id="scSendBtn" type="button">Send starred items to project</button>
+    // Inserted into the app's OWN header toolbar (next to "classics
+    // studio" / "portfolio" / "download" etc.), not a floating overlay.
+    // A fixed-position bar was tried first and pushed content off the
+    // bottom of the screen: this app's own CSS sets
+    // `html,body{height:100%;overflow:hidden}`, so adding a top margin
+    // to body doesn't grow the page to make room — it just clips
+    // whatever no longer fits at the bottom. Living inside the header's
+    // existing normal-flow toolbar avoids that class of bug entirely,
+    // and matches how the Mock-up Studio adapter already works.
+    const topActions = document.querySelector('header .topActions');
+    if (!topActions) {
+      console.warn('[suite] Playground header toolbar not found — adapter inactive');
+      return;
+    }
+
+    const wrap = document.createElement('span');
+    wrap.id = 'scSendBar';
+    wrap.innerHTML = `
+      <button id="scSendBtn" type="button" class="small primary">Send starred items to project</button>
       <span id="scSendStatus"></span>
     `;
-    document.body.appendChild(bar);
+    topActions.appendChild(wrap);
 
     const style = document.createElement('style');
     style.textContent = `
-      #scSendBar{position:fixed;top:0;left:0;right:0;z-index:99999;
-        display:flex;align-items:center;gap:10px;padding:8px 14px;
-        background:#2b2440;color:#fff;font:600 13px/1.3 system-ui,
-        -apple-system,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.25);}
-      #scSendLabel{opacity:.75;font-weight:700;letter-spacing:.02em;}
-      #scSendBtn{background:#7c5cff;color:#fff;border:0;border-radius:8px;
-        padding:6px 12px;font:inherit;font-weight:700;cursor:pointer;}
-      #scSendBtn:disabled{opacity:.55;cursor:default;}
-      #scSendBtn:hover:not(:disabled){background:#8f72ff;}
-      #scSendStatus{opacity:.9;}
-      body{margin-top:38px !important;}
+      #scSendBar{display:inline-flex;align-items:center;gap:8px;
+        margin-left:6px;padding-left:10px;
+        border-left:1px solid rgba(255,255,255,.18);}
+      #scSendStatus{font-size:12px;opacity:.85;white-space:nowrap;}
     `;
     document.head.appendChild(style);
 
@@ -91,24 +98,38 @@
         }
 
         let sent = 0;
-        for (const item of items) {
-          status.textContent = `sending ${sent + 1}/${items.length}…`;
+        const failures = []; // { name, message } — surfaced inline, not just to console,
+                              // since an iPad user can't easily reach devtools mid-session.
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          const label = (item.ref && item.ref.name) || item.type;
+          status.textContent = `sending ${i + 1}/${items.length}…`;
           try {
             const dataUrl = await window.__scPortfolioItemDataUrl(item, SEND_PX);
-            if (!dataUrl) continue;
+            if (!dataUrl) {
+              failures.push({ name: label, message: 'no image was rendered for this item' });
+              continue;
+            }
             await window.SCLibrary.addAssetFromDataUrl(projectId, dataUrl, {
               kind: kindFor(item.type),
-              name: item.ref && item.ref.name ? item.ref.name : item.type,
+              name: label,
               source: { studio: 'playground' },
             });
             sent++;
           } catch (err) {
             console.error('[suite] failed to send portfolio item', item, err);
+            failures.push({ name: label, message: (err && err.message) || String(err) });
           }
         }
 
-        status.textContent = `✓ ${sent} sent to project`;
-        window.SCStatus && window.SCStatus.set('saved', { sent });
+        if (sent > 0 && !failures.length) {
+          status.textContent = `✓ ${sent} sent to project`;
+        } else if (sent > 0) {
+          status.textContent = `✓ ${sent} sent, ${failures.length} failed — "${failures[0].name}": ${failures[0].message}`;
+        } else {
+          status.textContent = `⚠ 0 sent — "${failures[0].name}": ${failures[0].message}`;
+        }
+        window.SCStatus && window.SCStatus.set(sent > 0 ? 'saved' : 'idle', { sent, failures });
       } finally {
         btn.disabled = false;
       }
