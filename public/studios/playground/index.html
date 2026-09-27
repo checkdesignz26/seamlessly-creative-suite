@@ -7212,7 +7212,7 @@ window.tsGetWorkingBgSnapshot=function(){
 };
 // Suite adapter hook: tsPushHistory itself is scoped to this IIFE like
 // everything else here — exposed the same way as the three hooks just
-// above it, so an external caller (the invert-colours button, added
+// above it, so an external caller (the swap-colours button, added
 // near the end of body) can record one proper undo step before using
 // tsSetBackgroundColour/tsApplyColourToSelected, matching every other
 // colour edit in this studio.
@@ -9001,7 +9001,7 @@ setTimeout(init,500);setTimeout(init,1500);
      toggle: doesn't touch how patterns are saved, loaded, or
      rendered.
 
-     2) An "invert" button that swaps the background colour and the
+     2) A "swap" button that swaps the background colour and the
      selected layer's colour in Classics Studio, built entirely from
      hooks the app already exposes for exactly this kind of cross-
      panel colour sync (window.tsGetWorkingBgSnapshot /
@@ -9085,17 +9085,20 @@ setTimeout(init,500);setTimeout(init,1500);
     // Classics.
   });
 
-  // --- invert background <-> selected layer colour (Classics Studio) ---
+  // --- swap background <-> selected layer colour (Classics Studio) ---
+  // Named "swap", not "invert" — invert already means something else
+  // (colour inversion) in design tools; this just exchanges the two
+  // values, nothing tonal.
   var textureOverlay = document.getElementById('textureStudioOverlay');
   var topActions = textureOverlay && textureOverlay.querySelector('.tsHeader .topActions');
   if (topActions && window.tsGetWorkingBgSnapshot && window.tsSetBackgroundColour && window.tsApplyColourToSelected) {
-    var invertBtn = document.createElement('button');
-    invertBtn.type = 'button';
-    invertBtn.className = 'small';
-    invertBtn.title = 'Swap the background colour with the selected layer\'s colour';
-    invertBtn.textContent = '⇄ invert colours';
-    topActions.appendChild(invertBtn);
-    invertBtn.addEventListener('click', function () {
+    var swapBtn = document.createElement('button');
+    swapBtn.type = 'button';
+    swapBtn.className = 'small';
+    swapBtn.title = 'Swap the background colour with the selected layer\'s colour';
+    swapBtn.textContent = '⇄ swap colours';
+    topActions.appendChild(swapBtn);
+    swapBtn.addEventListener('click', function () {
       var snap = window.tsGetWorkingBgSnapshot();
       if (!snap) return;
       if (window.tsPushHistory) window.tsPushHistory(); // one undo step, matching every other colour edit
