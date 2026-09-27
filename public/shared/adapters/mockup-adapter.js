@@ -106,26 +106,25 @@
         'width:64px;height:64px;padding:0;border-radius:8px;overflow:hidden;' +
         'border:2px solid transparent;cursor:pointer;position:relative;background:#0002;';
 
-      // Thumb blobs coming back out of IndexedDB have occasionally shown
-      // up broken on iPad Safari under memory pressure (a known class of
-      // iOS IndexedDB/Blob issue, not something specific to this app) —
-      // rather than a bare broken-image icon, fall back to the full-res
-      // file, and if that ALSO fails, show a plain letter tile instead of
-      // a dead end. Revokes each object URL once the <img> is done with
-      // it, so repeatedly hitting "refresh" doesn't leak blob URLs.
+      // CONFIRMED on real hardware: an <img src> pointed at
+      // URL.createObjectURL(blob) for a Blob that came back out of
+      // IndexedDB can fail to decode on iPad Safari, even though the
+      // exact same Blob decodes fine everywhere else in this app (the
+      // "add to collection" click below, converting via
+      // blobToDataUrl -> new Image(), works — that's proven by the
+      // mockups actually rendering the pattern correctly). So the
+      // thumbnail uses that same proven data:-URL path instead of an
+      // object URL, rather than a fallback for a rarer edge case.
       const img = document.createElement('img');
       img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
       let triedFallback = false;
-      let currentUrl = null;
       function setSrcFrom(blob) {
-        if (currentUrl) URL.revokeObjectURL(currentUrl);
-        currentUrl = URL.createObjectURL(blob);
-        img.src = currentUrl;
+        window.SCLibrary.blobToDataUrl(blob).then((dataUrl) => { img.src = dataUrl; });
       }
       img.addEventListener('error', () => {
         if (!triedFallback && asset.thumb) {
           triedFallback = true;
-          console.warn('[suite] thumb blob failed to decode, retrying with full-res file', asset.name);
+          console.warn('[suite] thumb data URL failed to decode, retrying with full-res file', asset.name);
           setSrcFrom(asset.file);
           return;
         }
