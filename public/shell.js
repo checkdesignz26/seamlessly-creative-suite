@@ -149,7 +149,12 @@
     currentStudioId = studio.id;
     writeLastState({ studioId: studio.id });
     [...el.studioTabs.children].forEach((btn) => {
-      btn.classList.toggle('active', btn.dataset.studio === studio.id);
+      const isActive = btn.dataset.studio === studio.id;
+      btn.classList.toggle('active', isActive);
+      // The tab strip scrolls horizontally at narrower widths (see
+      // shell.css) — never leave the studio someone just opened
+      // scrolled out of view.
+      if (isActive) btn.scrollIntoView({ inline: 'nearest', block: 'nearest' });
     });
 
     let mounted = mountedFrames.get(studio.id);

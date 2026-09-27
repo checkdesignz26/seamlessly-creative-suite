@@ -138,7 +138,22 @@ html, body {
   display: flex;
   gap: 6px;
   flex: 1;
-  flex-wrap: wrap;
+  /* Real issue found from testing: every studio renders inside an
+     iframe whose own viewport height is however much the browser
+     viewport has left AFTER this top bar — so this bar's height
+     directly shrinks every calc(100dvh - Npx) rule inside a studio's
+     own CSS (Playground's pattern-preview canvas among them). Wrapping
+     onto a second row here (previously flex-wrap:wrap) was the single
+     biggest avoidable cost: at a typical width this bar was ~91px
+     tall, most of it just the "(soon)" placeholder tabs pushing onto
+     their own row. Horizontal scroll instead of wrap — the same
+     technique Playground's own toolbar already uses at narrow widths
+     — keeps this bar to one row, giving every studio back real
+     height instead. */
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  min-width: 0;
 }
 
 .sc-tab {
@@ -152,6 +167,7 @@ html, body {
   font-weight: 600;
   font-size: 13px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .sc-tab:disabled { opacity: .4; cursor: default; }
