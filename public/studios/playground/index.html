@@ -8981,6 +8981,53 @@ setTimeout(init,500);setTimeout(init,1500);
 }
 </style>
 
+<!-- Seamlessly Creative suite copy — UX addition, not part of the
+     standalone app (that repo/deployment is untouched; this is only
+     in this suite's frozen copy of Playground). Requested: make
+     Classics Studio's pattern-preview canvas bigger while actively
+     designing by shrinking the saved-classics filmstrip, with a
+     button to bring it back for browsing/loading a saved pattern.
+     The filmstrip strip is a fixed 152px row in .tsModal's own grid
+     (grid-template-rows:auto minmax(0,1fr) 152px) — collapsing it to
+     44px hands that space straight to the middle "1fr" row the
+     preview canvas lives in. Purely a CSS/DOM toggle: doesn't touch
+     how patterns are saved, loaded, or rendered. -->
+<style>
+  #textureStudioOverlay .tsModal.scFilmCollapsed{grid-template-rows:auto minmax(0,1fr) 44px!important;}
+  #textureStudioOverlay .tsModal.scFilmCollapsed .tsFilmstrip{display:none!important;}
+  #textureStudioOverlay .tsModal.scFilmCollapsed .tsFilmHead{margin-bottom:0!important;}
+  #scFilmCollapseBtn{margin-left:auto;}
+</style>
+<script>
+(function () {
+  var KEY = 'sc.classicsFilmCollapsed.v1';
+  var overlay = document.getElementById('textureStudioOverlay');
+  var head = overlay && overlay.querySelector('.tsFilmHead');
+  if (!head) return; // markup changed underneath us — no-op rather than error
+
+  var btn = document.createElement('button');
+  btn.id = 'scFilmCollapseBtn';
+  btn.type = 'button';
+  btn.className = 'small';
+  head.appendChild(btn);
+
+  function apply(collapsed) {
+    var modal = overlay.querySelector('.tsModal');
+    if (modal) modal.classList.toggle('scFilmCollapsed', collapsed);
+    btn.textContent = collapsed ? 'show filmstrip ▴' : 'bigger canvas ▾';
+  }
+  var collapsed = false;
+  try { collapsed = localStorage.getItem(KEY) === '1'; } catch (e) {}
+  apply(collapsed);
+
+  btn.addEventListener('click', function () {
+    collapsed = !collapsed;
+    apply(collapsed);
+    try { localStorage.setItem(KEY, collapsed ? '1' : '0'); } catch (e) {}
+  });
+})();
+</script>
+
 <!-- Seamlessly Creative suite integration — inert unless loaded inside
      the suite shell with ?project=<id>; standalone use is unaffected. -->
 <script src="/shared/project-library.js"></script>
