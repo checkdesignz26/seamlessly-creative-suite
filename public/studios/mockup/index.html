@@ -7022,6 +7022,20 @@ document.getElementById('ilExportPngBtn')?.addEventListener('click', async () =>
   downloadCanvasPNG(out, 'interactive_lookbook_page' + (ilActivePageIndex + 1) + '.png');
 });
 
+// Seamlessly Creative suite hook — same rasterisation path as the PNG
+// export button right above (ilActiveCanvas + ilRasterizeCanvas),
+// read-only. Used by shared/adapters/mockup-adapter.js's "send page to
+// project" button. Lives in this exact scope because ilActivePageIndex
+// is a plain top-level `let` binding, not a window property, so it's
+// only reachable from code that shares this same script's scope — not
+// from a separately-loaded <script src>.
+window.__scGetLookbookPageCanvas = async function () {
+  const canvasEl = ilActiveCanvas();
+  if (!canvasEl) return null;
+  const out = await ilRasterizeCanvas(canvasEl);
+  return { canvas: out, name: 'Lookbook page ' + (ilActivePageIndex + 1) };
+};
+
 document.getElementById('ilExportPdfBtn')?.addEventListener('click', async () => {
   if (!window.jspdf) {
     showToastMessage('the lookbook library is still loading — give it a second and try again.');
@@ -7237,6 +7251,23 @@ document.getElementById('downloadPreviewBtn')?.addEventListener('click', () => {
     alert('open or render a mock-up first');
   }
 });
+
+// Seamlessly Creative suite hook — same source of truth as the download
+// handler right above (largePreviewCanvas / currentPreviewScene /
+// currentPreviewProduct), read-only. Used by
+// shared/adapters/mockup-adapter.js's "send mock-up to project" button.
+// Lives in this exact scope because currentPreviewScene/currentPreviewProduct
+// are plain top-level `let` bindings, not window properties, so they're
+// only reachable from code that shares this same script's scope — not
+// from a separately-loaded <script src>.
+window.__scGetCurrentMockupCanvas = function () {
+  const largeCanvas = document.getElementById('largePreviewCanvas');
+  if (!largeCanvas || largeCanvas.classList.contains('hidden')) return null;
+  const name = currentPreviewScene
+    ? currentPreviewScene.replace(/\s+/g, '_')
+    : (currentPreviewProduct || 'mockup');
+  return { canvas: largeCanvas, name: name + '_mockup' };
+};
 
 document.getElementById('closePreviewBtn').addEventListener('click', () => {
   previewOverlay.classList.add('hidden');

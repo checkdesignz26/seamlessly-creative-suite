@@ -46,6 +46,24 @@
  * listed in the panel below) is genuinely project-scoped. Making
  * Mock-up Studio's own state project-aware is Phase 2+ work, not
  * something this adapter can safely paper over on its own.
+ *
+ * --- SEND side (Phase 2) -------------------------------------------
+ *
+ * Two small "send to project" buttons, mirroring Pattern Playground's
+ * send button (see playground-adapter.js) but for Mock-up Studio's
+ * own two output kinds:
+ *   - a rendered product mock-up (kind 'mockup')
+ *   - an exported interactive-lookbook page (kind 'lookbook')
+ * Both read the SAME canvas the app's own existing "download" buttons
+ * already use, via two tiny read-only window hooks added right next
+ * to those download handlers in index.html
+ * (window.__scGetCurrentMockupCanvas, window.__scGetLookbookPageCanvas)
+ * — nothing here duplicates or second-guesses how those images
+ * actually get rendered, and neither hook changes what those download
+ * buttons do. Pattern Pages already routes any non-pattern/motif/
+ * background kind into its design-assets tray (see pages-adapter.js's
+ * trayTypeFor), so 'mockup' and 'lookbook' assets show up there with
+ * no changes needed on that side.
  */
 (function () {
   'use strict';
@@ -219,6 +237,88 @@
     }
   }
 
+  // --- SEND side (Phase 2) ------------------------------------------
+
+  // Same working-resolution convention as every other adapter (Playground
+  // sends at 1800px; Pattern Pages downscales incoming assets to the
+  // same) — keeps what lands in the shared library well inside iPad
+  // Safari's comfort zone, the same size class a real export already is.
+  const SEND_PX = 1800;
+
+  function canvasToWorkingDataUrl(canvas) {
+    const longest = Math.max(canvas.width, canvas.height);
+    if (longest <= SEND_PX) return canvas.toDataURL('image/png');
+    const scale = SEND_PX / longest;
+    const scaled = document.createElement('canvas');
+    scaled.width = Math.round(canvas.width * scale);
+    scaled.height = Math.round(canvas.height * scale);
+    scaled.getContext('2d').drawImage(canvas, 0, 0, scaled.width, scaled.height);
+    return scaled.toDataURL('image/png');
+  }
+
+  // One shared button-builder for both send buttons — same shape, same
+  // status/error handling, only the source hook, asset kind and copy
+  // differ.
+  function attachSendButton({ afterEl, label, kind, getCanvasInfo, emptyMessage }) {
+    if (!afterEl || !afterEl.parentNode) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'scSendBar';
+    wrap.style.cssText = 'margin-top:8px;display:flex;flex-direction:column;gap:4px;';
+    wrap.innerHTML = `
+      <button type="button" class="secondary scSendToProjectBtn" style="width:100%;">${label}</button>
+      <span class="scSendStatus" style="font-size:12px;opacity:.75;"></span>
+    `;
+    afterEl.insertAdjacentElement('afterend', wrap);
+    const btn = wrap.querySelector('.scSendToProjectBtn');
+    const statusEl = wrap.querySelector('.scSendStatus');
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      window.SCStatus && window.SCStatus.set('saving');
+      try {
+        const info = await getCanvasInfo();
+        if (!info) {
+          statusEl.textContent = emptyMessage;
+          window.SCStatus && window.SCStatus.set('idle');
+          return;
+        }
+        const dataUrl = canvasToWorkingDataUrl(info.canvas);
+        await window.SCLibrary.addAssetFromDataUrl(projectId, dataUrl, {
+          kind,
+          name: info.name,
+          source: { studio: 'mockup' },
+        });
+        statusEl.textContent = `✓ sent "${info.name}" to project`;
+        window.SCStatus && window.SCStatus.set('saved');
+      } catch (err) {
+        console.error('[suite] failed to send', kind, 'to project', err);
+        statusEl.textContent = '⚠ failed to send — see console';
+        window.SCStatus && window.SCStatus.set('idle');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
+  function initSendButtons() {
+    attachSendButton({
+      afterEl: document.getElementById('downloadPreviewBtn'),
+      label: 'send mock-up to project',
+      kind: 'mockup',
+      getCanvasInfo: () =>
+        window.__scGetCurrentMockupCanvas ? window.__scGetCurrentMockupCanvas() : null,
+      emptyMessage: 'open or render a mock-up first',
+    });
+    attachSendButton({
+      afterEl: document.getElementById('ilExportPngBtn'),
+      label: 'send page to project',
+      kind: 'lookbook',
+      getCanvasInfo: () =>
+        window.__scGetLookbookPageCanvas ? window.__scGetLookbookPageCanvas() : null,
+      emptyMessage: 'design a lookbook page first',
+    });
+  }
+
   // No separate restore call here on purpose — see the file header.
   // The app's own boot sequence already restores the freshest session
   // by the time this runs (its checkForAutosaveRecovery(), patched
@@ -229,12 +329,13 @@
     const panel = buildPanel();
     if (!panel) {
       console.warn('[suite] Mock-up Studio collection strip not found — adapter inactive');
-      return;
+    } else {
+      const grid = panel.querySelector('#scProjectAssetGrid');
+      const statusEl = panel.querySelector('#scProjectStatus');
+      panel.querySelector('#scRefreshBtn').addEventListener('click', () => renderGrid(grid, statusEl));
+      renderGrid(grid, statusEl);
     }
-    const grid = panel.querySelector('#scProjectAssetGrid');
-    const statusEl = panel.querySelector('#scProjectStatus');
-    panel.querySelector('#scRefreshBtn').addEventListener('click', () => renderGrid(grid, statusEl));
-    renderGrid(grid, statusEl);
+    initSendButtons();
   }
 
   if (document.readyState === 'loading') {
