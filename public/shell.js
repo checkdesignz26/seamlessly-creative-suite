@@ -38,8 +38,8 @@
   const STUDIOS = [
     { id: 'playground', name: 'Pattern Playground', path: '/studios/playground/index.html', available: true },
     { id: 'mockup', name: 'Mock-up Studio', path: '/studios/mockup/index.html', available: true },
+    { id: 'pages', name: 'Pattern Pages', path: '/studios/pages/index.html', available: true },
     { id: 'resizer', name: 'Creative Resizer', path: null, available: false },
-    { id: 'pages', name: 'Pattern Pages', path: null, available: false },
   ];
 
   const LAST_STATE_KEY = 'sc.shell.lastState.v1';
