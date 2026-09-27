@@ -1685,7 +1685,7 @@ body.theme-light .swbResizeHandle::after{
     <p class="mockupTinyNote">White mask area fills with the selected pattern. The new live mock-up stays editable with the sliders after creation.</p>
   </div></div>
 
-  <div class="box trayTop"><h2>images & mock-ups</h2><input id="assetInput" class="hidden" type="file" accept="image/*" multiple onchange="loadTray(event,'asset')"><input id="mockupInput" class="hidden" type="file" accept="image/*" onchange="createMockupPage(event)"><input id="imageLayerInput" class="hidden" type="file" accept="image/*" onchange="addUploadedImageLayer(event)"><button class="full" onclick="assetInput.click()" title="Add your own images, banners or mock-up backgrounds to the tray">Upload Design Assets</button><div id="assetTray" class="thumbGrid"></div><div class="grid2"><button onclick="addImageLayer('image')" title="Add the selected asset as an image layer on the page">add selected image</button><button onclick="mockupInput.click()" title="Create a new page from an uploaded mock-up photo">mock-up page</button></div><div class="grid2"><button onclick="addImageLayer('banner')" title="Add a wide banner image layer">banner</button><button onclick="addImageLayer('overlay')" title="Add a full-page overlay image layer">overlay</button></div><div class="grid2"><button onclick="fillSelectedFrame()" title="Fill the currently selected showcase slot with the selected image - handy for a collage layout">fill selected slot</button><button class="primary" onclick="magicFillEmptySlots()" title="Fill every empty showcase slot at once with the selected image">✨ fill all empty</button></div><div class="aiDisclosureControls"><label class="checkRow"><input id="aiDisclosureToggle" type="checkbox" checked>add movable “AI generated” badge to mock-up</label><button class="full" onclick="addAIDisclosureBadge()" title="Add a movable &quot;AI generated&quot; disclosure badge">add AI generated badge</button><p class="smallText">Subtle white pill with fixed soft-grey text. Resize the badge shape, but the words stay readable.</p></div><p class="smallText">One tray for images, banners and mock-ups. Images now arrive at a useful page size instead of tiny; resize them afterwards if needed.</p></div>
+  <div class="box trayTop"><h2>images & mock-ups</h2><input id="assetInput" class="hidden" type="file" accept="image/*" multiple onchange="loadTray(event,'asset')"><input id="mockupInput" class="hidden" type="file" accept="image/*" onchange="createMockupPage(event)"><input id="imageLayerInput" class="hidden" type="file" accept="image/*" onchange="addUploadedImageLayer(event)"><button class="full" onclick="assetInput.click()" title="Add your own images, banners or mock-up backgrounds to the tray">Upload Design Assets</button><div id="assetTray" class="thumbGrid"></div><div class="grid2"><button onclick="addImageLayer('image')" title="Add the selected asset as an image layer on the page">add selected image</button><button onclick="scMockupPageBtnClick()" title="Create a new page from the selected tray asset, or upload a mock-up photo if nothing's selected">mock-up page</button></div><div class="grid2"><button onclick="addImageLayer('banner')" title="Add a wide banner image layer">banner</button><button onclick="addImageLayer('overlay')" title="Add a full-page overlay image layer">overlay</button></div><div class="grid2"><button onclick="fillSelectedFrame()" title="Fill the currently selected showcase slot with the selected image - handy for a collage layout">fill selected slot</button><button class="primary" onclick="magicFillEmptySlots()" title="Fill every empty showcase slot at once with the selected image">✨ fill all empty</button></div><div class="aiDisclosureControls"><label class="checkRow"><input id="aiDisclosureToggle" type="checkbox" checked>add movable “AI generated” badge to mock-up</label><button class="full" onclick="addAIDisclosureBadge()" title="Add a movable &quot;AI generated&quot; disclosure badge">add AI generated badge</button><p class="smallText">Subtle white pill with fixed soft-grey text. Resize the badge shape, but the words stay readable.</p></div><p class="smallText">One tray for images, banners and mock-ups. Images now arrive at a useful page size instead of tiny; resize them afterwards if needed.</p></div>
   <!-- Hidden ahead of launch at the maker's request - the feature isn't behaving quite as
        intended yet and needs more work. The code, tests and Button Guide entry are untouched;
        to bring it back, just delete the #batchListingSetBox{display:none} rule below. -->
@@ -2503,6 +2503,66 @@ function createMockupPage(e){
  };
 
  img.src=URL.createObjectURL(file);
+}
+
+// Same page-building logic as createMockupPage() right above, but sourced
+// from a src string already sitting in the design-assets tray instead of a
+// fresh file-input change event. Real gap found from testing: a mock-up
+// added to the tray - by hand via "Upload Design Assets", or sent in from
+// a Seamlessly Creative project (see shared/adapters/pages-adapter.js,
+// which pushes into this same state.trays.asset array via
+// window.scAddToTray) - could be selected in the tray, but "mock-up page"
+// only ever opened a fresh file picker; there was never a path from an
+// already-selected tray asset to a new mock-up page at all, uploaded or
+// project-sourced. This is that path, reused for both.
+function createMockupPageFromAssetSrc(src){
+ if(!src)return;
+ let img=new Image();
+ img.onload=()=>{
+   save();
+
+   let p={
+     type:'mockup',
+     w:img.naturalWidth || img.width,
+     h:img.naturalHeight || img.height,
+     layers:[]
+   };
+
+   let bg=layer('mockup',{
+     name:'mock-up background',
+     x:0,
+     y:0,
+     w:100,
+     h:100,
+     src:img.src,
+     fit:'cover',
+     z:1
+   });
+
+   p.layers.push(bg);
+   if($('aiDisclosureToggle') && $('aiDisclosureToggle').checked){
+     p.layers.push(makeAIDisclosureLayer(2));
+   }
+   state.pages.push(p);
+   state.selectedPage=state.pages.length-1;
+   state.selected=(p.layers.at(-1)||bg).id;
+
+   render();
+   scrollSel();
+ };
+ img.src=src;
+}
+
+// Wired to the "mock-up page" button in place of a bare mockupInput.click()
+// - if a design-asset tray item is currently selected (uploaded or
+// project-sourced, no distinction), build the page from it directly;
+// otherwise fall back to the original file-picker flow untouched, so
+// nothing changes for someone who hasn't selected anything in the tray.
+function scMockupPageBtnClick(){
+ let i=state.selectedTray && state.selectedTray.asset;
+ let item=(i!=null && state.trays.asset) ? state.trays.asset[i] : null;
+ if(item && item.src){ createMockupPageFromAssetSrc(item.src); return; }
+ mockupInput.click();
 }
 
 function makeAIDisclosureLayer(z=nextZ()){
