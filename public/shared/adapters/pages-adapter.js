@@ -118,8 +118,28 @@
     statusEl.textContent = `${assets.length} available — tap one to add it to your tray`;
 
     for (const asset of assets) {
-      const tile = document.createElement('button');
-      tile.type = 'button';
+      // Real bug found from testing: every tile rendered as a plain
+      // letter tile instead of the actual pattern, even though the
+      // exact same blobToDataUrl approach already works in Mock-up
+      // Studio's adapter (see below). Root cause: this tile was built
+      // as a <button>, and Pattern Pages has a page-wide
+      // `button{padding,background,border,text-transform:lowercase,...}
+      // !important` rule (its base button skin) that clobbers a plain
+      // button's inline background/border/padding no matter what — so
+      // even a successfully-decoded thumbnail was fighting that
+      // !important background, and any tile that DID fall back to its
+      // single-letter label rendered lowercase because of that same
+      // rule, which read as "just a small letter, not a pattern".
+      // Pattern Pages' own working tray thumbnails (see renderTrays()
+      // above, building `<div class="thumb">`) never use a <button> as
+      // the tile itself for exactly this reason. Matching that same,
+      // already-proven markup — a plain div acting as a button via
+      // role="button" — sidesteps the collision entirely instead of
+      // fighting it with more !important overrides of our own.
+      const tile = document.createElement('div');
+      tile.className = 'thumb';
+      tile.setAttribute('role', 'button');
+      tile.setAttribute('tabindex', '0');
       tile.title = `${asset.name} (${asset.kind})`;
       tile.style.cssText =
         'width:64px;height:64px;padding:0;border-radius:8px;overflow:hidden;' +
@@ -131,6 +151,7 @@
       // silently stuck — retry with the full-res file, then fall back
       // to a plain letter tile instead of hanging forever.
       const img = document.createElement('img');
+      img.alt = '';
       img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
       let triedFallback = false;
       function showFallback() {
@@ -160,8 +181,15 @@
       trySrcFrom(asset.thumb || asset.file);
       tile.appendChild(img);
 
-      tile.addEventListener('click', async () => {
-        tile.disabled = true;
+      // A plain div has no native .disabled, so guard re-entrancy with a
+      // flag the same way Pattern Pages' own tray tiles don't need to
+      // (theirs is a synchronous select, not an async add) — this one
+      // awaits toWorkingDataUrl + scAddToTray, so a fast double-tap must
+      // not fire it twice.
+      let busy = false;
+      async function activate() {
+        if (busy) return;
+        busy = true;
         tile.style.opacity = '0.5';
         window.SCStatus && window.SCStatus.set('saving');
         try {
@@ -176,9 +204,13 @@
           tile.style.borderColor = '#ef4444';
           window.SCStatus && window.SCStatus.set('idle');
         } finally {
-          tile.disabled = false;
+          busy = false;
           tile.style.opacity = '1';
         }
+      }
+      tile.addEventListener('click', activate);
+      tile.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(); }
       });
       grid.appendChild(tile);
     }
