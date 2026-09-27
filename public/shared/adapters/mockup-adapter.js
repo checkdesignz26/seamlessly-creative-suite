@@ -11,23 +11,37 @@
  * wrapped in an IIFE), so it's called directly rather than needing a
  * hook to be added, the way Playground's portfolio internals did.
  *
- * IMPORTANT, found while testing this against the real app: Mock-up
- * Studio's own "quick save" (idbSaveProject, keyed MSTUDIO_IDB_KEY)
- * only runs when the user clicks its "quick save" button by hand —
- * adding a pattern to the collection does NOT itself trigger it, and
- * there's a separate 20s-interval "autosave" slot that's only ever
- * offered back via a confirm() prompt on next load, not restored
- * silently. Neither matches the suite's "one project, no per-studio
- * save button" promise on its own, so this adapter calls Mock-up
- * Studio's existing idbSaveProject()/idbLoadProject() directly, right
- * after a project asset is added and once on load — same storage
- * mechanism the "quick save"/"quick load" buttons already use, just
- * triggered automatically instead of left to the user.
+ * REAL USER REPORT this file (and the small inline patch at the top
+ * of index.html's <head>) fixes: Mock-up Studio has TWO overlapping
+ * save slots — a "quick save" (idbSaveProject, MSTUDIO_IDB_KEY,
+ * written only when the user clicks that button by hand) and a
+ * separate 20s-interval "autosave" (MSTUDIO_IDB_AUTOSAVE_KEY, written
+ * continuously in the background) that's only ever offered back via a
+ * native confirm() popup on the next load — and this adapter was
+ * ALSO running its own silent restore from the quick-save slot on top
+ * of that. Result: the user saw a confusing native "found autosaved
+ * work — restore it?" popup, with no clear idea whether cancelling
+ * would delete anything, while a second, invisible restore from a
+ * DIFFERENT, likely-staler slot happened right after it regardless.
  *
- * KNOWN PHASE 1 LIMIT (flagging rather than hiding): that quick-save
- * slot is a single GLOBAL key in mockupStudioDB, not scoped per suite
- * project — Mock-up Studio itself has no concept of "project". Two
- * different suite projects will currently share the same restored
+ * Fixed as ONE restore path, not two: index.html's inline patch
+ * answers that popup silently (always "yes, restore" — the one
+ * answer that can never delete anything) instead of showing it, and
+ * this adapter no longer runs a second, separate restore of its own —
+ * the continuously-updated autosave slot is the more complete
+ * snapshot anyway (it captures every manual edit made directly in
+ * Mock-up Studio's own UI, not just patterns added from the project
+ * panel below). This adapter still calls idbSaveProject() itself
+ * right after adding a project asset — a zero-latency safety net so
+ * that specific action is captured instantly rather than waiting up
+ * to 20s for the next autosave tick, and it also keeps the app's own
+ * "quick load" button (still visible, untouched) meaningful if the
+ * user reaches for it directly.
+ *
+ * KNOWN PHASE 1 LIMIT (flagging rather than hiding): both of these
+ * slots are single GLOBAL keys in mockupStudioDB, not scoped per
+ * suite project — Mock-up Studio itself has no concept of "project".
+ * Two different suite projects will currently share the same restored
  * mock-up layout/session; only the shared asset library (what's
  * listed in the panel below) is genuinely project-scoped. Making
  * Mock-up Studio's own state project-aware is Phase 2+ work, not
@@ -151,9 +165,13 @@
           const workingSrc = await toWorkingDataUrl(asset.file);
           await addQuickCollectionPattern(workingSrc);
           // addQuickCollectionPattern does not itself persist — see the
-          // file header. Save immediately through the app's own "quick
-          // save" mechanism so the change survives a reload without the
-          // user needing to press Mock-up Studio's own save button.
+          // file header. performAutosave writes to the SAME key
+          // (MSTUDIO_IDB_AUTOSAVE_KEY) that's now the sole thing
+          // restored on load, so an add-then-immediately-reload can't
+          // lose this addition while waiting for the next 20s tick.
+          // idbSaveProject also keeps the app's own separate "quick
+          // load" button (still visible, untouched) meaningful too.
+          await performAutosave(false);
           await idbSaveProject(serializeProject());
           tile.style.borderColor = '#22c55e';
           window.SCStatus && window.SCStatus.set('saved');
@@ -170,26 +188,13 @@
     }
   }
 
-  // Restores Mock-up Studio's own last-saved session (see the file
-  // header's "known Phase 1 limit" note — this is one global slot, not
-  // per-project) so re-opening the suite doesn't leave the pattern
-  // collection empty until the user manually clicks "quick load". Runs
-  // once, before checkForAutosaveRecovery's own confirm()-prompted
-  // crash-recovery check further down the app's own boot sequence —
-  // that check reads a *different* key (the 20s-interval autosave
-  // slot) and is left exactly as-is; this only pre-fills the quick-save
-  // slot the app already treats as the normal "last session".
-  async function restoreLastSession() {
-    try {
-      const data = await idbLoadProject();
-      if (data) await restoreProject(data);
-    } catch (err) {
-      console.warn('[suite] could not restore last Mock-up Studio session', err);
-    }
-  }
-
+  // No separate restore call here on purpose — see the file header.
+  // The app's own boot sequence already restores the freshest session
+  // by the time this runs (its checkForAutosaveRecovery(), patched
+  // silent by index.html's inline script, has already resolved before
+  // DOMContentLoaded fires); a second restore here would just race it
+  // with a likely-staler snapshot.
   async function init() {
-    await restoreLastSession();
     const panel = buildPanel();
     if (!panel) {
       console.warn('[suite] Mock-up Studio collection strip not found — adapter inactive');

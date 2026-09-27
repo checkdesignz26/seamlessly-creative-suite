@@ -1,6 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Seamlessly Creative suite integration — inert unless loaded inside
+     the suite shell with ?project=<id>; standalone use is unaffected.
+     Placed first, before the app's own <script> further down, because
+     that script's checkForAutosaveRecovery() calls window.confirm()
+     synchronously during its own boot, blocking all later script
+     execution until answered — a script at the END of body (where the
+     rest of the suite's integration lives, see before </body>) would
+     load too late to intercept it. Real user report: this native
+     "found autosaved work — restore it?" popup was showing up
+     constantly and confusingly inside the suite, on top of the
+     shared-library adapter's own separate, silent restore — two
+     competing save systems asking the same question two different
+     ways. Inside the suite this one question is answered silently and
+     safely (always "yes, restore" — the one branch that can never
+     delete anything) instead of shown; see mockup-adapter.js for the
+     other half of this fix (it no longer also runs its own separate
+     restore, so only one restore path is authoritative). -->
+<script>
+(function () {
+  var params = new URLSearchParams(location.search);
+  if (!params.get('project')) return; // standalone — leave native behaviour alone
+  var realConfirm = window.confirm;
+  window.confirm = function (message) {
+    if (typeof message === 'string' && message.indexOf('found autosaved work') !== -1) {
+      console.log('[suite] auto-answered the autosave-recovery prompt (restore) instead of showing it');
+      return true;
+    }
+    return realConfirm.apply(window, arguments);
+  };
+})();
+</script>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
 <title>✿ Mock-up Studio Coastal Atelier ✿</title>
