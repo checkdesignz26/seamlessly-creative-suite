@@ -7214,9 +7214,41 @@ window.tsGetWorkingBgSnapshot=function(){
 // everything else here — exposed the same way as the three hooks just
 // above it, so an external caller (the swap-colours button, added
 // near the end of body) can record one proper undo step before using
-// tsSetBackgroundColour/tsApplyColourToSelected, matching every other
-// colour edit in this studio.
+// this studio's own colour setters, matching every other colour edit
+// here.
 window.tsPushHistory=tsPushHistory;
+// Real bug found via a live screenshot: swapping only recoloured
+// state.layers[selected] (one single layer) via
+// tsApplyColourToSelected - fine for a pattern with one stripe layer,
+// but "scatter dots" (and anything similar) creates one layer PER
+// dot, all sharing one colour. Swapping only the selected one left
+// every other dot still black-on-a-now-black-background, invisible.
+// This instead recolours every layer that currently shares the
+// selected layer's exact colour - the same "these all count as one
+// role" idea tsResetToGrey/tsRecolourLayers above already use for
+// their own layer-wide operations - not just the one indexed layer.
+window.tsSwapBackgroundAndLayerColours=function(){
+ if(!state)return null;
+ const sel=state.layers&&state.layers[selected];
+ const oldBg=state.bgColor||'#ffffff';
+ const oldLayerColour=sel?sel.color:'#555555';
+ tsPushHistory();
+ state.bg=true;state.bgColor=oldLayerColour;
+ (state.layers||[]).forEach(l=>{
+  if(l.color!==oldLayerColour)return; // leave differently-coloured layers alone (e.g. plaid's other stripes)
+  if(l.origColor===undefined)l.origColor=l.color;
+  l.color=oldBg;l.manual=true;
+ });
+ if(tsAppliedState){
+  tsAppliedState.state.bg=true;tsAppliedState.state.bgColor=oldLayerColour;
+  (tsAppliedState.state.layers||[]).forEach(l=>{if(l.color===oldLayerColour){if(l.origColor===undefined)l.origColor=l.color;l.color=oldBg;l.manual=true;}});
+ }
+ tsAppliedDataUrl=null;
+ try{if(tsAppliedState)localStorage.setItem('pkmActiveClassicV65',JSON.stringify(tsAppliedState));}catch(e){}
+ if(typeof renderAll==='function')renderAll(false);
+ if(typeof render==='function')render();
+ return {base:oldLayerColour,tex:oldBg}; // same {base,tex} shape as tsGetWorkingBgSnapshot, for the caller's own readout refresh
+};
 window.tsResetToGrey=function(){
  if(state)tsGreyLayers(state.layers);
  if(tsAppliedState)tsGreyLayers(tsAppliedState.state.layers);
@@ -9197,13 +9229,14 @@ setTimeout(init,500);setTimeout(init,1500);
     }
 
     swapBtn.addEventListener('click', function () {
-      if (classicsOpen() && window.tsGetWorkingBgSnapshot && window.tsSetBackgroundColour && window.tsApplyColourToSelected) {
-        var snap = window.tsGetWorkingBgSnapshot();
-        if (!snap) return;
-        if (window.tsPushHistory) window.tsPushHistory(); // one undo step, matching every other colour edit in Classics
-        window.tsSetBackgroundColour(snap.tex);
-        window.tsApplyColourToSelected(snap.base);
-        paintReadout(snap.tex, snap.base);
+      if (classicsOpen() && window.tsSwapBackgroundAndLayerColours) {
+        // Recolours EVERY layer sharing the selected layer's colour,
+        // not just that one layer — a pattern like scatter-dots has
+        // one layer per dot, all meant to swap together. See the
+        // function's own comment for the real bug this fixed.
+        var result = window.tsSwapBackgroundAndLayerColours();
+        if (!result) return;
+        paintReadout(result.base, result.tex);
       } else if (backgroundStudioOpen() && window.bgGetWorkingSnapshot && window.bgSetRoleColours) {
         var bgSnap = window.bgGetWorkingSnapshot();
         if (!bgSnap) return;
