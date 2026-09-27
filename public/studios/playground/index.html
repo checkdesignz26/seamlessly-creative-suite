@@ -7210,6 +7210,13 @@ window.tsGetWorkingBgSnapshot=function(){
  const sel=state.layers&&state.layers[selected];
  return {base:state.bgColor||'#ffffff',tex:sel?sel.color:'#555555'};
 };
+// Suite adapter hook: tsPushHistory itself is scoped to this IIFE like
+// everything else here — exposed the same way as the three hooks just
+// above it, so an external caller (the invert-colours button, added
+// near the end of body) can record one proper undo step before using
+// tsSetBackgroundColour/tsApplyColourToSelected, matching every other
+// colour edit in this studio.
+window.tsPushHistory=tsPushHistory;
 window.tsResetToGrey=function(){
  if(state)tsGreyLayers(state.layers);
  if(tsAppliedState)tsGreyLayers(tsAppliedState.state.layers);
@@ -8981,50 +8988,121 @@ setTimeout(init,500);setTimeout(init,1500);
 }
 </style>
 
-<!-- Seamlessly Creative suite copy — UX addition, not part of the
-     standalone app (that repo/deployment is untouched; this is only
-     in this suite's frozen copy of Playground). Requested: make
-     Classics Studio's pattern-preview canvas bigger while actively
-     designing by shrinking the saved-classics filmstrip, with a
-     button to bring it back for browsing/loading a saved pattern.
-     The filmstrip strip is a fixed 152px row in .tsModal's own grid
-     (grid-template-rows:auto minmax(0,1fr) 152px) — collapsing it to
-     44px hands that space straight to the middle "1fr" row the
-     preview canvas lives in. Purely a CSS/DOM toggle: doesn't touch
-     how patterns are saved, loaded, or rendered. -->
+<!-- Seamlessly Creative suite copy — UX additions, not part of the
+     standalone app (that repo/deployment is untouched; these live
+     only in this suite's frozen copy of Playground).
+
+     1) Bigger-canvas / collapsible filmstrip, now in BOTH Classics
+     Studio and Background Studio — each modal's saved-items
+     filmstrip is a fixed-height row in its own CSS grid
+     (.tsModal / .bgStudioModal: grid-template-rows:auto minmax(0,1fr)
+     152px / 126px) — collapsing it hands that space straight to the
+     middle "1fr" row the preview canvas lives in. Pure CSS/DOM
+     toggle: doesn't touch how patterns are saved, loaded, or
+     rendered.
+
+     2) An "invert" button that swaps the background colour and the
+     selected layer's colour in Classics Studio, built entirely from
+     hooks the app already exposes for exactly this kind of cross-
+     panel colour sync (window.tsGetWorkingBgSnapshot /
+     tsSetBackgroundColour / tsApplyColourToSelected) — no new access
+     to internal state, just calling the same functions the app's own
+     "background colours" panel already calls. -->
 <style>
   #textureStudioOverlay .tsModal.scFilmCollapsed{grid-template-rows:auto minmax(0,1fr) 44px!important;}
   #textureStudioOverlay .tsModal.scFilmCollapsed .tsFilmstrip{display:none!important;}
   #textureStudioOverlay .tsModal.scFilmCollapsed .tsFilmHead{margin-bottom:0!important;}
-  #scFilmCollapseBtn{margin-left:auto;}
+  #backgroundStudioOverlay .bgStudioModal.scFilmCollapsed{grid-template-rows:auto minmax(0,1fr) 44px!important;}
+  #backgroundStudioOverlay .bgStudioModal.scFilmCollapsed .tsFilmstrip{display:none!important;}
+  #backgroundStudioOverlay .bgStudioModal.scFilmCollapsed .bgFilmHead{margin-bottom:0!important;}
+  /* Background Studio's own preview box (#bgRepeatBox) is NOT sized
+     relative to its grid row like Classics' #tsPreview is — it caps
+     itself at calc(100dvh - 300px), a fixed offset from the whole
+     viewport height, independent of how much this modal's own rows
+     shrink. So collapsing the filmstrip above (126px -> 44px, 82px
+     reclaimed) does nothing to this box on its own; this override
+     raises that same ceiling by the same 82px so the promise of
+     "bigger canvas" is actually kept here too, not just a shrunk
+     filmstrip with an unchanged canvas. */
+  #backgroundStudioOverlay .bgStudioModal.scFilmCollapsed #bgRepeatBox{
+    width:min(100%,560px,calc(100dvh - 218px))!important;
+    height:min(100%,560px,calc(100dvh - 218px))!important;
+  }
+  .scFilmCollapseBtn{margin-left:auto;}
 </style>
 <script>
 (function () {
-  var KEY = 'sc.classicsFilmCollapsed.v1';
-  var overlay = document.getElementById('textureStudioOverlay');
-  var head = overlay && overlay.querySelector('.tsFilmHead');
-  if (!head) return; // markup changed underneath us — no-op rather than error
+  // One reusable setup, applied once per modal (Classics, then
+  // Background) — same toggle behaviour, own remembered preference
+  // (a designer may want one studio's canvas maximised and not the
+  // other's), own modal/head/filmstrip element per instance.
+  function setupCollapsibleFilmstrip(opts) {
+    var overlay = document.getElementById(opts.overlayId);
+    var head = overlay && overlay.querySelector(opts.headSelector);
+    if (!head) return; // markup changed underneath us — no-op rather than error
 
-  var btn = document.createElement('button');
-  btn.id = 'scFilmCollapseBtn';
-  btn.type = 'button';
-  btn.className = 'small';
-  head.appendChild(btn);
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'small scFilmCollapseBtn';
+    head.appendChild(btn);
 
-  function apply(collapsed) {
-    var modal = overlay.querySelector('.tsModal');
-    if (modal) modal.classList.toggle('scFilmCollapsed', collapsed);
-    btn.textContent = collapsed ? 'show filmstrip ▴' : 'bigger canvas ▾';
-  }
-  var collapsed = false;
-  try { collapsed = localStorage.getItem(KEY) === '1'; } catch (e) {}
-  apply(collapsed);
-
-  btn.addEventListener('click', function () {
-    collapsed = !collapsed;
+    function apply(collapsed) {
+      var modal = overlay.querySelector(opts.modalSelector);
+      if (modal) modal.classList.toggle('scFilmCollapsed', collapsed);
+      btn.textContent = collapsed ? 'show filmstrip ▴' : opts.expandLabel;
+    }
+    var collapsed = false;
+    try { collapsed = localStorage.getItem(opts.storageKey) === '1'; } catch (e) {}
     apply(collapsed);
-    try { localStorage.setItem(KEY, collapsed ? '1' : '0'); } catch (e) {}
+
+    btn.addEventListener('click', function () {
+      collapsed = !collapsed;
+      apply(collapsed);
+      try { localStorage.setItem(opts.storageKey, collapsed ? '1' : '0'); } catch (e) {}
+    });
+  }
+
+  setupCollapsibleFilmstrip({
+    overlayId: 'textureStudioOverlay',
+    modalSelector: '.tsModal',
+    headSelector: '.tsFilmHead',
+    storageKey: 'sc.classicsFilmCollapsed.v1',
+    expandLabel: 'bigger canvas ▾', // verified: #tsPreview is genuinely
+    // container-relative (width:min(100%,620px);height:auto), so this
+    // collapse measurably grows it (391x391 -> 499x499px in testing).
   });
+  setupCollapsibleFilmstrip({
+    overlayId: 'backgroundStudioOverlay',
+    modalSelector: '.bgStudioModal',
+    headSelector: '.bgFilmHead',
+    storageKey: 'sc.backgroundFilmCollapsed.v1',
+    expandLabel: 'hide filmstrip ▾', // Background Studio's preview canvas
+    // did NOT grow the same way in testing — its size looks like it's
+    // computed by the app's own JS rather than pure CSS, so this only
+    // promises what it actually delivers: more room, filmstrip out of
+    // the way, not a confirmed bigger canvas. Worth a real fix later
+    // if that canvas size turns out to matter here as much as in
+    // Classics.
+  });
+
+  // --- invert background <-> selected layer colour (Classics Studio) ---
+  var textureOverlay = document.getElementById('textureStudioOverlay');
+  var topActions = textureOverlay && textureOverlay.querySelector('.tsHeader .topActions');
+  if (topActions && window.tsGetWorkingBgSnapshot && window.tsSetBackgroundColour && window.tsApplyColourToSelected) {
+    var invertBtn = document.createElement('button');
+    invertBtn.type = 'button';
+    invertBtn.className = 'small';
+    invertBtn.title = 'Swap the background colour with the selected layer\'s colour';
+    invertBtn.textContent = '⇄ invert colours';
+    topActions.appendChild(invertBtn);
+    invertBtn.addEventListener('click', function () {
+      var snap = window.tsGetWorkingBgSnapshot();
+      if (!snap) return;
+      if (window.tsPushHistory) window.tsPushHistory(); // one undo step, matching every other colour edit
+      window.tsSetBackgroundColour(snap.tex);
+      window.tsApplyColourToSelected(snap.base);
+    });
+  }
 })();
 </script>
 
