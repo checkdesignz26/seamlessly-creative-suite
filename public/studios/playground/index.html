@@ -9029,6 +9029,30 @@ setTimeout(init,500);setTimeout(init,1500);
     height:min(100%,560px,calc(100dvh - 218px))!important;
   }
   .scFilmCollapseBtn{margin-left:auto;}
+
+  /* Real bug from testing at a realistic iPad width (~1024px CSS px):
+     the swap-colours button (added below) tipped Classics Studio's
+     already-tight toolbar row over its available width — it has no
+     wrap protection at this width (flex-wrap:nowrap computed, 16px
+     overflow measured) and .tsModal clips anything that overflows,
+     so the button was invisible rather than just wrapping to a new
+     line. Force-wrapping here is scoped to MY added buttons' own
+     row via .topActions, not a global override of the app's design. */
+  #textureStudioOverlay .tsHeader .topActions{flex-wrap:wrap!important;}
+
+  /* Separate, PRE-EXISTING issue (confirmed unrelated to anything in
+     this suite copy: reproduces with every suite addition removed,
+     standalone, at this same width) — the "LAYERS / ITEMS" panel's
+     own grid columns add up to slightly MORE than the modal's actual
+     width at ~1024px (measured 1039px of columns inside a 1012px
+     modal, a 27px gap in this snapshot's responsive breakpoint math),
+     and .tsModal{overflow:hidden} clips that excess invisibly rather
+     than making it reachable. Not attempting to rebalance that
+     column-width cascade here (it's a ~20-media-query system; a
+     targeted fix risks breaking a different width instead) — this is
+     a minimal safety net so the same content that used to be
+     invisibly cut off becomes horizontally scrollable instead. */
+  #textureStudioOverlay .tsBody{overflow-x:auto!important;}
 </style>
 <script>
 (function () {
