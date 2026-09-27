@@ -9085,6 +9085,41 @@ setTimeout(init,500);setTimeout(init,1500);
     // Classics.
   });
 
+  // --- main Pattern Playground: hide the "saved patterns" filmstrip ---
+  // A different shape of fix from the two above: the main view is a
+  // normal scrolling column (.workspace{overflow:auto}), not a fixed-
+  // row modal grid, so there's no shared height budget to redistribute
+  // and the canvas's own size isn't governed by how much the filmstrip
+  // takes below it. Collapsing it here doesn't grow the canvas either
+  // (same honest caveat as Background Studio) — its real value is
+  // needing to scroll less to see the canvas without the "saved
+  // patterns" strip's ~150px+ competing for the same visible window.
+  (function () {
+    var head = document.querySelector('.filmstripBlock .filmstripHead');
+    var strip = document.getElementById('savedFilmstrip');
+    if (!head || !strip) return;
+    var KEY = 'sc.mainFilmCollapsed.v1';
+
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'small';
+    head.appendChild(btn);
+
+    function apply(collapsed) {
+      strip.style.display = collapsed ? 'none' : '';
+      btn.textContent = collapsed ? 'show saved patterns ▴' : 'hide saved patterns ▾';
+    }
+    var collapsed = false;
+    try { collapsed = localStorage.getItem(KEY) === '1'; } catch (e) {}
+    apply(collapsed);
+
+    btn.addEventListener('click', function () {
+      collapsed = !collapsed;
+      apply(collapsed);
+      try { localStorage.setItem(KEY, collapsed ? '1' : '0'); } catch (e) {}
+    });
+  })();
+
   // --- swap background <-> selected layer colour (Classics Studio) ---
   // Named "swap", not "invert" — invert already means something else
   // (colour inversion) in design tools; this just exchanges the two
