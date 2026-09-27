@@ -197,23 +197,58 @@
   el.newProjectBtn.addEventListener('click', () => createProject());
   el.createFirstBtn.addEventListener('click', () => createProject('Café Latte Collection'));
 
+  // Real bug found on iPad Safari: the old version prepared the
+  // backup (several awaited IndexedDB reads) and THEN called
+  // a.click() itself, all inside this one handler. Safari only
+  // honours a file-save triggered synchronously within the tap that
+  // started it — once anything is awaited first, Safari silently
+  // drops the save with no error, which read as "nothing happens" /
+  // "can't download a project". Chromium (used for testing this)
+  // doesn't enforce that as strictly, so it worked in every automated
+  // test and only failed on the real device.
+  //
+  // Fixed as two real taps instead of one: this button prepares the
+  // file (as slow as it needs to be), then a SEPARATE, genuine <a
+  // download> link appears for the user to tap — that second tap is
+  // its own fresh gesture, so Safari allows it.
+  const backupLink = document.createElement('a');
+  backupLink.id = 'scBackupLink';
+  backupLink.hidden = true;
+  backupLink.textContent = '⬇ tap to save backup';
+  el.backupBtn.insertAdjacentElement('afterend', backupLink);
+
+  function resetBackupUI() {
+    el.backupBtn.hidden = false;
+    el.backupBtn.disabled = false;
+    el.backupBtn.textContent = 'Download Project Backup';
+    backupLink.hidden = true;
+    if (backupLink.href) URL.revokeObjectURL(backupLink.href);
+    backupLink.removeAttribute('href');
+  }
+
   el.backupBtn.addEventListener('click', async () => {
     if (!currentProjectId) return;
     el.backupBtn.disabled = true;
-    const original = el.backupBtn.textContent;
     el.backupBtn.textContent = 'preparing…';
     try {
-      const result = await window.SCLibrary.downloadProjectBackup(currentProjectId);
-      el.backupBtn.textContent = `✓ ${result.assetCount} assets`;
+      const result = await window.SCLibrary.prepareProjectBackup(currentProjectId);
+      backupLink.href = URL.createObjectURL(result.blob);
+      backupLink.download = result.filename;
+      backupLink.textContent = `⬇ tap to save (${result.assetCount} assets)`;
+      el.backupBtn.hidden = true;
+      backupLink.hidden = false;
     } catch (err) {
       console.error('[suite] backup failed', err);
       el.backupBtn.textContent = 'backup failed';
-    } finally {
-      setTimeout(() => {
-        el.backupBtn.textContent = original;
-        el.backupBtn.disabled = false;
-      }, 2500);
+      setTimeout(resetBackupUI, 2500);
     }
+  });
+
+  backupLink.addEventListener('click', () => {
+    // Let the browser's native download actually happen (don't
+    // preventDefault) — just reset back to the normal button a
+    // moment later, after the tap has done its job.
+    setTimeout(resetBackupUI, 400);
   });
 
   async function boot() {

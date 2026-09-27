@@ -277,20 +277,32 @@
     };
   }
 
-  async function downloadProjectBackup(projectId) {
+  // Builds the backup Blob but does NOT trigger a download itself —
+  // that has to happen from a real, synchronous tap (see shell.js's
+  // click handler). Real bug found on iPad Safari: the old version of
+  // this function did its own a.click() at the end, AFTER several
+  // awaited IndexedDB reads above (exportProjectBackup ->
+  // listAssets -> blobToDataUrl per asset). Safari only allows a file
+  // save to be triggered synchronously within the tap that started
+  // it; once anything is awaited first, the click that follows is no
+  // longer considered part of that same user gesture and Safari
+  // silently blocks it — no error, nothing visibly happens. Chromium
+  // (what this was tested with) doesn't enforce that as strictly, so
+  // the bug never showed up in testing until real iPad use surfaced
+  // it. Splitting "prepare the file" (async, can take as long as it
+  // needs) from "save it" (must be a real, fresh tap) fixes this.
+  async function prepareProjectBackup(projectId) {
     const data = await exportProjectBackup(projectId);
     const json = JSON.stringify(data);
     const stamp = new Date().toISOString().slice(0, 10);
     const safeName = (data.project.name || 'project').replace(/[\\/:*?"<>|]/g, '').trim() || 'project';
     const blob = new Blob([json], { type: 'application/octet-stream' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `${safeName}-${stamp}.screativeproject`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-    return { bytes: json.length, assetCount: data.assets.length };
+    return {
+      blob,
+      filename: `${safeName}-${stamp}.screativeproject`,
+      bytes: json.length,
+      assetCount: data.assets.length,
+    };
   }
 
   global.SCLibrary = {
@@ -305,6 +317,6 @@
     addAssetFromBlob,
     deleteAsset,
     blobToDataUrl,
-    downloadProjectBackup,
+    prepareProjectBackup,
   };
 })(window);

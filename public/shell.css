@@ -191,6 +191,25 @@ html, body {
 }
 #scBackupBtn:disabled { opacity: .6; cursor: default; }
 
+/* The real, genuine-tap download link (see shell.js) — styled to
+   look like #scBackupBtn so swapping between them is seamless, but
+   it's a real <a download> element, not a button, since only a real
+   anchor tap reliably triggers a file save on Safari. */
+#scBackupLink {
+  background: var(--sc-accent);
+  border: 1px solid var(--sc-accent);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  white-space: nowrap;
+  text-decoration: none;
+  display: inline-block;
+}
+#scBackupLink[hidden] { display: none; }
+
 #scMain {
   position: relative;
   flex: 1;
