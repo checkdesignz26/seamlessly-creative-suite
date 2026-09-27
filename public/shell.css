@@ -114,6 +114,14 @@ html, body {
   color: var(--sc-muted);
   font-size: 13px;
   white-space: nowrap;
+  /* Real bug from testing: "saved" -> "saving..." is a different text
+     length, and with no fixed width here every status change reflowed
+     the whole top bar — visibly shifting the studio tabs sideways
+     ("the whole panel jumps"). flex-shrink:0 + a min-width sized to
+     the longest label keeps this element's width constant regardless
+     of which status text is showing. */
+  flex-shrink: 0;
+  min-width: 84px;
 }
 
 .sc-dot {
