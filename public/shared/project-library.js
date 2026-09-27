@@ -135,7 +135,8 @@
 
   // --- Assets ---------------------------------------------------------
   //
-  // Asset shape:
+  // Public asset shape (what listAssets/getAsset/addAssetFromBlob
+  // return — every caller outside this file only ever sees this):
   //   { id, projectId, kind: 'pattern'|'motif'|'background'|'graphic'
   //                          |'mockup'|'lookbook',
   //     name, file (Blob, PNG), width, height, thumb (Blob, PNG),
@@ -143,6 +144,12 @@
   //     derivedFrom: assetId | null,
   //     derivation: { studio, preset, px, dpi } | null,
   //     created, updated }
+  //
+  // What's actually stored in IndexedDB differs — fileBuffer/fileType
+  // and thumbBuffer/thumbType instead of file/thumb — see the
+  // hydrateAsset comment below for why, and note that a record
+  // written before that fix may still have the old file/thumb Blob
+  // fields directly; hydrateAsset handles both.
 
   async function listAssets(projectId) {
     const store = await tx(STORE_ASSETS, 'readonly');
@@ -151,12 +158,50 @@
       reqToPromise(idx.getAll(IDBKeyRange.only(projectId))),
       'listAssets'
     );
-    return all.sort((a, b) => (a.created || 0) - (b.created || 0));
+    return all.sort((a, b) => (a.created || 0) - (b.created || 0)).map(hydrateAsset);
   }
 
   async function getAsset(id) {
     const store = await tx(STORE_ASSETS, 'readonly');
-    return withTimeout(reqToPromise(store.get(id)), 'getAsset');
+    const record = await withTimeout(reqToPromise(store.get(id)), 'getAsset');
+    return hydrateAsset(record);
+  }
+
+  // Real bug found on iPad Safari, one layer deeper than the
+  // dataUrlToBlob fix above: even after that fix let store.put(asset)
+  // succeed, every asset read back out showed a broken/fallback
+  // thumbnail everywhere it was displayed (Mock-up Studio's own
+  // project panel, not just Pattern Pages') — the SAME class of
+  // WebKit IndexedDB bug, just its other failure mode. WebKit's
+  // IndexedDB cannot reliably structured-clone Blob objects at all:
+  // sometimes it rejects the write outright (the earlier bug),
+  // sometimes it accepts the write but silently corrupts the Blob on
+  // the way back out, so it fails to decode as an image later even
+  // though nothing errored at save time. A plain Blob, in-memory
+  // buffer or not, still goes through the same buggy Blob-specific
+  // clone path either way.
+  // Fixed at the root instead of chasing another symptom: assets are
+  // no longer stored as Blob fields at all. addAssetFromBlob below
+  // stores the raw bytes as a plain ArrayBuffer (fileBuffer/thumbBuffer)
+  // plus a MIME type string — both structured-clone reliably on every
+  // browser tested, Safari included, since neither is a Blob. A real
+  // Blob is reconstructed here, in memory, only when a caller actually
+  // asks for one (via listAssets/getAsset) — asset.file/asset.thumb
+  // still come back as normal Blobs to every existing caller
+  // (Playground/Mock-up Studio/Pattern Pages adapters, the project
+  // backup export), so nothing downstream had to change.
+  function hydrateAsset(record) {
+    if (!record) return record;
+    if (record.file || record.thumb) {
+      // A record saved before this fix already has real Blob fields
+      // (from whatever it managed to store) - nothing to reconstruct.
+      return record;
+    }
+    const { fileBuffer, fileType, thumbBuffer, thumbType, ...rest } = record;
+    return Object.assign({}, rest, {
+      file: fileBuffer ? new Blob([fileBuffer], { type: fileType || 'image/png' }) : null,
+      thumb: thumbBuffer ? new Blob([thumbBuffer], { type: thumbType || 'image/png' }) : null,
+    });
   }
 
   // Real bug found on iPad Safari: fetch(dataUrl).then(r => r.blob())
@@ -231,15 +276,24 @@
   async function addAssetFromBlob(projectId, blob, meta) {
     meta = meta || {};
     const { blob: thumb, width, height } = await makeThumb(blob, 320);
-    const asset = {
+    // Stored as ArrayBuffer + type, not as the Blob objects themselves -
+    // see the hydrateAsset comment above for why. blob.arrayBuffer() is
+    // supported on every browser this suite targets (iOS Safari 14+).
+    const [fileBuffer, thumbBuffer] = await Promise.all([
+      blob.arrayBuffer(),
+      thumb.arrayBuffer(),
+    ]);
+    const record = {
       id: uid('asset'),
       projectId,
       kind: meta.kind || 'pattern',
       name: meta.name || 'untitled',
-      file: blob,
+      fileBuffer,
+      fileType: blob.type || 'image/png',
       width,
       height,
-      thumb,
+      thumbBuffer,
+      thumbType: thumb.type || 'image/png',
       source: meta.source || null,
       derivedFrom: meta.derivedFrom || null,
       derivation: meta.derivation || null,
@@ -247,9 +301,9 @@
       updated: Date.now(),
     };
     const store = await tx(STORE_ASSETS, 'readwrite');
-    await withTimeout(reqToPromise(store.put(asset)), 'addAsset');
+    await withTimeout(reqToPromise(store.put(record)), 'addAsset');
     await touchProject(projectId, {});
-    return asset;
+    return hydrateAsset(record);
   }
 
   async function deleteAsset(id) {
