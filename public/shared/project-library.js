@@ -330,23 +330,42 @@
   // real ZIP/binary format can replace this later without changing
   // the shell's "Download Project Backup" button.
 
+  // Real bug found from testing: a project containing even one asset
+  // saved before the ArrayBuffer storage fix above (ones that already
+  // show as a broken/fallback thumbnail everywhere else, from the same
+  // WebKit Blob-corruption bug) made "Download Project Backup" fail
+  // outright for the WHOLE project — Promise.all rejects the instant
+  // any single blobToDataUrl(a.file) call rejects, so one bad legacy
+  // asset blocked every good one from being backed up too. Fixed the
+  // same way playground-adapter.js's own "send to project" already
+  // handles a per-item failure: convert each asset independently, and
+  // if one fails, include it in the backup as a marked skip (name +
+  // reason, no image data) instead of aborting the whole export. A
+  // project with nothing but good assets is unaffected either way.
   async function exportProjectBackup(projectId) {
     const project = await getProject(projectId);
     if (!project) throw new Error('project not found');
     const assets = await listAssets(projectId);
     const assetsOut = await Promise.all(
-      assets.map(async (a) => ({
-        id: a.id,
-        kind: a.kind,
-        name: a.name,
-        width: a.width,
-        height: a.height,
-        source: a.source,
-        derivedFrom: a.derivedFrom,
-        derivation: a.derivation,
-        created: a.created,
-        file: await blobToDataUrl(a.file),
-      }))
+      assets.map(async (a) => {
+        const base = {
+          id: a.id,
+          kind: a.kind,
+          name: a.name,
+          width: a.width,
+          height: a.height,
+          source: a.source,
+          derivedFrom: a.derivedFrom,
+          derivation: a.derivation,
+          created: a.created,
+        };
+        try {
+          return Object.assign(base, { file: await blobToDataUrl(a.file) });
+        } catch (err) {
+          console.error('[suite] asset failed to back up, skipping just this one', a.id, a.name, err);
+          return Object.assign(base, { file: null, skipped: true, skipReason: (err && err.message) || String(err) });
+        }
+      })
     );
     return {
       app: 'seamlessly-creative-suite',
@@ -378,11 +397,13 @@
     const stamp = new Date().toISOString().slice(0, 10);
     const safeName = (data.project.name || 'project').replace(/[\\/:*?"<>|]/g, '').trim() || 'project';
     const blob = new Blob([json], { type: 'application/octet-stream' });
+    const skippedCount = data.assets.filter((a) => a.skipped).length;
     return {
       blob,
       filename: `${safeName}-${stamp}.screativeproject`,
       bytes: json.length,
       assetCount: data.assets.length,
+      skippedCount,
     };
   }
 

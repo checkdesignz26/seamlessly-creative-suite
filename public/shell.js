@@ -300,7 +300,13 @@
       const result = await window.SCLibrary.prepareProjectBackup(currentProjectId);
       backupLink.href = URL.createObjectURL(result.blob);
       backupLink.download = result.filename;
-      backupLink.textContent = `⬇ tap to save (${result.assetCount} assets)`;
+      // A per-asset failure (see exportProjectBackup's own comment)
+      // no longer blocks the whole backup — surface it here instead
+      // of hiding it, so "some of my patterns are missing from this
+      // backup" has an explanation rather than being a silent gap.
+      backupLink.textContent = result.skippedCount
+        ? `⬇ tap to save (${result.assetCount - result.skippedCount} of ${result.assetCount} assets — ${result.skippedCount} too damaged to back up)`
+        : `⬇ tap to save (${result.assetCount} assets)`;
       el.backupBtn.hidden = true;
       backupLink.hidden = false;
     } catch (err) {
