@@ -1,0 +1,215 @@
+:root {
+  --sc-bg: #17141f;
+  --sc-panel: #221d33;
+  --sc-border: #352c4d;
+  --sc-text: #f3f0fa;
+  --sc-muted: #9a90b8;
+  --sc-accent: #7c5cff;
+  --sc-green: #22c55e;
+  --sc-amber: #f5a524;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--sc-bg);
+  color: var(--sc-text);
+  font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+}
+
+#scShell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+#scTopBar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  background: var(--sc-panel);
+  border-bottom: 1px solid var(--sc-border);
+  flex-wrap: wrap;
+}
+
+#scBrand {
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: var(--sc-accent);
+  white-space: nowrap;
+}
+
+.sc-switcher {
+  position: relative;
+}
+
+#scProjectName {
+  background: none;
+  border: 1px solid var(--sc-border);
+  color: var(--sc-text);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  max-width: 40vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sc-switcher[open] #scProjectMenu { display: block; }
+
+#scProjectMenu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 220px;
+  background: var(--sc-panel);
+  border: 1px solid var(--sc-border);
+  border-radius: 10px;
+  padding: 6px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.4);
+  z-index: 50;
+}
+
+.sc-project-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  color: var(--sc-text);
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.sc-project-item:hover, .sc-project-item.active {
+  background: rgba(124, 92, 255, .18);
+}
+
+#scNewProjectBtn {
+  width: 100%;
+  margin-top: 4px;
+  text-align: left;
+  background: none;
+  border: 1px dashed var(--sc-border);
+  color: var(--sc-muted);
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+}
+
+#scStatus {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--sc-muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.sc-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--sc-muted);
+}
+.sc-dot-saved { background: var(--sc-green); }
+.sc-dot-saving { background: var(--sc-amber); }
+.sc-dot-idle { background: var(--sc-muted); }
+
+#scStudioTabs {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.sc-tab {
+  background: none;
+  border: 1px solid var(--sc-border);
+  color: var(--sc-muted);
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.sc-tab:disabled { opacity: .4; cursor: default; }
+
+.sc-tab.active {
+  background: var(--sc-accent);
+  border-color: var(--sc-accent);
+  color: #fff;
+}
+
+#scBackupBtn {
+  background: none;
+  border: 1px solid var(--sc-border);
+  color: var(--sc-text);
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+}
+#scBackupBtn:disabled { opacity: .6; cursor: default; }
+
+#scMain {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+#scStudioFrame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: #fff;
+}
+
+#scEmptyState[hidden] {
+  display: none;
+}
+
+#scEmptyState {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: var(--sc-muted);
+  text-align: center;
+  padding: 24px;
+}
+
+#scEmptyState h1 {
+  color: var(--sc-text);
+  margin: 0;
+  font-size: 22px;
+}
+
+#scCreateFirstBtn {
+  background: var(--sc-accent);
+  color: #fff;
+  border: 0;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}

@@ -1,0 +1,18 @@
+# Seamlessly Creative — suite shell (Phase 1 proof of concept)
+#
+# Pure static deployment (Cloudflare "Workers with assets", no worker
+# script, no bindings) — the same shape as the existing Mock-up Studio
+# Worker's own wrangler.toml. There is no licensing/routing logic yet;
+# that gets added as its own Worker script once Phase 3 starts.
+#
+# `name` below determines the free test address for Phase 1:
+#   https://seamlessly-creative-suite.<your-subdomain>.workers.dev
+# No route or custom domain is configured here on purpose, so this
+# cannot become reachable at suite.checkdesignz.com by accident. See
+# DEPLOY.md for how to add that domain later, once you're ready.
+
+name = "seamlessly-creative-suite"
+compatibility_date = "2024-09-23"
+
+[assets]
+directory = "./public"

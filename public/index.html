@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Seamlessly Creative</title>
+<link rel="stylesheet" href="/shell.css">
+</head>
+<body>
+<div id="scShell">
+  <div id="scTopBar">
+    <div id="scBrand">Seamlessly Creative</div>
+
+    <div class="sc-switcher" id="scProjectSwitcher">
+      <button id="scProjectName" type="button" title="Switch project"
+        onclick="this.parentElement.toggleAttribute('open')">Loading…</button>
+      <div id="scProjectMenu">
+        <div id="scProjectList"></div>
+        <button id="scNewProjectBtn" type="button">+ New project</button>
+      </div>
+    </div>
+
+    <div id="scStatus">
+      <span class="sc-dot sc-dot-idle" id="scStatusDot"></span>
+      <span id="scStatusText">—</span>
+    </div>
+
+    <div id="scStudioTabs"></div>
+
+    <button id="scBackupBtn" type="button">Download Project Backup</button>
+  </div>
+
+  <div id="scMain">
+    <div id="scEmptyState" hidden>
+      <h1>Start your first project</h1>
+      <p>A project holds the patterns and assets you move between studios.<br>
+         Try “Café Latte Collection” to test the flow.</p>
+      <button id="scCreateFirstBtn" type="button">Create a project</button>
+    </div>
+    <iframe id="scStudioFrame" title="Studio" hidden></iframe>
+  </div>
+</div>
+
+<script src="/shared/project-library.js"></script>
+<script src="/shell.js"></script>
+</body>
+</html>
