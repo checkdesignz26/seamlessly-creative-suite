@@ -104,6 +104,9 @@
     const projects = await window.SCLibrary.listProjects();
     el.projectList.innerHTML = '';
     projects.forEach((p) => {
+      const row = document.createElement('div');
+      row.className = 'sc-project-row';
+
       const item = document.createElement('button');
       item.type = 'button';
       item.className = 'sc-project-item' + (p.id === currentProjectId ? ' active' : '');
@@ -112,7 +115,28 @@
         el.projectSwitcher.removeAttribute('open');
         openProject(p.id);
       });
-      el.projectList.appendChild(item);
+
+      // Requested so old test/throwaway projects (and whatever they
+      // dragged into the shared asset library — a stress-test project
+      // full of assets saved before a since-fixed storage bug, in the
+      // case this was first asked for) can actually be cleared out,
+      // not just abandoned. Its own button, not part of the row's main
+      // click target, so a stray tap while switching projects can
+      // never delete one by accident.
+      const deleteBtn = document.createElement('button');
+      deleteBtn.type = 'button';
+      deleteBtn.className = 'sc-project-delete';
+      deleteBtn.title = 'Delete project';
+      deleteBtn.setAttribute('aria-label', 'Delete project "' + p.name + '"');
+      deleteBtn.textContent = '✕';
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteProjectFlow(p);
+      });
+
+      row.appendChild(item);
+      row.appendChild(deleteBtn);
+      el.projectList.appendChild(row);
     });
     return projects;
   }
@@ -120,6 +144,48 @@
   function teardownAllFrames() {
     mountedFrames.forEach(({ iframe }) => iframe.remove());
     mountedFrames.clear();
+  }
+
+  // Deletes the project AND every asset in the shared project library
+  // that belongs to it (SCLibrary.deleteProject already cascades that
+  // — see project-library.js). Never touches any studio's own database
+  // — a pattern saved inside Playground, a mock-up layout inside
+  // Mock-up Studio, a .ppages autosave inside Pattern Pages are all
+  // untouched; this only removes what the suite itself added to this
+  // project's shared asset library.
+  async function deleteProjectFlow(project) {
+    const assetCount = (await window.SCLibrary.listAssets(project.id)).length;
+    const warning = assetCount
+      ? `Delete "${project.name}" and its ${assetCount} project asset${assetCount === 1 ? '' : 's'}? ` +
+        `This only removes them from Seamlessly Creative's shared project library — nothing saved inside ` +
+        `Pattern Playground, Mock-up Studio or Pattern Pages themselves is touched. This can't be undone.`
+      : `Delete "${project.name}"? This can't be undone.`;
+    if (!confirm(warning)) return;
+
+    const wasCurrent = project.id === currentProjectId;
+    await window.SCLibrary.deleteProject(project.id);
+
+    if (!wasCurrent) {
+      await refreshProjectSwitcher();
+      return;
+    }
+
+    // Deleted the project that was actually open — its studio iframes
+    // are showing data for a project that no longer exists, so they
+    // have to go, the same as a genuine project switch does.
+    teardownAllFrames();
+    currentProjectId = null;
+    writeLastState({ projectId: null });
+
+    const remaining = await window.SCLibrary.listProjects();
+    if (remaining.length) {
+      await openProject(remaining[0].id);
+    } else {
+      await refreshProjectSwitcher();
+      el.projectName.textContent = '';
+      el.emptyState.hidden = false;
+      el.frameHost.hidden = true;
+    }
   }
 
   async function openProject(projectId) {

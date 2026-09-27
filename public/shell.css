@@ -77,9 +77,16 @@ html, body {
   z-index: 50;
 }
 
+.sc-project-row {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+}
+
 .sc-project-item {
   display: block;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   text-align: left;
   background: none;
   border: 0;
@@ -88,10 +95,30 @@ html, body {
   border-radius: 8px;
   cursor: pointer;
   font: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sc-project-item:hover, .sc-project-item.active {
   background: rgba(124, 92, 255, .18);
+}
+
+.sc-project-delete {
+  flex-shrink: 0;
+  width: 30px;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  color: var(--sc-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+}
+
+.sc-project-delete:hover {
+  background: rgba(239, 68, 68, .18);
+  color: #fca5a5;
 }
 
 #scNewProjectBtn {
