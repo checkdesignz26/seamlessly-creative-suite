@@ -159,8 +159,35 @@
     return withTimeout(reqToPromise(store.get(id)), 'getAsset');
   }
 
+  // Real bug found on iPad Safari: fetch(dataUrl).then(r => r.blob())
+  // is the obvious way to turn a dataURL into a Blob, and works fine
+  // for reading the Blob back out (img.src, canvas draws, etc.) — but
+  // a Blob built this way is backed by WebKit's internal fetch/network
+  // response machinery, not a plain in-memory buffer, and WebKit's
+  // IndexedDB implementation cannot always structured-clone that kind
+  // of Blob to disk. The failure is exactly this: store.put(asset)
+  // rejects with "Error preparing Blob/File data to be stored in
+  // object store" — every "send to project" action (Playground's
+  // starred patterns, Mock-up Studio's mock-ups/lookbook pages) goes
+  // through this function, so this broke sending everywhere, not any
+  // one studio. Chromium (used for local testing) doesn't have this
+  // limitation, so it only ever showed up on a real device.
+  // Fixed by decoding the base64 payload by hand into a plain
+  // Uint8Array and building the Blob directly from that buffer —
+  // a plain memory-backed Blob, not a fetch response, which
+  // structured-clones into IndexedDB reliably on every browser tested
+  // so far, Safari included.
   function dataUrlToBlob(dataUrl) {
-    return fetch(dataUrl).then((r) => r.blob());
+    const comma = dataUrl.indexOf(',');
+    const header = dataUrl.slice(0, comma);
+    const isBase64 = /;base64/.test(header);
+    const mimeMatch = /^data:([^;,]+)/.exec(header);
+    const mime = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+    const body = dataUrl.slice(comma + 1);
+    const binary = isBase64 ? atob(body) : decodeURIComponent(body);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return Promise.resolve(new Blob([bytes], { type: mime }));
   }
 
   function loadImage(src) {
