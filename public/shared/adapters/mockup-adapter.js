@@ -216,7 +216,13 @@
         tile.style.opacity = '0.5';
         window.SCStatus && window.SCStatus.set('saving');
         try {
-          const workingSrc = await toWorkingDataUrl(asset.file);
+          // Prefer the repeat-safe tile (Half Brick/Half Drop's genuinely non-square true repeat
+          // unit) when this asset has one - Mock-up Studio only ever plain-grid-tiles whatever
+          // image it's given, and asset.file alone (the plain single-cell ORIGINAL/SINGLE ARTWORK)
+          // does NOT plain-grid-tile correctly for those two layouts. Grid-layout assets, and every
+          // asset from before this feature existed, have no repeatTile and fall through to file
+          // exactly as before.
+          const workingSrc = await toWorkingDataUrl(asset.repeatTile || asset.file);
           await addQuickCollectionPattern(workingSrc);
           // addQuickCollectionPattern does not itself persist — see the
           // file header. performAutosave writes to the SAME key

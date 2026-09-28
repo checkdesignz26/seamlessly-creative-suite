@@ -205,26 +205,56 @@
       nameEl.textContent = asset.name || 'untitled';
       tile.appendChild(nameEl);
 
-      async function activate() {
+      // Default action (the whole tile, unchanged from before repeatTile existed): opens the
+      // ORIGINAL/SINGLE ARTWORK exactly as before, into Creative Resizer's own Single Artwork mode
+      // if the user picks it there — a Half Brick/Half Drop classic must stay usable as standalone
+      // artwork, never forced into a repeat. Tapping it does NOT hand over the repeat-safe tile.
+      async function activate(useRepeatTile) {
         try {
           window.SCStatus && window.SCStatus.set('saving');
           // Hand the existing full-res Blob straight to the app's own
           // upload entry point — no extra full-resolution copy kept
           // here, no dataURL round-trip, same memory shape as a local
           // file pick.
-          const safeName = (asset.name || 'project-asset').replace(/[^a-z0-9_\-]/gi, '_') + '.png';
-          const file = new File([asset.file], safeName, { type: asset.file.type || 'image/png' });
-          await window.handlePickedPatternFile(file);
+          const blob = (useRepeatTile && asset.repeatTile) || asset.file;
+          const suffix = useRepeatTile && asset.repeatTile ? '-repeat-tile' : '';
+          const safeName = (asset.name || 'project-asset').replace(/[^a-z0-9_\-]/gi, '_') + suffix + '.png';
+          const file = new File([blob], safeName, { type: blob.type || 'image/png' });
+          // repeatModeHint tells Creative Resizer's own converter exactly which layout this is
+          // (see loadImage's own note) instead of guessing from the image's aspect ratio - only
+          // meaningful when actually sending the repeat-safe tile.
+          const opts = useRepeatTile && asset.repeatTile ? { repeatModeHint: asset.repeatLayout || 'grid' } : undefined;
+          await window.handlePickedPatternFile(file, opts);
           window.SCStatus && window.SCStatus.set('saved');
         } catch (err) {
           console.error('[suite] failed to open project asset', asset, err);
           window.SCStatus && window.SCStatus.set('idle');
         }
       }
-      tile.addEventListener('click', activate);
+      tile.addEventListener('click', () => activate(false));
       tile.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(); }
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(false); }
       });
+
+      // Secondary, additive action - only shown for a Half Brick/Half Drop classic that actually
+      // has a separate repeat-safe tile stored. Lets the user explicitly choose "open this as a
+      // repeat" instead of the tile's default Single Artwork behaviour, per the suite's Half Brick/
+      // Half Drop cross-app handoff: Creative Resizer should be able to use EITHER representation,
+      // not have the choice made for it.
+      if (asset.repeatTile && asset.repeatLayout) {
+        const repeatBtn = document.createElement('button');
+        repeatBtn.type = 'button';
+        repeatBtn.className = 'pattern-library-tile-repeat-btn';
+        repeatBtn.title = `Open the seamless ${asset.repeatLayout === 'halfdrop' ? 'half-drop' : 'half-brick'} repeat tile instead of the single artwork`;
+        repeatBtn.textContent = '⟲';
+        repeatBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          activate(true);
+        });
+        tile.appendChild(repeatBtn);
+      }
+
       grid.appendChild(tile);
     }
   }
@@ -241,6 +271,16 @@
     const statusEl = panel.querySelector('#scProjectStatus');
     panel.querySelector('#scRefreshBtn').addEventListener('click', () => renderGrid(grid, statusEl));
     renderGrid(grid, statusEl);
+
+    const style = document.createElement('style');
+    style.textContent = `
+      .pattern-library-tile-repeat-btn{position:absolute;top:-4px;right:-4px;width:20px;height:20px;
+        border-radius:50%;border:none;background:var(--accent-a);color:#fff;font-size:11px;
+        line-height:20px;padding:0;cursor:pointer;display:flex;align-items:center;
+        justify-content:center;}
+      .pattern-library-tile-repeat-btn:hover{filter:brightness(1.1);}
+    `;
+    document.head.appendChild(style);
   }
 
   if (document.readyState === 'loading') {

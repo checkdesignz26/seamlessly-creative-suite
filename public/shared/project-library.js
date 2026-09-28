@@ -140,10 +140,17 @@
   //   { id, projectId, kind: 'pattern'|'motif'|'background'|'graphic'
   //                          |'mockup'|'lookbook'|'resized-export',
   //     name, file (Blob, PNG), width, height, thumb (Blob, PNG),
+  //     repeatTile (Blob, PNG) | null, repeatLayout: 'halfbrick'|'halfdrop' | null,
   //     source: { studio, recipe?, recipeVersion? },
   //     derivedFrom: assetId | null,
   //     derivation: { studio, preset, px, dpi } | null,
   //     created, updated }
+  //
+  // repeatTile/repeatLayout (added for Pattern Playground's Half Brick/Half Drop repeat layouts):
+  // `file` is always the plain ORIGINAL/SINGLE ARTWORK - unchanged meaning, still what Single
+  // Artwork mode and every pre-existing caller gets. repeatTile is a SEPARATE, genuinely different
+  // rendering (only present when repeatLayout isn't grid/null) that plain-grid-tiles correctly on
+  // its own - see mockup-adapter.js and resizer-adapter.js for who reads it and why.
   //
   // `kind` is a plain string tag, not an enforced enum — each studio's
   // adapter sets it on send and reads it on receive. It's the one
@@ -202,15 +209,22 @@
   // backup export), so nothing downstream had to change.
   function hydrateAsset(record) {
     if (!record) return record;
+    // repeatTileBuffer only exists on records written after the Half Brick/Half Drop cross-app
+    // handoff feature was added, so it's reconstructed the same way regardless of which era the
+    // rest of the record is from (see the file/thumb branch below for the legacy case this
+    // predates).
+    const { repeatTileBuffer, repeatTileType, ...withoutRepeatTile } = record;
+    const repeatTile = repeatTileBuffer ? new Blob([repeatTileBuffer], { type: repeatTileType || 'image/png' }) : (record.repeatTile || null);
     if (record.file || record.thumb) {
       // A record saved before this fix already has real Blob fields
-      // (from whatever it managed to store) - nothing to reconstruct.
-      return record;
+      // (from whatever it managed to store) - nothing else to reconstruct.
+      return Object.assign({}, withoutRepeatTile, { repeatTile });
     }
-    const { fileBuffer, fileType, thumbBuffer, thumbType, ...rest } = record;
+    const { fileBuffer, fileType, thumbBuffer, thumbType, ...rest } = withoutRepeatTile;
     return Object.assign({}, rest, {
       file: fileBuffer ? new Blob([fileBuffer], { type: fileType || 'image/png' }) : null,
       thumb: thumbBuffer ? new Blob([thumbBuffer], { type: thumbType || 'image/png' }) : null,
+      repeatTile,
     });
   }
 
@@ -277,10 +291,26 @@
    * canvas export already produces). Handles the dataURL -> Blob
    * conversion and thumbnail generation so an adapter only ever has
    * to call this one function.
+   *
+   * meta.repeatTileDataUrl (optional): a SECOND representation of the
+   * same design - the repeat-safe tile (see Pattern Playground's
+   * tsRenderSavedItemVariants). `file`/`thumb` stay the plain single
+   * ORIGINAL/SINGLE ARTWORK exactly as before (still what Creative
+   * Resizer's Single Artwork mode and every other existing caller
+   * gets, unchanged) - this is stored alongside it as `repeatTile`,
+   * for a caller that specifically needs something it can plain-grid-
+   * tile (Mock-up Studio) or that should drive Creative Resizer's own
+   * repeat mode. meta.repeatLayout ('halfbrick'/'halfdrop'; omitted or
+   * 'grid' means "no separate tile needed" and repeatTileDataUrl is
+   * expected to be absent) rides along as plain metadata so a
+   * consumer can tell what kind of repeat-safe tile it got without
+   * inspecting pixels.
    */
   async function addAssetFromDataUrl(projectId, dataUrl, meta) {
     const blob = await dataUrlToBlob(dataUrl);
-    return addAssetFromBlob(projectId, blob, meta);
+    meta = meta || {};
+    const repeatTileBlob = meta.repeatTileDataUrl ? await dataUrlToBlob(meta.repeatTileDataUrl) : null;
+    return addAssetFromBlob(projectId, blob, Object.assign({}, meta, { repeatTileBlob }));
   }
 
   async function addAssetFromBlob(projectId, blob, meta) {
@@ -289,9 +319,10 @@
     // Stored as ArrayBuffer + type, not as the Blob objects themselves -
     // see the hydrateAsset comment above for why. blob.arrayBuffer() is
     // supported on every browser this suite targets (iOS Safari 14+).
-    const [fileBuffer, thumbBuffer] = await Promise.all([
+    const [fileBuffer, thumbBuffer, repeatTileBuffer] = await Promise.all([
       blob.arrayBuffer(),
       thumb.arrayBuffer(),
+      meta.repeatTileBlob ? meta.repeatTileBlob.arrayBuffer() : Promise.resolve(null),
     ]);
     const record = {
       id: uid('asset'),
@@ -304,6 +335,9 @@
       height,
       thumbBuffer,
       thumbType: thumb.type || 'image/png',
+      repeatTileBuffer: repeatTileBuffer || null,
+      repeatTileType: meta.repeatTileBlob ? (meta.repeatTileBlob.type || 'image/png') : null,
+      repeatLayout: meta.repeatLayout || null,
       source: meta.source || null,
       derivedFrom: meta.derivedFrom || null,
       derivation: meta.derivation || null,
@@ -364,16 +398,29 @@
           name: a.name,
           width: a.width,
           height: a.height,
+          repeatLayout: a.repeatLayout || null,
           source: a.source,
           derivedFrom: a.derivedFrom,
           derivation: a.derivation,
           created: a.created,
         };
+        // repeatTile is converted independently of the main file below - a failure there
+        // shouldn't mark the whole asset skipped when the original artwork backed up fine (and
+        // vice versa isn't possible, since a missing repeatTile just means "no separate tile", not
+        // an error).
+        let repeatTile = null;
+        if (a.repeatTile) {
+          try {
+            repeatTile = await blobToDataUrl(a.repeatTile);
+          } catch (err) {
+            console.error('[suite] repeat-safe tile failed to back up, keeping the original artwork', a.id, a.name, err);
+          }
+        }
         try {
-          return Object.assign(base, { file: await blobToDataUrl(a.file) });
+          return Object.assign(base, { file: await blobToDataUrl(a.file), repeatTile });
         } catch (err) {
           console.error('[suite] asset failed to back up, skipping just this one', a.id, a.name, err);
-          return Object.assign(base, { file: null, skipped: true, skipReason: (err && err.message) || String(err) });
+          return Object.assign(base, { file: null, repeatTile: null, skipped: true, skipReason: (err && err.message) || String(err) });
         }
       })
     );
@@ -452,12 +499,25 @@
       }
       try {
         const blob = await dataUrlToBlob(a.file);
+        // repeatTile is best-effort here too - if it fails to decode, restore the asset anyway
+        // with just its original artwork rather than skipping the whole thing over a secondary
+        // representation.
+        let repeatTileBlob = null;
+        if (a.repeatTile) {
+          try {
+            repeatTileBlob = await dataUrlToBlob(a.repeatTile);
+          } catch (err) {
+            console.error('[suite] repeat-safe tile failed to import, keeping the original artwork', a.id, a.name, err);
+          }
+        }
         await addAssetFromBlob(project.id, blob, {
           kind: a.kind,
           name: a.name,
           source: a.source,
           derivedFrom: null,
           derivation: a.derivation,
+          repeatTileBlob,
+          repeatLayout: a.repeatLayout || null,
         });
         importedCount++;
       } catch (err) {

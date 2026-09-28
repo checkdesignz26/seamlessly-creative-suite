@@ -39,7 +39,7 @@
   const SEND_PX = 1800;
 
   function waitForHooks(tries) {
-    if (window.__scAllPortfolioItems && window.__scPortfolioItemDataUrl) {
+    if (window.__scAllPortfolioItems && (window.__scPortfolioItemVariants || window.__scPortfolioItemDataUrl)) {
       init();
       return;
     }
@@ -90,15 +90,24 @@
         const label = (item.ref && item.ref.name) || item.type;
         setStatusText(`sending ${i + 1}/${items.length}…`);
         try {
-          const dataUrl = await window.__scPortfolioItemDataUrl(item, SEND_PX);
-          if (!dataUrl) {
+          // __scPortfolioItemVariants (added for Half Brick/Half Drop) returns the ORIGINAL/SINGLE
+          // ARTWORK plus, when this is a non-Grid classic, a separate REPEAT-SAFE TILE and which
+          // repeat layout it is - see project-library.js's asset-shape comment for who reads those.
+          // Falls back to the older, single-image hook so this adapter still works against a
+          // not-yet-refrozen Playground copy.
+          const variants = window.__scPortfolioItemVariants
+            ? await window.__scPortfolioItemVariants(item, SEND_PX)
+            : { dataUrl: await window.__scPortfolioItemDataUrl(item, SEND_PX), repeatTileDataUrl: null, repeatLayout: null };
+          if (!variants || !variants.dataUrl) {
             failures.push({ name: label, message: 'no image was rendered for this item' });
             continue;
           }
-          await window.SCLibrary.addAssetFromDataUrl(projectId, dataUrl, {
+          await window.SCLibrary.addAssetFromDataUrl(projectId, variants.dataUrl, {
             kind: kindFor(item.type),
             name: label,
             source: { studio: 'playground' },
+            repeatTileDataUrl: variants.repeatTileDataUrl || null,
+            repeatLayout: variants.repeatLayout || null,
           });
           sent++;
         } catch (err) {

@@ -4276,7 +4276,8 @@ function regenerateAllCanvases() {
         }
     }
 
-    async function loadImage(file) {
+    async function loadImage(file, opts) {
+        opts = opts || {};
         await cleanupBeforeNewUpload();
 
         sourceFileMime = file.type || '';
@@ -4315,9 +4316,20 @@ function regenerateAllCanvases() {
             const sourceH = prep.originalHeight || uploadedSourceHeight;
             const sourceIsTwoToOne = sourceLooksTwoToOne(sourceW, sourceH);
 
-            // If a converter was selected before uploading but the incoming file is
-            // square (or otherwise not approximately 2:1), do not force-convert it.
-            if (tileSourceMode !== 'square' && !sourceIsTwoToOne) {
+            if (opts.repeatModeHint === 'halfbrick' || opts.repeatModeHint === 'halfdrop') {
+                // An explicit hint (currently only the Seamlessly Creative suite adapter, handing
+                // over Pattern Playground's own repeat-safe tile - see resizer-adapter.js) is
+                // trusted outright rather than guessed from the file's aspect ratio: Playground
+                // already knows exactly which layout this is, so there's nothing to detect.
+                tileSourceMode = opts.repeatModeHint;
+                syncTileSourceButtons();
+                addDebugStep(`Repeat mode set from caller: ${opts.repeatModeHint}`);
+            } else if (opts.repeatModeHint === 'grid') {
+                tileSourceMode = 'square';
+                syncTileSourceButtons();
+            } else if (tileSourceMode !== 'square' && !sourceIsTwoToOne) {
+                // If a converter was selected before uploading but the incoming file is
+                // square (or otherwise not approximately 2:1), do not force-convert it.
                 const rejectedMode = tileSourceMode;
                 tileSourceMode = 'square';
                 repeatMode = 'grid';
@@ -4327,10 +4339,13 @@ function regenerateAllCanvases() {
                 setDebugWarning(`This file is ${sourceW} × ${sourceH}px, so it was recognised as a square tile. The ${rejectedMode === 'halfdrop' ? 'half-drop' : 'half-brick'} converter was not applied.`);
                 showToast('Square tile detected — switched back to 3600 square', 2800);
             } else if (tileSourceMode === 'square' && sourceIsTwoToOne) {
-                // Keep the existing convenient auto-detection for genuine 2:1 files.
-                tileSourceMode = 'halfbrick';
+                // Keep the existing convenient auto-detection for genuine 2:1 files - orientation-
+                // aware (tall -> half-brick, wide -> half-drop, matching the same convention
+                // makeSquareWorkingTileFromSource's own crop branches below already assume) rather
+                // than always guessing half-brick regardless of which way the rectangle runs.
+                tileSourceMode = sourceH > sourceW ? 'halfbrick' : 'halfdrop';
                 syncTileSourceButtons();
-                addDebugStep('Auto converter selected: half-brick source');
+                addDebugStep(`Auto converter selected: ${tileSourceMode} source`);
             }
 
             originalImg = makeSquareWorkingTileFromSource(applyBackgroundToCanvas(uploadedSourceCanvas), tileSourceMode);
@@ -4551,7 +4566,7 @@ function regenerateAllCanvases() {
         return out;
     };
 
-    async function handlePickedPatternFile(file) {
+    async function handlePickedPatternFile(file, opts) {
         if (!file) return;
         resetDiagnostics(file);
         const allowed = /image\/(png|jpe?g|webp)/i.test(file.type || '') || /\.(png|jpe?g|webp)$/i.test(file.name || '');
@@ -4561,7 +4576,7 @@ function regenerateAllCanvases() {
         }
         try {
             showToast('✧ Loading pattern… ✧', 1200);
-            await loadImage(file);
+            await loadImage(file, opts);
         } catch (err) {
             console.error('Pattern upload failed:', err);
             removeImage();
