@@ -5133,6 +5133,16 @@ document.getElementById('quickReplaceBtn').addEventListener('click', () => {
   document.getElementById('quickUploadCard').classList.remove('hidden');
   renderAllPatternSwatchRows();
   renderQuickCardsSequentially(ALL_QUICK_PRODUCTS);
+  // Real gap found from testing: clearing the pattern here only changed
+  // in-memory state - the 20s-interval autosave (MSTUDIO_IDB_AUTOSAVE_KEY)
+  // is what actually gets restored on the next load (see
+  // checkForAutosaveRecovery), so unless a tick happened to fire in the
+  // meantime, reloading right after "replace" silently brought the old
+  // pattern straight back, making the button look like it didn't work.
+  // scheduleAutosave() is this app's own existing debounced-save-with-
+  // status path (already used for other real edits), so this makes
+  // "replace" a real, persisted reset instead of a same-session-only one.
+  scheduleAutosave();
 });
 
 document.getElementById('resetScaleBtn')?.addEventListener('click', () => {
