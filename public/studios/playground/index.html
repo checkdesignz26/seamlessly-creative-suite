@@ -5372,7 +5372,8 @@ refreshHeroThumbs();
         </div></div>
       </aside>
       <section class="tsPreviewPanel">
-        <div class="tsPreviewTop"><h3 id="tsStudioTitle">Stripe Engine</h3><div class="seg"><button id="tsSingle" class="active">single tile</button><button id="tsRepeat">3×3 repeat</button><button id="tsBrick">brick repeat</button></div></div>
+        <div class="tsPreviewTop"><h3 id="tsStudioTitle">Stripe Engine</h3><div class="seg"><button id="tsSingle" class="active">single tile</button><button id="tsRepeat">3×3 repeat</button></div></div>
+        <div class="tsPreviewTop" id="tsRepeatLayoutRow" style="display:none"><h3 style="text-transform:none;font-size:12px;color:var(--muted)">repeat layout</h3><div class="seg"><button id="tsLayoutGrid" class="active">grid</button><button id="tsLayoutHalfBrick">half brick</button><button id="tsLayoutHalfDrop">half drop</button></div></div>
         <div class="tsCanvasWrap"><canvas id="tsPreview" width="900" height="900"></canvas></div>
         <div class="tsBelow"><div class="tsScaleBox"><div class="tsScaleTop"><span>Pattern Scale <em id="tsScaleName" class="tsScaleName">normal</em></span><span id="tsScaleValue">100%</span></div><input id="tsPatternScale" type="range" min="25" max="200" value="100"><div class="tsScaleTicks"><span>tiny</span><span>normal</span><span>bold</span></div></div><button id="tsGuides" class="small active">guides on</button></div>
       </section>
@@ -5689,7 +5690,7 @@ let state, selected=0, previewMode='single', showGuides=true, saved=[];
 let tsUndoStack=[], tsRedoStack=[], tsRestoring=false;
 function copy(o){return JSON.parse(JSON.stringify(o));}
 function tsSnapshot(){return copy({state,selected,previewMode,showGuides});}
-function tsRestore(snap){if(!snap)return;tsRestoring=true;state=copy(snap.state);selected=snap.selected||0;previewMode=snap.previewMode||'single';showGuides=snap.showGuides!==false;selectedBlendGroupId=null;customPathPoints=[];resetBlendPickers();setSeg();renderAll();tsRestoring=false;}
+function tsRestore(snap){if(!snap)return;tsRestoring=true;state=copy(snap.state);selected=snap.selected||0;previewMode=normalisePreviewMode(snap.previewMode);showGuides=snap.showGuides!==false;selectedBlendGroupId=null;customPathPoints=[];resetBlendPickers();setSeg();renderAll();tsRestoring=false;}
 // Quick save/load, reachable from inside Classics Studio itself - its overlay is full-screen, so
 // the main canvas's own quick save/load buttons were never actually clickable while this was open.
 // Shares the same single QUICKSAVE_KEY slot as the main canvas and Background Studio (tagged with
@@ -5791,14 +5792,22 @@ function stripeDefaults(){return {type:'stripes',bg:true,bgColor:'#ffffff',bgOpa
  {kind:'stripe',name:'black stripe 3',color:'#111111',pos:78,width:6,gap:0,opacity:100,blend:'normal',direction:'vertical',rotate:0,visible:true}
 ]};}
 function dotsDefault(){
- const pts=[0,50,100];
+ const corners=[0,100];
  let layers=[];
- pts.forEach((y,ri)=>pts.forEach((x,ci)=>layers.push({
-  // v61 blueprint: nine BIG editable polka-dot placeholders, like the skeleton view.
-  // Edge/corner dots are centred on tile edges so the single tile is visibly seamless.
-  kind:'dot',name:`black dot ${ri+1}-${ci+1}`,color:'#111111',x,y,pos:x,width:58,gap:0,opacity:100,blend:'normal',direction:'single',rotate:y,visible:true
+ corners.forEach((y,ri)=>corners.forEach((x,ci)=>layers.push({
+  // v61 blueprint, revised: a corner dot (mirrored to all 4 tile corners, so the single tile is
+  // visibly seamless) plus one centre dot - a classic quincunx/five-of-dice arrangement. The old
+  // 3x3 placeholder grid (pts 0/50/100 on both axes) put a real dot every 50% of the cell on BOTH
+  // axes, so its true repeat pitch was half the cell - and Half Brick/Half Drop's 50%-of-cell row/
+  // column offset landed exactly on top of an existing dot, making them indistinguishable from
+  // Grid at these default settings (still genuinely seamless, just visually invisible - see the
+  // Polka Dots repeat-layout upgrade). Corner+centre has no dot repeating at half the cell on
+  // either axis alone, so switching Grid -> Half Brick/Half Drop is visibly different immediately,
+  // without changing what "Half Brick"/"Half Drop" mathematically mean.
+  kind:'dot',name:`black dot corner ${ri+1}-${ci+1}`,color:'#111111',x,y,pos:x,width:58,gap:0,opacity:100,blend:'normal',direction:'single',rotate:y,visible:true
  })));
- return {type:'dots',bg:true,bgColor:'#ffffff',bgOpacity:100,scale:100,layers};
+ layers.push({kind:'dot',name:'black dot centre',color:'#111111',x:50,y:50,pos:50,width:58,gap:0,opacity:100,blend:'normal',direction:'single',rotate:50,visible:true});
+ return {type:'dots',bg:true,bgColor:'#ffffff',bgOpacity:100,scale:100,layers,repeatLayout:'grid'};
 }
 function checksDefault(){return {type:'checks',bg:true,bgColor:'#ffffff',bgOpacity:100,scale:100,layers:[
  // v69: checks is a real 2x2 checkerboard of four independently paintable squares (not
@@ -6643,7 +6652,15 @@ function wire(){
  $('tsSurfaceTextureScale').oninput=e=>{tsPushHistory();if(state.surfaceTexture)state.surfaceTexture.scale=+e.target.value;renderAll();};
  $('tsWobbleToggle').onclick=()=>tsMutate(()=>{state.handDrawn=state.handDrawn||{enabled:false,amount:35};state.handDrawn.enabled=!state.handDrawn.enabled;});
  $('tsWobbleAmount').oninput=e=>{tsPushHistory();state.handDrawn=state.handDrawn||{enabled:true,amount:35};state.handDrawn.amount=+e.target.value;renderAll();};
- $('tsSingle').onclick=()=>{previewMode='single';setSeg();renderAll();};$('tsRepeat').onclick=()=>{previewMode='repeat';setSeg();renderAll();};$('tsBrick').onclick=()=>{previewMode='brick';setSeg();renderAll();};$('tsGuides').onclick=()=>{showGuides=!showGuides;$('tsGuides').classList.toggle('active',showGuides);renderAll();};
+ $('tsSingle').onclick=()=>{previewMode='single';setSeg();renderAll();};$('tsRepeat').onclick=()=>{previewMode='repeat';setSeg();renderAll();};$('tsGuides').onclick=()=>{showGuides=!showGuides;$('tsGuides').classList.toggle('active',showGuides);renderAll();};
+ // Repeat layout (Grid | Half Brick | Half Drop) - Polka Dots only (see the display toggle next
+ // to tsScatterDots above), separate from view mode (single tile / 3x3 repeat) above: this picks
+ // the actual repeat mathematics, not just how it's previewed. Lives on state itself (not a
+ // standalone variable like previewMode) so it saves/restores automatically everywhere state
+ // already does - Save Classic, the filmstrip, Quick Save/Load, undo/redo - with no extra code.
+ if($('tsLayoutGrid'))$('tsLayoutGrid').onclick=()=>{tsPushHistory();state.repeatLayout='grid';renderAll();};
+ if($('tsLayoutHalfBrick'))$('tsLayoutHalfBrick').onclick=()=>{tsPushHistory();state.repeatLayout='halfbrick';renderAll();};
+ if($('tsLayoutHalfDrop'))$('tsLayoutHalfDrop').onclick=()=>{tsPushHistory();state.repeatLayout='halfdrop';renderAll();};
  $('tsAddLayer').onclick=()=>{tsPushHistory();let base=state.layers[selected]||{kind:state.type==='dots'?'dot':state.type==='argyle'?'diamond':(state.type==='checks'||state.type==='gingham')?'check':'stripe',chevron:state.type==='chevron',direction:'vertical',rotate:0,gap:state.type==='chevron'?45:18,width:18,opacity:100,blend:'normal'};let l=copy(base);l.name=(state.type==='dots'?'dot':state.type==='argyle'?'diamond':state.type==='chevron'?'chevron':'stripe')+' '+(state.layers.length+1);l.color=palette[state.layers.length%palette.length];l.pos=((base.pos||0)+(base.width||12)+(base.gap||10))%100;l.visible=true;state.layers.splice(selected+1,0,l);selected++;renderAll();};
  $('tsRemoveLayer').onclick=()=>{if(state.layers.length){tsPushHistory();state.layers.splice(selected,1);selected=Math.max(0,selected-1);renderAll();}};
  if($('tsScatterDots'))$('tsScatterDots').onclick=()=>{
@@ -6737,7 +6754,17 @@ function wire(){
  if($('tsAllGaps'))$('tsAllGaps').oninput=()=>applyAllStripe('gap',$('tsAllGaps').value);
  $('tsReset').onclick=()=>{tsPushHistory();state=defaultFor(state.type);selected=0;renderAll();};$('tsSave').onclick=saveTexture; if($('tsUndo'))$('tsUndo').onclick=tsUndo; if($('tsRedo'))$('tsRedo').onclick=tsRedo; if($('tsQuickSave'))$('tsQuickSave').onclick=tsQuickSaveNow; if($('tsQuickLoad'))$('tsQuickLoad').onclick=tsQuickLoadNow; const ov=$('textureStudioOverlay'); let tsTap=null; ov.addEventListener('touchend',e=>{if(!ov.classList.contains('open'))return; if(e.changedTouches.length===2||e.touches.length===2){e.preventDefault();tsUndo();} if(e.changedTouches.length===3||e.touches.length===3){e.preventDefault();tsRedo();}}, {passive:false});
  if($('tsApplyToPKM'))$('tsApplyToPKM').onclick=applyToPKM;
- if($('tsDownload'))$('tsDownload').onclick=()=>window.openDownloadPanel('download classic pattern',async(w,dpi)=>{const canvas=document.createElement('canvas');canvas.width=w;canvas.height=w;renderPreview(canvas,w,state,'single',false);const bytes=await canvasToDpiPngBytes(canvas,dpi);triggerBlobDownload(new Blob([bytes],{type:'image/png'}),`${slugName(state.type||'classic')}-${w}x${w}-${dpi}dpi.png`);},w=>`Exports the current single tile as a seamless ${w}×${w}px PNG.`);
+ // Half Brick/Half Drop tiles are genuinely not square (see the note above drawRepeatUnit) - `w`
+ // here is a REFERENCE size (what a Grid tile's own side, or a Half Brick/Drop tile's single cell,
+ // is capped at), not a guaranteed final width. renderClassicsRepeatPreview sets the canvas's real
+ // (possibly taller/wider) dimensions itself; the filename/description read those back afterwards
+ // rather than assuming w×w, so a Half Brick export is honestly named e.g. 1800x3600, not 1800x1800.
+ if($('tsDownload'))$('tsDownload').onclick=()=>window.openDownloadPanel('download classic pattern',async(w,dpi)=>{const canvas=document.createElement('canvas');renderClassicsRepeatPreview(canvas,w,state,'single',false);const bytes=await canvasToDpiPngBytes(canvas,dpi);triggerBlobDownload(new Blob([bytes],{type:'image/png'}),`${slugName(state.type||'classic')}-${canvas.width}x${canvas.height}-${dpi}dpi.png`);},w=>{
+  const layout=state.repeatLayout||'grid';
+  if(layout==='halfbrick')return `Exports the current Half Brick tile as a seamless ${w}×${w*2}px PNG.`;
+  if(layout==='halfdrop')return `Exports the current Half Drop tile as a seamless ${w*2}×${w}px PNG.`;
+  return `Exports the current single tile as a seamless ${w}×${w}px PNG.`;
+ });
  if($('tsSelectMode'))$('tsSelectMode').onclick=tsToggleSelectMode;
  if($('tsSelectAll'))$('tsSelectAll').onclick=()=>{saved.forEach((_,i)=>tsSelectedIdx.add(i));renderFilmstrip();tsUpdateSelectUI();};
  if($('tsSelectNone'))$('tsSelectNone').onclick=()=>{tsSelectedIdx.clear();renderFilmstrip();tsUpdateSelectUI();};
@@ -6747,10 +6774,21 @@ function wire(){
  if($('tsGreyModeBtn'))$('tsGreyModeBtn').onclick=()=>tsShowMode('grey');
  if($('tsColourModeBtn'))$('tsColourModeBtn').onclick=()=>tsShowMode('colour');
 }
-function setSeg(){['tsSingle','tsRepeat','tsBrick'].forEach(id=>$(id).classList.remove('active'));$(previewMode==='single'?'tsSingle':previewMode==='repeat'?'tsRepeat':'tsBrick').classList.add('active');}
+function setSeg(){['tsSingle','tsRepeat'].forEach(id=>$(id).classList.remove('active'));$(previewMode==='single'?'tsSingle':'tsRepeat').classList.add('active');}
+// Backward compatibility: a classic saved before this upgrade may still carry the old
+// previewMode==='brick' view-mode value (the removed top-toolbar "brick repeat" button - a
+// preview-only visual experiment with no real seamless mathematics or export behind it, replaced
+// by the repeat layout system below). Treat it as the closest still-valid view mode, 'repeat', so
+// nothing crashes or shows a stuck-inactive toolbar for an old save.
+function normalisePreviewMode(mode){return mode==='brick'?'repeat':(mode||'single');}
+function setRepeatLayoutSeg(){
+ const layout=(state&&state.repeatLayout)||'grid';
+ const activeId=layout==='halfbrick'?'tsLayoutHalfBrick':layout==='halfdrop'?'tsLayoutHalfDrop':'tsLayoutGrid';
+ ['tsLayoutGrid','tsLayoutHalfBrick','tsLayoutHalfDrop'].forEach(id=>{const el=$(id); if(el)el.classList.toggle('active',id===activeId);});
+}
 function syncSurfaceTextureUI(){const tex=state.surfaceTexture;const activeType=tex&&tex.type?tex.type:'none';$('tsSurfaceTextureGrid')?.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.tstex===activeType));const row=$('tsSurfaceTextureIntensityRow');if(row)row.style.display=activeType==='none'?'none':'grid';if($('tsSurfaceTextureScale'))$('tsSurfaceTextureScale').value=(tex&&tex.scale)||60;}
 function syncHandDrawnUI(){const hd=state.handDrawn;const on=!!(hd&&hd.enabled);$('tsWobbleToggle')?.classList.toggle('on',on);const row=$('tsWobbleIntensityRow');if(row)row.style.display=on?'grid':'none';if($('tsWobbleAmount'))$('tsWobbleAmount').value=(hd&&hd.amount)||35;}
-function renderAll(sync=true){refreshAllLayerNames();syncSurfaceTextureUI();syncHandDrawnUI();tsScheduleWipAutosave();$('tsBgToggle').classList.toggle('on',!!state.bg);$('tsBgOpacity').value=state.bgOpacity??100;if(document.getElementById('textureStudioOverlay')?.classList.contains('open'))cmSyncBgColourUI();$('tsPatternScale').value=state.scale||100;$('tsScaleValue').textContent=(state.scale||100)+'%'; if($('tsScaleName'))$('tsScaleName').textContent=scaleName(state.scale||100);$('tsStudioTitle').textContent=tsStudioLabel(state.type)+' Studio';document.querySelectorAll('#tsTabs button').forEach(b=>b.classList.toggle('active',b.dataset.type===state.type));renderLayers();renderInspector(sync);renderPalette();renderColourGrid();state.__selectedIndex=selected; renderPreview($('tsPreview'),900,state,previewMode,showGuides); delete state.__selectedIndex;
+function renderAll(sync=true){refreshAllLayerNames();syncSurfaceTextureUI();syncHandDrawnUI();tsScheduleWipAutosave();$('tsBgToggle').classList.toggle('on',!!state.bg);$('tsBgOpacity').value=state.bgOpacity??100;if(document.getElementById('textureStudioOverlay')?.classList.contains('open'))cmSyncBgColourUI();$('tsPatternScale').value=state.scale||100;$('tsScaleValue').textContent=(state.scale||100)+'%'; if($('tsScaleName'))$('tsScaleName').textContent=scaleName(state.scale||100);$('tsStudioTitle').textContent=tsStudioLabel(state.type)+' Studio';document.querySelectorAll('#tsTabs button').forEach(b=>b.classList.toggle('active',b.dataset.type===state.type));renderLayers();renderInspector(sync);renderPalette();renderColourGrid();setRepeatLayoutSeg();state.__selectedIndex=selected; renderClassicsRepeatPreview($('tsPreview'),900,state,previewMode,showGuides); delete state.__selectedIndex;
  // renderFilmstrip() used to run here too, on every single edit - fine with a couple of saved
  // patterns, but with a real library of them it means fully re-rendering every saved thumbnail
  // (each running the same wobble/surface-texture drawing as the live canvas) on every slider
@@ -6770,6 +6808,7 @@ function renderAll(sync=true){refreshAllLayerNames();syncSurfaceTextureUI();sync
  if($('tsGlobalDotBox'))$('tsGlobalDotBox').style.display=dotBased?'':'none';
  if($('tsScatterDots'))$('tsScatterDots').style.display=(state.type==='dots')?'':'none';
  if($('tsBlendPathBox'))$('tsBlendPathBox').style.display=(state.type==='dots')?'':'none';
+ if($('tsRepeatLayoutRow'))$('tsRepeatLayoutRow').style.display=(state.type==='dots')?'':'none';
  syncBlendPathUI();
 }
 function renderLayers(){const list=$('tsLayerList');list.innerHTML='';if($('tsUnlockAll'))$('tsUnlockAll').style.display=state.layers.some(l=>l.manual)?'':'none';if(!state.layers.length){list.innerHTML='<div class="tsEmpty">No layers yet.</div>';return;}const dirLabel={vertical:'Vertical',horizontal:'Horizontal',diag1:'Diagonal /',diag2:'Diagonal \\'};const dirIcon={vertical:'│',horizontal:'─',diag1:'╱',diag2:'╲'};state.layers.forEach((l,i)=>{let card=document.createElement('div');card.className='tsLayerCard '+(i===selected?'active':'');let label=dirLabel[l.direction]||'Vertical';let icon=(l.kind==='dot'?'●':l.chevron?'︿':(dirIcon[l.direction]||'│'));card.innerHTML=`<div class="tsLayerNum">${i+1}</div><div class="tsLayerSwatch" style="background:${l.color}"><span>${icon}</span></div><div class="tsLayerInfo"><b>${l.name||('layer '+(i+1))}</b><small>${label}</small></div><div class="tsLayerActions">${l.manual?'<button class="tsLockBtn" title="Tap to unlock - lets colour-mode preview cycling recolour this layer again">🔒</button>':''}<button class="tsEye">${l.visible?'shown':'hidden'}</button></div>`;card.onclick=e=>{if(e.target.classList.contains('tsEye')){l.visible=!l.visible;}else if(e.target.classList.contains('tsLockBtn')){l.manual=false;}else selected=i;renderAll();};list.appendChild(card);});}
@@ -6866,13 +6905,15 @@ function tsChevronBandPath(ctx,center,halfWidth,yFrom,yTo,periodPx,amp,round,wob
  for(let i=right.length-1;i>=0;i--)ctx.lineTo(right[i][0],right[i][1]);
  ctx.closePath();
 }
-function drawOneCell(ctx,cell,st,ox=0,oy=0,mirrorY=true){
- // Brick/half-drop rows are horizontally shifted relative to their neighbours, so a shape sitting
- // right on a cell's top/bottom edge no longer lines up with whatever mirror copy the row above or
- // below would draw at that same seam - drawing both anyway just superimposes two mismatched phases
- // and hides the stagger entirely. mirrorY=false (passed only by the brick preview loop) keeps each
- // row's own edge-straddling half-shape at its own correct (shifted) position instead.
+function drawOneCell(ctx,cell,st,ox=0,oy=0,mirrorY=true,mirrorX=true){
+ // mirrorY/mirrorX default to true (every caller except one gets the original, unchanged self-
+ // mirroring behaviour). The one exception is the legacy renderPreview below, which still passes
+ // mirrorY=false for its old, removed-from-the-UI 'brick' mode (mode!=='brick') so a shifted row's
+ // edge-straddling shape doesn't double up with its differently-phased neighbour; that old preview
+ // hack is kept working as-is for any previously saved item, but the current Half Brick/Half Drop
+ // repeat layout is built by drawRepeatUnit/drawDotLayersRaw instead and no longer touches this flag.
  const dyMirror=mirrorY?[-cell,0,cell]:[0];
+ const dxMirror=mirrorX?[-cell,0,cell]:[0];
  ctx.save();ctx.translate(ox,oy);ctx.beginPath();ctx.rect(0,0,cell,cell);ctx.clip();if(st.bg){ctx.globalAlpha=(st.bgOpacity??100)/100;ctx.fillStyle=st.bgColor||'#fff';ctx.fillRect(0,0,cell,cell);ctx.globalAlpha=1;}let layers=st.layers||[];layers.forEach((l,idx)=>{if(!l.visible)return;ctx.save();ctx.globalAlpha=(l.opacity??100)/100;ctx.globalCompositeOperation=compositeFor(l.blend);let ww=pxFromSlider(l.width,cell);
  // The texture pattern tile used to always be rendered at the FULL tile size (cell), regardless
  // of how small the shape being filled actually is. A watercolour blob is drawn many tile-pixels
@@ -6897,7 +6938,7 @@ function drawOneCell(ctx,cell,st,ox=0,oy=0,mirrorY=true){
  let y=((l.y ?? l.rotate ?? 50)/100)*cell;
  const wobAmp=Math.min(tsHandDrawnAmp(st,cell),r*0.4);
  const spin=l.spin||0;
- [-cell,0,cell].forEach(dx=>dyMirror.forEach(dy=>{if(wobAmp){tsWobblyCirclePath(ctx,x+dx,y+dy,r,idx*13+7,wobAmp,spin);ctx.fill();}else{ctx.beginPath();ctx.arc(x+dx,y+dy,r,0,Math.PI*2);ctx.fill();} if(idx===st.__selectedIndex)tsStrokeSelected(ctx,cell,()=>{
+ dxMirror.forEach(dx=>dyMirror.forEach(dy=>{if(wobAmp){tsWobblyCirclePath(ctx,x+dx,y+dy,r,idx*13+7,wobAmp,spin);ctx.fill();}else{ctx.beginPath();ctx.arc(x+dx,y+dy,r,0,Math.PI*2);ctx.fill();} if(idx===st.__selectedIndex)tsStrokeSelected(ctx,cell,()=>{
   // Trace the SAME wobbly outline as the fill (just a hair bigger) rather than a plain circle -
   // otherwise the highlight visibly cuts across the wobble's peaks/valleys instead of hugging them.
   if(wobAmp){tsWobblyCirclePath(ctx,x+dx,y+dy,r+tsHighlightMargin(cell),idx*13+7,wobAmp,spin);}else{ctx.beginPath();ctx.arc(x+dx,y+dy,r+tsHighlightMargin(cell),0,Math.PI*2);}
@@ -6984,6 +7025,146 @@ function drawTile(ctx,x,y,w,st){ctx.save();ctx.translate(x,y);ctx.beginPath();ct
  // do exactly that). Capping at `w` means a single exported/previewed tile is always a whole,
  // genuinely seamless period, at any scale setting.
  let cell=Math.max(40,Math.min(w,w*scale));for(let yy=-cell;yy<w+cell;yy+=cell){for(let xx=-cell;xx<w+cell;xx+=cell){drawOneCell(ctx,cell,st,xx,yy);}}ctx.restore();}
+
+// --- Polka Dots repeat layout: Grid | Half Brick | Half Drop -------------------------------
+//
+// Grid is one plain cell, tiled - exactly what drawTile/renderPreview already did, untouched.
+// Half Brick / Half Drop need a genuinely bigger seamless period than one cell: a real half-brick
+// repeat alternates each row's horizontal position by half a cell, which only repeats itself again
+// every TWO rows - so the true repeat unit is one cell wide but two cells tall (unshifted row,
+// then a row shifted right by half a cell). Half Drop is the same idea on the other axis: one cell
+// tall, two cells wide. This is standard textile-repeat construction, not a shortcut - it's the
+// smallest tile that can be repeated in a perfectly plain grid (no per-row/per-column offset
+// needed at tiling time) and still reproduce the correct alternating pattern forever.
+//
+// Deliberately kept SEPARATE from drawTile/renderPreview above (which stay exactly as they were,
+// always a plain single-cell square) because those two are reused far beyond Classics Studio's own
+// live editing view - filmstrip thumbnails, "apply to pattern" (window.tsRenderToTileCanvas, whose
+// result gets drawn into the main canvas's own square-tile grid via a plain drawImage per slot -
+// a taller/wider canvas there would misalign that whole grid), zip batch export, and Seamlessly
+// Creative's own portfolio "send to project" render all call them assuming a plain square tile.
+// Reworking every one of those to be repeat-layout-aware is out of scope for this upgrade; a Half
+// Brick/Half Drop pattern only escapes as its true (non-square) seamless shape through the two
+// places this task is actually about - Classics Studio's own live preview and its Download PNG
+// button - via renderClassicsRepeatPreview below. Every other consumer keeps treating a Polka Dots
+// pattern as a plain single cell, same as it always has.
+function repeatUnitSize(cell,layout){
+ if(layout==='halfbrick')return{w:cell,h:cell*2};
+ if(layout==='halfdrop')return{w:cell*2,h:cell};
+ return{w:cell,h:cell};
+}
+// Draws every visible dot-kind layer of st ONCE at absolute offset (ox,oy), with no clip of its
+// own and no dxMirror/dyMirror self-completion (contrast drawOneCell, which clips to its own
+// [0,cell]x[0,cell] box and self-mirrors within it - correct for Grid, where every neighbour is the
+// same phase, but wrong for a brick/drop row or column, whose real neighbour is a DIFFERENT phase).
+// Used only to build brick/drop repeat units below: the caller sets ONE outer clip over the whole
+// unit first, then calls this repeatedly at a march of offsets - whatever falls inside that shared
+// clip survives, so a dot near one row/column's edge is completed by whatever the actual
+// neighbouring row/column draws there, rather than a same-phase copy of itself.
+function drawDotLayersRaw(ctx,cell,st,ox,oy){
+ ctx.save();ctx.translate(ox,oy);
+ (st.layers||[]).forEach((l,idx)=>{
+  if(!l.visible||l.kind!=='dot')return;
+  ctx.save();ctx.globalAlpha=(l.opacity??100)/100;ctx.globalCompositeOperation=compositeFor(l.blend);
+  let ww=pxFromSlider(l.width,cell);
+  const shapeFootprint=ww*2;
+  const texFloor=(st&&st.surfaceTexture&&st.surfaceTexture.type==='watercolour')?110:40;
+  ctx.fillStyle=tsGetSurfaceTexturePattern(ctx,l.color||'#000',Math.min(cell,200,Math.max(shapeFootprint*1.2,texFloor)),st)||(l.color||'#000');
+  let r=ww;
+  let x=((l.x ?? l.pos ?? 50)/100)*cell;
+  let y=((l.y ?? l.rotate ?? 50)/100)*cell;
+  const wobAmp=Math.min(tsHandDrawnAmp(st,cell),r*0.4);
+  const spin=l.spin||0;
+  if(wobAmp){tsWobblyCirclePath(ctx,x,y,r,idx*13+7,wobAmp,spin);ctx.fill();}else{ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();}
+  if(idx===st.__selectedIndex)tsStrokeSelected(ctx,cell,()=>{
+   if(wobAmp){tsWobblyCirclePath(ctx,x,y,r+tsHighlightMargin(cell),idx*13+7,wobAmp,spin);}else{ctx.beginPath();ctx.arc(x,y,r+tsHighlightMargin(cell),0,Math.PI*2);}
+   ctx.stroke();
+  });
+  ctx.restore();
+ });
+ ctx.restore();
+}
+function drawRepeatUnit(ctx,cell,st,layout){
+ if(layout==='halfbrick'||layout==='halfdrop'){
+  const{w:unitW,h:unitH}=repeatUnitSize(cell,layout);
+  // The caller has already clipped to this unit's own [0,unitW]x[0,unitH] box, so the bg fill and
+  // every dot pass below only ever paint within it.
+  if(st.bg){ctx.save();ctx.globalAlpha=(st.bgOpacity??100)/100;ctx.fillStyle=st.bgColor||'#fff';ctx.fillRect(0,0,unitW,unitH);ctx.restore();}
+  if(layout==='halfbrick'){
+   // Four row-passes: a phantom row above the unit and one below it, plus the real two rows.
+   // row0 (unshifted) and row1 (shifted by cell/2) are NOT each clipped to their own cell height -
+   // they share the single outer unit clip, so a dot that lands on the row0/row1 boundary from
+   // EITHER row simply renders as an ordinary, uncropped circle (it isn't a clip edge any more).
+   // Only the unit's true outer edges (y=0, y=2*cell) need edge completion, which is what the
+   // phantom rows supply: row -1 has the SAME phase as row1 (periodicity), so the sliver of its
+   // content that spills below y=0 is exactly what row0's own top edge needs; row 2 mirrors this
+   // for the unit's bottom edge.
+   for(let row=-1; row<=2; row++){
+    const oy=row*cell;
+    const shifted=(((row%2)+2)%2)!==0;
+    const baseOx=shifted?cell/2:0;
+    [-cell,0,cell].forEach(dx=>drawDotLayersRaw(ctx,cell,st,baseOx+dx,oy));
+   }
+  }else{
+   // Same idea, transposed: columns instead of rows, vertical shift instead of horizontal.
+   for(let col=-1; col<=2; col++){
+    const ox=col*cell;
+    const shifted=(((col%2)+2)%2)!==0;
+    const baseOy=shifted?cell/2:0;
+    [-cell,0,cell].forEach(dy=>drawDotLayersRaw(ctx,cell,st,ox,baseOy+dy));
+   }
+  }
+ }else{
+  drawOneCell(ctx,cell,st,0,0);
+ }
+}
+// The one place Single Tile view, the 3x3 preview and Download PNG all get their pixels from -
+// preview and export can never disagree about where the seams are, because both literally call
+// this same function. mode==='single' sizes the canvas to the tile's own true (possibly non-
+// square) dimensions; the repeat/3x3 mode tiles that same unit in a plain grid, which is valid by
+// construction since the unit already is one full, genuine period.
+function renderClassicsRepeatPreview(canvas,size,st,mode,guides){
+ const layout=st.repeatLayout||'grid';
+ const ctx=canvas.getContext('2d');
+ if(mode==='single'){
+  const scale=(st.scale||100)/100;
+  const cell=Math.max(40,Math.min(size,size*scale));
+  const{w:unitW,h:unitH}=repeatUnitSize(cell,layout);
+  const cw=Math.round(unitW),ch=Math.round(unitH);
+  if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch;}
+  ctx.clearRect(0,0,cw,ch);ctx.fillStyle='#fff';ctx.fillRect(0,0,cw,ch);
+  ctx.save();ctx.beginPath();ctx.rect(0,0,unitW,unitH);ctx.clip();
+  drawRepeatUnit(ctx,cell,st,layout);
+  ctx.restore();
+  if(canvas.id==='tsPreview'){
+   // #tsPreview's CSS hardcodes aspect-ratio:1 (every other classic type's single tile always was
+   // square) - a genuine Half Brick/Half Drop tile isn't, so the on-screen box needs to match its
+   // real shape or the correct, correctly-drawn pixels would just get squashed/stretched back into
+   // looking square again. Reset (not just override) for grid, so switching back to it doesn't
+   // leave a stale non-square box behind.
+   canvas.style.aspectRatio=(cw&&ch)?(cw+'/'+ch):'';
+   const gsize=Math.min(cw,ch); drawDotSnapGuides(ctx,gsize); if(st.type==='dots')drawBlendPathPreview(ctx,gsize);
+  }
+  return;
+ }
+ if(canvas.width!==size||canvas.height!==size){canvas.width=size;canvas.height=size;}
+ ctx.clearRect(0,0,size,size);ctx.fillStyle='#fff';ctx.fillRect(0,0,size,size);
+ const scale=(st.scale||100)/100;
+ const cell=Math.max(40,(size/3)*scale);
+ const{w:unitW,h:unitH}=repeatUnitSize(cell,layout);
+ for(let uy=-unitH; uy<size+unitH; uy+=unitH){
+  for(let ux=-unitW; ux<size+unitW; ux+=unitW){
+   ctx.save();ctx.translate(ux,uy);ctx.beginPath();ctx.rect(0,0,unitW,unitH);ctx.clip();
+   drawRepeatUnit(ctx,cell,st,layout);
+   ctx.restore();
+  }
+ }
+ if(guides){
+  ctx.strokeStyle='rgba(20,20,35,.22)';ctx.lineWidth=1;
+  for(let uy=-unitH; uy<size+unitH; uy+=unitH){for(let ux=-unitW; ux<size+unitW; ux+=unitW){ctx.strokeRect(ux,uy,unitW,unitH);}}
+ }
+}
+
 function drawDotSnapGuides(ctx,size){
  if(dotSnapGuideX==null&&dotSnapGuideY==null)return;
  ctx.save();
