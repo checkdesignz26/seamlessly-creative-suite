@@ -7333,6 +7333,27 @@ function tsDeleteSelectedBatch(){
 // closure) needs a way to render an arbitrary saved classic to a square canvas the same way this
 // filmstrip's own zip export does above.
 window.tsRenderSavedItemToCanvas=function(item,size){const canvas=document.createElement('canvas');canvas.width=size;canvas.height=size;renderPreview(canvas,size,item.state,item.previewMode||'single',false);return canvas;};
+// Half Brick/Half Drop cross-app handoff: a saved classic can need up to two distinct exported
+// representations, not one. tsRenderSavedItemToCanvas above always returns the plain single-cell
+// SQUARE (the ORIGINAL/SINGLE ARTWORK) - unchanged, exactly what every existing caller (filmstrip
+// thumbnails, the collection portfolio, Creative Resizer's Single Artwork mode) already gets, and
+// what a design should keep being usable as even when its repeat layout is Half Brick/Half Drop
+// (see the repeat-layout upgrade's own scoping note above drawRepeatUnit - this is deliberately NOT
+// forced through the 3x3 preview or the non-square repeat unit). This adds the REPEAT-SAFE TILE
+// alongside it: renderClassicsRepeatPreview's true seamless repeat unit (square for Grid - identical
+// to the original in that case - genuinely non-square for Half Brick/Half Drop, the exact same
+// tile the Download PNG button's "true repeat unit" option produces), plus which repeat layout it
+// is. A caller that specifically needs "a tile Mock-up Studio can plain-grid-tile correctly, or that
+// Creative Resizer's own repeat mode should use" reads repeatTile/repeatLayout from here instead of
+// assuming the original square always tiles correctly on its own.
+window.tsRenderSavedItemVariants=function(item,size){
+ const original=window.tsRenderSavedItemToCanvas(item,size);
+ const layout=(item.state&&item.state.repeatLayout)||'grid';
+ if(layout!=='halfbrick'&&layout!=='halfdrop')return{original,repeatTile:original,repeatLayout:'grid'};
+ const repeatTile=document.createElement('canvas');
+ renderClassicsRepeatPreview(repeatTile,size,item.state,'single',false);
+ return{original,repeatTile,repeatLayout:layout};
+};
 /* v66 template-mode bridge: Classics Studio is a self-contained canvas editor with no
    link to the live template. "apply to template" snapshots the edited pattern into
    tsAppliedState, which is what actually shows on the main stage / travels with a
@@ -7667,6 +7688,24 @@ body.theme-light .filmPortfolio.active{background:rgba(255,196,64,.92)!important
   if(item.type==='hero')return heroImgDataUrl||null;
   return null;
  }
+ // Same job as portfolioItemDataUrl above, but for callers (specifically the suite's "send to
+ // project") that need the ORIGINAL/SINGLE ARTWORK and, when this is a Half Brick/Half Drop classic,
+ // the separate REPEAT-SAFE TILE alongside it - see tsRenderSavedItemVariants' own note for why one
+ // square image can't serve both a "use this as standalone artwork" destination and a "tile this
+ // normally" one. Every other item type has no such distinction (its single rendering already tiles
+ // correctly, or isn't a repeat at all), so repeatTileDataUrl/repeatLayout are just null for those -
+ // callers already have to handle "no repeat tile" as "use dataUrl for everything".
+ async function portfolioItemVariants(item,size){
+  if(item.type==='classic'&&window.tsRenderSavedItemVariants){
+   const{original,repeatTile,repeatLayout}=window.tsRenderSavedItemVariants(item.ref,size);
+   return{
+    dataUrl:original.toDataURL('image/png'),
+    repeatTileDataUrl:repeatTile===original?null:repeatTile.toDataURL('image/png'),
+    repeatLayout:repeatLayout==='grid'?null:repeatLayout,
+   };
+  }
+  return{dataUrl:await portfolioItemDataUrl(item,size),repeatTileDataUrl:null,repeatLayout:null};
+ }
  async function renderPortfolioBody(){
   const body=document.getElementById('portfolioBody');
   const items=sortPortfolioItems(allPortfolioItems());
@@ -7827,6 +7866,10 @@ body.theme-light .filmPortfolio.active{background:rgba(255,196,64,.92)!important
  // gallery's "already in project" badges after a send completes.
  window.__scAllPortfolioItems=allPortfolioItems;
  window.__scPortfolioItemDataUrl=portfolioItemDataUrl;
+ // Half Brick/Half Drop cross-app handoff: the same shape as portfolioItemDataUrl but also
+ // returning the separate repeat-safe tile (when this item has one) and its repeat layout - see
+ // portfolioItemVariants' own comment and project-library.js's asset-shape comment.
+ window.__scPortfolioItemVariants=portfolioItemVariants;
  window.__scSortPortfolioItems=sortPortfolioItems;
  window.__scOpenPortfolio=openPortfolio;
  window.__scRenderPortfolioBody=renderPortfolioBody;
