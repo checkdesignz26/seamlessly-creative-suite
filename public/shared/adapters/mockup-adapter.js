@@ -4,8 +4,13 @@
  * Only activates with ?project=<id> in the URL (i.e. loaded from the
  * Seamlessly Creative shell). Opened standalone, this script no-ops.
  *
- * Lists the project's pattern-ish assets (pattern/motif/background)
- * from the shared library and adds each chosen one through Mock-up
+ * Lists the project's SOURCE assets — pattern/motif/background/graphic
+ * (patterns, artwork, hero/source images) — from the shared library,
+ * per the suite's routing rules: Mock-up Studio needs original source
+ * artwork to mock up, not a finished mock-up/lookbook page (those
+ * belong in Pattern Pages' assembly step) or a Creative Resizer
+ * product-specific resized export (see resizer-adapter.js — those also
+ * route to Pattern Pages only). Adds each chosen one through Mock-up
  * Studio's OWN existing entry point, addQuickCollectionPattern(src) —
  * that function is a genuine top-level global in this app (it is not
  * wrapped in an IIFE), so it's called directly rather than needing a
@@ -122,7 +127,7 @@
     grid.innerHTML = '';
     statusEl.textContent = 'loading project…';
     const assets = (await window.SCLibrary.listAssets(projectId)).filter((a) =>
-      ['pattern', 'motif', 'background'].includes(a.kind)
+      ['pattern', 'motif', 'background', 'graphic'].includes(a.kind)
     );
     if (!assets.length) {
       statusEl.textContent = 'No patterns in this project yet — send some from Pattern Playground first.';

@@ -19,16 +19,22 @@
  * it only reads it once and pushes a copy into the live tray, the
  * same as if the designer had uploaded that same image by hand.
  *
+ * Pattern Pages is deliberately the one app in the suite allowed to
+ * see every kind of project asset — it's the final assembly room
+ * (listing pages, showcases, collages, presentations), and a finished
+ * mock-up, a resized product export and a source pattern are all
+ * legitimate raw material there. Unlike Creative Resizer and Mock-up
+ * Studio's own project panels (see their adapters' RECEIVE-side
+ * filters), nothing is excluded here — and nothing is reclassified
+ * either: a mock-up stays kind 'mockup', a resized export stays kind
+ * 'resized-export', etc. all the way through.
+ *
  * Asset kinds and where they land:
  *   pattern / motif / background  -> the pattern tray (state.trays.pattern)
- *   anything else (mockup, lookbook, graphic, ...) -> the design-assets
- *     tray (state.trays.asset) — Pattern Pages' own second tray for
- *     non-pattern images (logos, photos, etc.)
- * Only 'pattern' kind assets exist in shared projects today (sent
- * from Pattern Playground) — the other kinds are supported here
- * ahead of time so nothing needs to change on this side once Mock-up
- * Studio (or anything else) starts sending its own outputs into a
- * project.
+ *   anything else (mockup, lookbook, graphic, resized-export, ...) ->
+ *     the design-assets tray (state.trays.asset) — Pattern Pages' own
+ *     second tray for non-pattern images (logos, photos, mock-ups,
+ *     resized exports, etc.)
  */
 (function () {
   'use strict';

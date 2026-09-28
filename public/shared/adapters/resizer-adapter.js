@@ -15,15 +15,28 @@
  * a tiny read-only hook added next to that same handler in index.html.
  * Nothing here dumps every generated size or an intermediate canvas —
  * only what's selected, exactly like a real download would produce.
- * Sent with kind: 'pattern' so it lands in Mock-up Studio's existing
- * project panel unchanged (that panel already filters to
- * pattern/motif/background — see mockup-adapter.js) and in Pattern
- * Pages' pattern tray (see pages-adapter.js's trayTypeFor).
+ * Sent with kind: 'resized-export' — a product-specific resized output
+ * is not the same thing as a source pattern, so it gets its own kind
+ * rather than reusing 'pattern' (an earlier version of this adapter
+ * did, which made a "Mug Wrap" export indistinguishable from a real
+ * source pattern and leak into Mock-up Studio's own project panel).
+ * Per the suite's routing rules, resized exports go to Pattern Pages
+ * only (pages-adapter.js shows every kind unfiltered, routing anything
+ * that isn't pattern/motif/background into its design-assets tray via
+ * trayTypeFor) — Mock-up Studio's project panel deliberately excludes
+ * this kind (see mockup-adapter.js's own filter) since it needs source
+ * artwork to mock up, not an already-resized product export.
  *
  * RECEIVE: a "seamlessly creative project" panel, styled with the
  * app's own existing .pattern-tray-box/.pattern-library-tile classes
- * (same visual language, no new CSS), listing every asset in the
- * project. Tapping one wraps its file Blob in a real File and calls
+ * (same visual language, no new CSS), listing the project's SOURCE
+ * assets only — pattern/motif/background/graphic (patterns, artwork,
+ * hero/source images). Deliberately excludes 'mockup', 'lookbook' and
+ * 'resized-export': Creative Resizer resizes source artwork, it
+ * doesn't re-resize an already-finished mock-up or another resized
+ * export, and a finished mock-up/lookbook page belongs in Pattern
+ * Pages' assembly step, not back in a sizing tool. Tapping a tile
+ * wraps its file Blob in a real File and calls
  * window.handlePickedPatternFile(file) directly — the app's own,
  * already-hardened upload entry point (Safari-safe decode, large-
  * image downscaling, black-canvas detection all already handled
@@ -83,7 +96,7 @@
           statusEl.textContent = `sending ${i + 1}/${items.length}…`;
           try {
             await window.SCLibrary.addAssetFromDataUrl(projectId, items[i].dataUrl, {
-              kind: 'pattern',
+              kind: 'resized-export',
               name: items[i].name,
               source: { studio: 'resizer' },
             });
@@ -133,12 +146,18 @@
     return panel;
   }
 
+  // Source artwork only — see the file header for why mockup/lookbook/
+  // resized-export are deliberately excluded here.
+  const RECEIVABLE_KINDS = ['pattern', 'motif', 'background', 'graphic'];
+
   async function renderGrid(grid, statusEl) {
     grid.innerHTML = '';
     statusEl.textContent = 'loading project…';
-    const assets = await window.SCLibrary.listAssets(projectId);
+    const assets = (await window.SCLibrary.listAssets(projectId)).filter((a) =>
+      RECEIVABLE_KINDS.includes(a.kind)
+    );
     if (!assets.length) {
-      statusEl.textContent = 'No assets in this project yet — send some from Pattern Playground or another studio first.';
+      statusEl.textContent = 'No source patterns or artwork in this project yet — send some from Pattern Playground first.';
       return;
     }
     statusEl.textContent = `${assets.length} available — tap one to open it here`;

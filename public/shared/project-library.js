@@ -138,12 +138,22 @@
   // Public asset shape (what listAssets/getAsset/addAssetFromBlob
   // return — every caller outside this file only ever sees this):
   //   { id, projectId, kind: 'pattern'|'motif'|'background'|'graphic'
-  //                          |'mockup'|'lookbook',
+  //                          |'mockup'|'lookbook'|'resized-export',
   //     name, file (Blob, PNG), width, height, thumb (Blob, PNG),
   //     source: { studio, recipe?, recipeVersion? },
   //     derivedFrom: assetId | null,
   //     derivation: { studio, preset, px, dpi } | null,
   //     created, updated }
+  //
+  // `kind` is a plain string tag, not an enforced enum — each studio's
+  // adapter sets it on send and reads it on receive. It's the one
+  // source of truth for suite-wide asset routing: which studios show
+  // which assets in their own project panel (see each adapter's own
+  // RECEIVE-side filter, e.g. mockup-adapter.js / resizer-adapter.js).
+  // Source-ish kinds (pattern/motif/background/graphic) are visible to
+  // Creative Resizer, Mock-up Studio and Pattern Pages; studio-specific
+  // outputs (mockup/lookbook/resized-export) are visible to Pattern
+  // Pages only — it's the one app in the suite meant to see every kind.
   //
   // What's actually stored in IndexedDB differs — fileBuffer/fileType
   // and thumbBuffer/thumbType instead of file/thumb — see the
