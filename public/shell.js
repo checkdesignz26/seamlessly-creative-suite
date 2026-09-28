@@ -116,6 +116,20 @@
         openProject(p.id);
       });
 
+      // Own button, not part of the row's main click target, so a
+      // stray tap while switching projects can never rename one by
+      // accident.
+      const renameBtn = document.createElement('button');
+      renameBtn.type = 'button';
+      renameBtn.className = 'sc-project-rename';
+      renameBtn.title = 'Rename project';
+      renameBtn.setAttribute('aria-label', 'Rename project "' + p.name + '"');
+      renameBtn.textContent = '✎';
+      renameBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        renameProjectFlow(p);
+      });
+
       // Requested so old test/throwaway projects (and whatever they
       // dragged into the shared asset library — a stress-test project
       // full of assets saved before a since-fixed storage bug, in the
@@ -135,10 +149,24 @@
       });
 
       row.appendChild(item);
+      row.appendChild(renameBtn);
       row.appendChild(deleteBtn);
       el.projectList.appendChild(row);
     });
     return projects;
+  }
+
+  // Renames via the same generic patch path project creation itself
+  // uses (SCLibrary.touchProject) — no new storage or ID involved,
+  // just an update to the one existing `name` field. If the renamed
+  // project is the one currently open, the top bar's name is updated
+  // in place too so it doesn't sit stale until the next project switch.
+  async function renameProjectFlow(project) {
+    const name = prompt('Rename project', project.name);
+    if (!name || !name.trim() || name.trim() === project.name) return;
+    await window.SCLibrary.touchProject(project.id, { name: name.trim() });
+    if (project.id === currentProjectId) el.projectName.textContent = name.trim();
+    await refreshProjectSwitcher();
   }
 
   function teardownAllFrames() {
