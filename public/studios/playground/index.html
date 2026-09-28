@@ -5293,9 +5293,12 @@ refreshHeroThumbs();
  window.openDownloadPanel=function(title,exportFn,noteFn,defaultWidth){
   activeExportFn=exportFn;activeNoteFn=noteFn;
   document.getElementById('dlTitle').textContent=title||'download pattern';
-  // "make it a square" only means anything for the main canvas's own export (it's the only
-  // caller that reads dlSquareTile) - hidden elsewhere so it doesn't look like an offered
-  // option that silently does nothing for classics/background/zip-batch downloads.
+  // "make it a square" only means anything for callers whose true repeat unit can be non-square
+  // (the main canvas's own halfbrick/halfdrop/hexagon/ogee tiling engines, and Classics Studio's
+  // Half Brick/Half Drop) - hidden by default so it doesn't look like an offered option that
+  // silently does nothing for background/zip-batch downloads or Classics Studio's own Grid mode;
+  // each caller that DOES support it re-shows it right after this call (see openDownload.onclick
+  // and tsDownload.onclick).
   document.getElementById('dlSquareLabel').style.display='none';
   // Bulk zip exports render many large canvases back to back, which is a lot heavier
   // on memory (especially on mobile Safari) than the default single-pattern print size -
@@ -6754,17 +6757,50 @@ function wire(){
  if($('tsAllGaps'))$('tsAllGaps').oninput=()=>applyAllStripe('gap',$('tsAllGaps').value);
  $('tsReset').onclick=()=>{tsPushHistory();state=defaultFor(state.type);selected=0;renderAll();};$('tsSave').onclick=saveTexture; if($('tsUndo'))$('tsUndo').onclick=tsUndo; if($('tsRedo'))$('tsRedo').onclick=tsRedo; if($('tsQuickSave'))$('tsQuickSave').onclick=tsQuickSaveNow; if($('tsQuickLoad'))$('tsQuickLoad').onclick=tsQuickLoadNow; const ov=$('textureStudioOverlay'); let tsTap=null; ov.addEventListener('touchend',e=>{if(!ov.classList.contains('open'))return; if(e.changedTouches.length===2||e.touches.length===2){e.preventDefault();tsUndo();} if(e.changedTouches.length===3||e.touches.length===3){e.preventDefault();tsRedo();}}, {passive:false});
  if($('tsApplyToPKM'))$('tsApplyToPKM').onclick=applyToPKM;
- // Half Brick/Half Drop tiles are genuinely not square (see the note above drawRepeatUnit) - `w`
- // here is a REFERENCE size (what a Grid tile's own side, or a Half Brick/Drop tile's single cell,
- // is capped at), not a guaranteed final width. renderClassicsRepeatPreview sets the canvas's real
- // (possibly taller/wider) dimensions itself; the filename/description read those back afterwards
- // rather than assuming w×w, so a Half Brick export is honestly named e.g. 1800x3600, not 1800x1800.
- if($('tsDownload'))$('tsDownload').onclick=()=>window.openDownloadPanel('download classic pattern',async(w,dpi)=>{const canvas=document.createElement('canvas');renderClassicsRepeatPreview(canvas,w,state,'single',false);const bytes=await canvasToDpiPngBytes(canvas,dpi);triggerBlobDownload(new Blob([bytes],{type:'image/png'}),`${slugName(state.type||'classic')}-${canvas.width}x${canvas.height}-${dpi}dpi.png`);},w=>{
+ // Half Brick/Half Drop's TRUE seamless repeat unit is genuinely not square (1:2 / 2:1 - see the
+ // note above drawRepeatUnit) - same situation the main canvas's own halfbrick/halfdrop tiling
+ // engines already solved (squareRepeatCounts/tileDimsForEngine, exportPatternPNG's wantSquare
+ // branch, the "make it an exact square" checkbox). Reusing those exact functions here rather than
+ // building a second system: 'halfbrick'/'halfdrop' are the same engine keys, and repeatUnitSize's
+ // w:h ratios are identical to tileDimsForEngine's, so squareRepeatCounts' nx×ny answer applies
+ // unchanged. `w` is a REFERENCE size, not a guaranteed final width - the export function and the
+ // note below both read the actual canvas dimensions back out afterwards.
+ if($('tsDownload'))$('tsDownload').onclick=()=>{
+  window.openDownloadPanel('download classic pattern',async(w,dpi)=>{
+   const layout=state.repeatLayout||'grid';
+   const wantSquare=(layout==='halfbrick'||layout==='halfdrop')&&!!document.getElementById('dlSquareTile')?.checked;
+   let canvas;
+   if(wantSquare){
+    const{nx,ny}=squareRepeatCounts(layout);
+    const unitWRatio=tileDimsForEngine(layout,10000).w/10000;
+    const trueTilePx=Math.max(1,Math.round(w/(nx*unitWRatio)));
+    const trueCanvas=document.createElement('canvas');
+    renderClassicsRepeatPreview(trueCanvas,trueTilePx,state,'single',false);
+    canvas=document.createElement('canvas');
+    canvas.width=trueCanvas.width*nx;canvas.height=trueCanvas.height*ny;
+    const ctx=canvas.getContext('2d');
+    for(let iy=0;iy<ny;iy++)for(let ix=0;ix<nx;ix++)ctx.drawImage(trueCanvas,ix*trueCanvas.width,iy*trueCanvas.height);
+   }else{
+    canvas=document.createElement('canvas');
+    renderClassicsRepeatPreview(canvas,w,state,'single',false);
+   }
+   const bytes=await canvasToDpiPngBytes(canvas,dpi);
+   triggerBlobDownload(new Blob([bytes],{type:'image/png'}),`${slugName(state.type||'classic')}-${canvas.width}x${canvas.height}-${dpi}dpi.png`);
+  },w=>{
+   const layout=state.repeatLayout||'grid';
+   if(layout==='halfbrick'||layout==='halfdrop'){
+    const{nx,ny}=squareRepeatCounts(layout);
+    const square=!!document.getElementById('dlSquareTile')?.checked;
+    const label=layout==='halfbrick'?'Half Brick':'Half Drop';
+    if(square)return `${label}'s true seamless repeat isn't a square on its own, so this auto-repeats it (${nx}×${ny} copies) to exactly fill a ${w}×${w}px square - still perfectly seamless, ready to drop straight into any app. The visible dot scale will look smaller, since more than one true repeat unit is now packed into the square.`;
+    if(layout==='halfbrick')return `Exports the current Half Brick true repeat unit as a seamless ${w}×${w*2}px PNG.`;
+    return `Exports the current Half Drop true repeat unit as a seamless ${w*2}×${w}px PNG.`;
+   }
+   return `Exports the current single tile as a seamless ${w}×${w}px PNG.`;
+  });
   const layout=state.repeatLayout||'grid';
-  if(layout==='halfbrick')return `Exports the current Half Brick tile as a seamless ${w}×${w*2}px PNG.`;
-  if(layout==='halfdrop')return `Exports the current Half Drop tile as a seamless ${w*2}×${w}px PNG.`;
-  return `Exports the current single tile as a seamless ${w}×${w}px PNG.`;
- });
+  document.getElementById('dlSquareLabel').style.display=(layout==='halfbrick'||layout==='halfdrop')?'flex':'none';
+ };
  if($('tsSelectMode'))$('tsSelectMode').onclick=tsToggleSelectMode;
  if($('tsSelectAll'))$('tsSelectAll').onclick=()=>{saved.forEach((_,i)=>tsSelectedIdx.add(i));renderFilmstrip();tsUpdateSelectUI();};
  if($('tsSelectNone'))$('tsSelectNone').onclick=()=>{tsSelectedIdx.clear();renderFilmstrip();tsUpdateSelectUI();};
