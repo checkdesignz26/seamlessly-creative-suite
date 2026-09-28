@@ -52,6 +52,8 @@
     statusDot: document.getElementById('scStatusDot'),
     statusText: document.getElementById('scStatusText'),
     backupBtn: document.getElementById('scBackupBtn'),
+    restoreBtn: document.getElementById('scRestoreBtn'),
+    restoreInput: document.getElementById('scRestoreInput'),
     studioTabs: document.getElementById('scStudioTabs'),
     frameHost: document.getElementById('scFrameHost'),
     emptyState: document.getElementById('scEmptyState'),
@@ -349,6 +351,39 @@
     // preventDefault) — just reset back to the normal button a
     // moment later, after the tap has done its job.
     setTimeout(resetBackupUI, 400);
+  });
+
+  // Upload Project Backup — the counterpart to Download above. Always
+  // creates a brand-new project rather than merging into whatever's
+  // currently open, so a restore can't silently mix into or overwrite
+  // an unrelated project. No Safari two-tap trick needed here (that
+  // workaround is only for triggering a file SAVE from code after an
+  // await; reading a file the user just picked has no such issue), so
+  // this is a normal single click -> file picker -> import.
+  const restoreBtnDefaultText = el.restoreBtn.textContent;
+  el.restoreBtn.addEventListener('click', () => el.restoreInput.click());
+  el.restoreInput.addEventListener('change', async () => {
+    const file = el.restoreInput.files && el.restoreInput.files[0];
+    el.restoreInput.value = ''; // allow picking the same file again later
+    if (!file) return;
+    el.restoreBtn.disabled = true;
+    el.restoreBtn.textContent = 'restoring…';
+    try {
+      const result = await window.SCLibrary.importProjectBackup(file);
+      el.restoreBtn.textContent = result.skippedCount
+        ? `restored ${result.importedCount} of ${result.totalCount} (${result.skippedCount} skipped)`
+        : `restored ${result.importedCount} asset${result.importedCount === 1 ? '' : 's'} ✓`;
+      await refreshProjectSwitcher();
+      await openProject(result.project.id);
+    } catch (err) {
+      console.error('[suite] restore failed', err);
+      el.restoreBtn.textContent = (err && err.message) || 'restore failed';
+    } finally {
+      setTimeout(() => {
+        el.restoreBtn.disabled = false;
+        el.restoreBtn.textContent = restoreBtnDefaultText;
+      }, 3000);
+    }
   });
 
   async function boot() {

@@ -417,6 +417,57 @@
     };
   }
 
+  // Reads a .screativeproject file back in (the counterpart to
+  // exportProjectBackup/prepareProjectBackup above) and rebuilds it as
+  // a brand-new project — never merged into whatever's currently open,
+  // so importing can't silently mix assets into the wrong project or
+  // overwrite something by accident. Each asset gets a fresh id (the
+  // one substore/IndexedDB is not necessarily the one it was exported
+  // from), so derivedFrom links from the original project would point
+  // at ids that don't exist here — dropped on import rather than left
+  // dangling. An asset the backup itself had already marked `skipped`
+  // (no image data, from a legacy Blob-corruption failure at export
+  // time — see exportProjectBackup's own comment) can't be restored
+  // either; counted separately so the caller can tell "imported
+  // everything" from "some assets didn't make the trip".
+  async function importProjectBackup(file) {
+    const text = await file.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (err) {
+      throw new Error('That file isn’t a valid backup (not readable JSON).');
+    }
+    if (!data || data.kind !== 'project-backup' || !Array.isArray(data.assets)) {
+      throw new Error('That file isn’t a Seamlessly Creative project backup.');
+    }
+    const baseName = (data.project && data.project.name) || 'Imported project';
+    const project = await createProject(baseName);
+    let importedCount = 0;
+    let skippedCount = 0;
+    for (const a of data.assets) {
+      if (!a.file) {
+        skippedCount++;
+        continue;
+      }
+      try {
+        const blob = await dataUrlToBlob(a.file);
+        await addAssetFromBlob(project.id, blob, {
+          kind: a.kind,
+          name: a.name,
+          source: a.source,
+          derivedFrom: null,
+          derivation: a.derivation,
+        });
+        importedCount++;
+      } catch (err) {
+        console.error('[suite] asset failed to import, skipping just this one', a.id, a.name, err);
+        skippedCount++;
+      }
+    }
+    return { project, importedCount, skippedCount, totalCount: data.assets.length };
+  }
+
   global.SCLibrary = {
     listProjects,
     getProject,
@@ -430,5 +481,6 @@
     deleteAsset,
     blobToDataUrl,
     prepareProjectBackup,
+    importProjectBackup,
   };
 })(window);

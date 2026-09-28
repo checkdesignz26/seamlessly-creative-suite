@@ -211,7 +211,7 @@ html, body {
   color: #fff;
 }
 
-#scBackupBtn {
+#scBackupBtn, #scRestoreBtn {
   background: none;
   border: 1px solid var(--sc-border);
   color: var(--sc-text);
@@ -222,7 +222,7 @@ html, body {
   font-weight: 600;
   white-space: nowrap;
 }
-#scBackupBtn:disabled { opacity: .6; cursor: default; }
+#scBackupBtn:disabled, #scRestoreBtn:disabled { opacity: .6; cursor: default; }
 
 /* The real, genuine-tap download link (see shell.js) — styled to
    look like #scBackupBtn so swapping between them is seamless, but
