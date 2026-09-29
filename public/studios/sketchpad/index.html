@@ -935,9 +935,13 @@ function duplicateSelectedStroke(){
 // parametric fallback left to accidentally show a stale "original" shape underneath.
 function convertShapeToPath(){
   const stroke=strokes.find(s=>s.id===selectedStrokeId);if(!stroke||!stroke.shape)return;
+  // shapeToPoints() repeats the first vertex at the end for a closed shape (that's what makes its
+  // OUTLINE actually render closed, no gap) — drop that repeated point before deriving nodes, or
+  // a closed shape would convert into a path with a redundant duplicate node sitting on its seam.
+  const srcPoints=stroke.closed?stroke.points.slice(0,-1):stroke.points;
   const nodes=SHAPE_POLYGONAL[stroke.shape.type]
-    ?stroke.points.map(p=>({x:p.x,y:p.y,pressure:p.pressure,type:'corner'}))
-    :pointsToNodes(stroke.points);
+    ?srcPoints.map(p=>({x:p.x,y:p.y,pressure:p.pressure,type:'corner'}))
+    :pointsToNodes(srcPoints);
   stroke.nodes=nodes;
   stroke.shape=null;
   stroke.points=nodesToPoints(nodes,stroke.closed);
@@ -1467,7 +1471,17 @@ function shapeToPoints(shape){
   const cx=(shape.x0+shape.x1)/2,cy=(shape.y0+shape.y1)/2;
   const hw=Math.max(0.5,Math.abs(shape.x1-shape.x0)/2),hh=Math.max(0.5,Math.abs(shape.y1-shape.y0)/2);
   const rot=(shape.rotation||0)*Math.PI/180,cosR=Math.cos(rot),sinR=Math.sin(rot);
-  return shapeLocalPoints(shape).map(p=>{
+  let local=shapeLocalPoints(shape);
+  // The brush engine is a dab-stamper: it only ever draws a segment BETWEEN consecutive points
+  // in this array, never an implicit one from the last point back to the first. shapeLocalPoints()
+  // only has to describe the shape's own silhouette once — every closed shape type (per
+  // SHAPE_CLOSED) gets its seam closed HERE, uniformly, by repeating the first vertex at the end,
+  // rather than each generator needing to remember to do it itself. This is also exactly what
+  // nodesToPoints() does for a closed set of edited nodes, so a shape's rendered outline and its
+  // Paint Inside clip boundary (built from this same points array) never disagree about where the
+  // seam is.
+  if(SHAPE_CLOSED[shape.type]&&local.length>1)local=local.concat([local[0]]);
+  return local.map(p=>{
     const lx=(shape.flipH?-p.x:p.x)*hw,ly=(shape.flipV?-p.y:p.y)*hh;
     return {x:cx+lx*cosR-ly*sinR,y:cy+lx*sinR+ly*cosR,pressure:0.65};
   });
