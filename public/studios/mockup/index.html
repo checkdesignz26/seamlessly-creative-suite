@@ -3156,7 +3156,23 @@ function createPatternTileCanvas(sourceImage, scalePercent = 100) {
 
   // Smaller base tile = visible repeat on product mock-ups.
   // This avoids the "single sticker strip" look when users upload large 3600px pattern tiles.
-  const baseTileSize = 210;
+  //
+  // 210 -> 380 (Seamlessly Creative): drawRepeatedTileLayer below draws this canvas onto the
+  // product canvas at its own native pixel size (ctx.drawImage(tile,x,y,tile.width,tile.height) -
+  // no further scaling of the placed tile), so this number is BOTH the actual resolution budget a
+  // detailed illustrated pattern (fine line art, small motifs) gets to keep its own detail in, AND
+  // the on-product footprint each repeat occupies - the two aren't separable here, since nothing
+  // downstream re-scales the tile once it's placed. At 210px there simply weren't enough
+  // destination pixels left for fine detail to survive being downscaled into, no matter how good
+  // the downscale algorithm is (highQualityDownscale's own area-averaging was already correct/
+  // alias-free - 210px was the real ceiling, not the method). 380px keeps scalePercent's role
+  // exactly the same (same clamp range, same multiplier) and keeps the repeat genuinely tiling
+  // the same way - it just means each repeat is itself moderately larger/fewer-per-product at a
+  // given scalePercent than it was at 210px, in exchange for surviving downscale with real detail
+  // intact. There is no way to give detailed patterns more destination pixels without this
+  // trade-off; it's a hard consequence of a fixed-resolution product canvas, not a shortcut taken
+  // here.
+  const baseTileSize = 380;
   const sourceW = effectiveSource.naturalWidth || effectiveSource.width || 1200;
   const sourceH = effectiveSource.naturalHeight || effectiveSource.height || 1200;
   const aspect = sourceH / Math.max(1, sourceW);
