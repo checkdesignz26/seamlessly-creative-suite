@@ -323,6 +323,17 @@ let paintMode='free',paintInsideTargetId=null;
 // shape disarms it and drops back to freehand, matching "after creation the new shape should
 // automatically become selected" rather than staying in shape-stamping mode.
 let armedShapeType=null,constrainShape=false,shapeDrawStroke=null,shapeDrawStart=null;
+// Draw + Hold: armed only during a plain freehand vector gesture (never Shape Tool dragging,
+// Continue Path, or the eraser — those each get their own explicit guard at the call sites below).
+// holdAnchor/holdTimer implement "stationary for HOLD_MS", tolerant of the small jitter real Pencil
+// input always has: the timer only resets when the pencil moves further than HOLD_MOVE_TOLERANCE
+// from wherever it last reset, so it fires once the pencil has settled, not on a literal zero-
+// movement count. holdTriggered flips true the moment a shape is recognised and the snap animation
+// starts; once true, further pointermoves adjust the recognised shape instead of accumulating more
+// freehand points (see adjustHeldShape).
+const HOLD_MS=420,HOLD_MOVE_TOLERANCE=9;
+let holdTimer=null,holdAnchor=null,holdTriggered=false,holdCorrectedShape=null,holdPressureProfile=null;
+let holdAdjustBaseHw=0,holdAdjustBaseHh=0,holdAdjustAnchorDist=1;
 let symMode='off',symX=W/2,symY=H/2,drawing=false;let motifs=[],placed=[],selected=null,traces=[],traceLocked=true;let bgImg=null,bgOpacity=1,bgShown=true;
 let history=[],hIndex=-1;let touchState=null;let lastTouchEnd=0;
 const $=id=>document.getElementById(id);
@@ -632,6 +643,7 @@ canvas.addEventListener('pointerdown',e=>{
     return;
   }
   drawing=true;
+  resetHoldState();
   if(eraserActive){
     eraseCandidates.clear();
     eraseAt(p.x,p.y,currentSettings().size/2);
@@ -669,8 +681,10 @@ canvas.addEventListener('pointermove',e=>{
     return;
   }
   if(eraserActive){eraseAt(p.x,p.y,currentSettings().size/2);renderEraserCursor(p.x,p.y,currentSettings().size/2);redraw();return}
+  if(holdTriggered){adjustHeldShape(p);return;} // shape already snapped this gesture — Pencil now adjusts it, not freehand
   pushRawPoint(p.x,p.y,pressure);
   renderLivePreviewIncremental();redraw();
+  if(!continueStrokeId)maybeArmHoldTimer(p); // Draw + Hold only applies to a plain freehand gesture, never Continue Path
 });
 canvas.addEventListener('pointerup',e=>{
   if(!drawing)return;
@@ -730,20 +744,29 @@ canvas.addEventListener('pointerup',e=>{
     // Undo/Redo history and project save/reload (both already serialise the whole strokes array
     // generically) with no extra persistence code needed.
     const clipStrokeId=(paintMode==='inside')?paintInsideTargetId:null;
-    symmetryTransforms().forEach(tf=>{
+    // A Draw+Hold correction only carries stroke.shape/closed onto the IDENTITY copy (the stroke
+    // actually drawn) — a symmetry-mirrored sibling's on-screen geometry is the mirror image of
+    // that shape, not what shapeToPoints(shape) would itself regenerate, so it stays a plain
+    // (still fully editable, still correctly closed) point/node stroke rather than a parametric
+    // one that would silently un-mirror itself the moment a param slider or Convert to Path ran.
+    const committedShape=holdTriggered?holdCorrectedShape:null;
+    const committedClosed=committedShape?!!SHAPE_CLOSED[committedShape.type]:false;
+    symmetryTransforms().forEach((tf,idx)=>{
       const pts=currentPoints.map(pt=>{const t=tf(pt);return{x:t.x,y:t.y,pressure:pt.pressure};});
-      const stroke={id:crypto.randomUUID(),brushId:activeBrushId,layerId:activeLayerId,color:currentColor,settings:Object.assign({},settingsSnapshot),points:pts,nodes:null,closed:false,clipStrokeId};
+      const stroke={id:crypto.randomUUID(),brushId:activeBrushId,layerId:activeLayerId,color:currentColor,settings:Object.assign({},settingsSnapshot),points:pts,nodes:null,closed:committedClosed,clipStrokeId,shape:(idx===0&&committedShape)?committedShape:null};
       strokes.push(stroke);appendStrokeToLayer(stroke);
     });
     BrushEngine.touchRecent(activeBrushId);syncRecents();
   }
   currentPoints=[];currentStrokeId=null;liveActive=false;lctx.clearRect(0,0,W,H);
+  resetHoldState();
   pushHist();redraw();
 });
 canvas.addEventListener('pointercancel',()=>{
   drawing=false;currentPoints=[];eraseCandidates.clear();liveActive=false;lctx.clearRect(0,0,W,H);
   if(continueStrokeId){const s=strokes.find(x=>x.id===continueStrokeId);if(s)rebuildLayer(s.layerId);continueStrokeId=null;continueBasePoints=null;}
   shapeDrawStroke=null;shapeDrawStart=null;
+  resetHoldState();
   redraw();
 });
 wrap.addEventListener('touchstart',e=>{e.preventDefault();const now=Date.now();touchState={n:e.touches.length,start:copyTouches(e.touches),last:copyTouches(e.touches),moved:false,time:now,zoom,panX,panY,rot};}, {passive:false});
@@ -1498,6 +1521,244 @@ function updateShapeDragBox(shape,start,cur,constrain){
   }
   shape.x0=start.x;shape.y0=start.y;shape.x1=x1;shape.y1=y1;
 }
+// ---- Draw + Hold shape correction ---------------------------------------------------------------
+// Reuses the Shape Tool's own data model end to end: recognition just produces a {type,x0,y0,x1,
+// y1,rotation,flipH,flipV} shape object identical to what dragging a Shape Tool button out
+// produces, so the corrected stroke gets stroke.shape set and is exactly as editable/Convert-to-
+// Path-able/Paint-Inside-compatible as one drawn with the Shape Tool — no second geometry system.
+// Every recognizer below is deliberately strict: a rejection (return null) means "do nothing, keep
+// the freehand stroke exactly as drawn" — a missed shape costs nothing, a wrongly "corrected"
+// organic drawing costs the user's actual work, so ties always go to leaving it alone.
+function polylineLength(pts){let len=0;for(let i=1;i<pts.length;i++)len+=Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y);return len;}
+// Principal axis of the point cloud (2x2 covariance eigenvector angle) — used to find a hand-drawn
+// ellipse's natural tilt without assuming it was drawn axis-aligned.
+function pcaAngle(points){
+  let mx=0,my=0;const n=points.length;
+  points.forEach(p=>{mx+=p.x;my+=p.y;});mx/=n;my/=n;
+  let sxx=0,syy=0,sxy=0;
+  points.forEach(p=>{const dx=p.x-mx,dy=p.y-my;sxx+=dx*dx;syy+=dy*dy;sxy+=dx*dy;});
+  return 0.5*Math.atan2(2*sxy,sxx-syy);
+}
+// The bounding box of `points` as seen in a frame rotated by -angle, then rotated back to a real
+// canvas centre — this is exactly the {cx,cy,hw,hh}+rotation shape.js already expects, for any
+// shape whose natural orientation isn't axis-aligned (a hand-drawn rectangle is rarely square to
+// the canvas).
+function fitOrientedBox(points,angle){
+  const cosA=Math.cos(-angle),sinA=Math.sin(-angle);
+  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+  points.forEach(p=>{
+    const rx=p.x*cosA-p.y*sinA,ry=p.x*sinA+p.y*cosA;
+    if(rx<minX)minX=rx;if(rx>maxX)maxX=rx;if(ry<minY)minY=ry;if(ry>maxY)maxY=ry;
+  });
+  const lcx=(minX+maxX)/2,lcy=(minY+maxY)/2;
+  const cosB=Math.cos(angle),sinB=Math.sin(angle);
+  return {cx:lcx*cosB-lcy*sinB,cy:lcx*sinB+lcy*cosB,hw:Math.max(0.5,(maxX-minX)/2),hh:Math.max(0.5,(maxY-minY)/2)};
+}
+// Fits an ellipse via PCA, then scores the fit by how far each point's normalised radius (in the
+// fitted ellipse's own frame) deviates from 1 — a real ellipse/circle gesture scores low, a
+// rectangle or organic blob scores high and gets rejected by the caller's threshold.
+function tryFitEllipse(points){
+  const angle=pcaAngle(points);
+  const box=fitOrientedBox(points,angle);
+  const cosA=Math.cos(-angle),sinA=Math.sin(-angle);
+  let errSum=0;
+  points.forEach(p=>{
+    const dx=p.x-box.cx,dy=p.y-box.cy;
+    const lx=dx*cosA-dy*sinA,ly=dx*sinA+dy*cosA;
+    errSum+=Math.abs(Math.hypot(lx/box.hw,ly/box.hh)-1);
+  });
+  return {...box,rotation:angle*180/Math.PI,avgErr:errSum/points.length};
+}
+// rdpSimplify() is an OPEN-chain simplifier — it always keeps whatever points[0]/points[last]
+// happen to be. Handed a near-closed loop's raw samples directly, those two anchors usually land
+// on two nearly-identical points a few samples apart on the SAME edge (not on real corners),
+// which makes the short "base" between them look like everything else deviates wildly from it —
+// producing a spurious extra vertex right at that seam instead of the loop's true corners. Fixing
+// this the standard way: split the loop into two chains at its two mutually farthest-apart points
+// (always genuine extremes for a roughly convex hand-drawn shape, never an arbitrary sample),
+// RDP-simplify each chain on its own correctly-anchored base, then stitch the results together.
+function rdpSimplifyClosedLoop(points,epsilon){
+  let iA=0,iB=0,maxD=-1;
+  for(let i=0;i<points.length;i++){
+    for(let j=i+1;j<points.length;j++){
+      const d=Math.hypot(points[i].x-points[j].x,points[i].y-points[j].y);
+      if(d>maxD){maxD=d;iA=i;iB=j;}
+    }
+  }
+  if(iA>iB){const t=iA;iA=iB;iB=t;}
+  const chain1=points.slice(iA,iB+1);
+  const chain2=points.slice(iB).concat(points.slice(0,iA+1));
+  const s1=rdpSimplify(chain1,epsilon),s2=rdpSimplify(chain2,epsilon);
+  return s1.slice(0,-1).concat(s2.slice(0,-1));
+}
+// Dominant-corner extraction — a triangle gesture simplifies to ~3 points, a rectangle to ~4, an
+// organic/rounded blob to many more (correctly falling through to "unrecognised" rather than
+// being forced into a shape it isn't).
+function tryFitPolygon(points,diag){
+  const eps=Math.max(8,diag*0.045);
+  const verts=rdpSimplifyClosedLoop(points,eps);
+  if(verts.length<3||verts.length>4)return null;
+  return verts;
+}
+function longestEdgeAngle(verts){
+  let best=0,bestLen=-1;
+  for(let i=0;i<verts.length;i++){
+    const a=verts[i],b=verts[(i+1)%verts.length];
+    const len=Math.hypot(b.x-a.x,b.y-a.y);
+    if(len>bestLen){bestLen=len;best=Math.atan2(b.y-a.y,b.x-a.x);}
+  }
+  return best;
+}
+function isRectangleish(verts){
+  if(verts.length!==4)return false;
+  for(let i=0;i<4;i++){
+    const p0=verts[(i+3)%4],p1=verts[i],p2=verts[(i+1)%4];
+    const v1x=p0.x-p1.x,v1y=p0.y-p1.y,v2x=p2.x-p1.x,v2y=p2.y-p1.y;
+    const mag=Math.hypot(v1x,v1y)*Math.hypot(v2x,v2y)||1;
+    const angleDeg=Math.acos(Math.max(-1,Math.min(1,(v1x*v2x+v1y*v2y)/mag)))*180/Math.PI;
+    if(Math.abs(angleDeg-90)>22)return false; // generous — this is hand-drawn, not CAD
+  }
+  return true;
+}
+function triangleArea(v){return Math.abs((v[1].x-v[0].x)*(v[2].y-v[0].y)-(v[2].x-v[0].x)*(v[1].y-v[0].y))/2;}
+// The single entry point: null means "not confident, leave the freehand stroke alone". Tries line
+// (open gesture) or ellipse then polygon (closed gesture) — the first one to clear its own strict
+// threshold wins; nothing lower down is even attempted once one hits.
+function recognizeShape(rawPoints){
+  if(!rawPoints||rawPoints.length<6)return null;
+  const xs=rawPoints.map(p=>p.x),ys=rawPoints.map(p=>p.y);
+  const minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
+  const w=maxX-minX,h=maxY-minY,diag=Math.hypot(w,h);
+  if(diag<40)return null; // too small a gesture to confidently classify at all
+  const first=rawPoints[0],last=rawPoints[rawPoints.length-1];
+  const gap=Math.hypot(last.x-first.x,last.y-first.y);
+  const isClosedGesture=gap<diag*0.28;
+  if(!isClosedGesture){
+    const straightDist=Math.hypot(last.x-first.x,last.y-first.y);
+    if(straightDist<40)return null;
+    let maxDev=0;
+    rawPoints.forEach(p=>{maxDev=Math.max(maxDev,distToSeg(p.x,p.y,first.x,first.y,last.x,last.y));});
+    const lengthRatio=polylineLength(rawPoints)/straightDist,devRatio=maxDev/straightDist;
+    if(lengthRatio<1.12&&devRatio<0.08)return {kind:'line',x0:first.x,y0:first.y,x1:last.x,y1:last.y};
+    return null;
+  }
+  const ellipseFit=tryFitEllipse(rawPoints);
+  if(ellipseFit.avgErr<0.13){
+    const aspect=Math.min(ellipseFit.hw,ellipseFit.hh)/Math.max(ellipseFit.hw,ellipseFit.hh);
+    const isCircle=aspect>0.85;
+    const hw=isCircle?(ellipseFit.hw+ellipseFit.hh)/2:ellipseFit.hw;
+    return {kind:isCircle?'circle':'ellipse',cx:ellipseFit.cx,cy:ellipseFit.cy,hw,hh:isCircle?hw:ellipseFit.hh,rotation:isCircle?0:ellipseFit.rotation};
+  }
+  const verts=tryFitPolygon(rawPoints,diag); // rdpSimplifyClosedLoop handles the near-duplicate start/end itself
+  if(!verts)return null;
+  if(verts.length===3){
+    if(triangleArea(verts)<0.12*w*h)return null; // rejects slivers/near-collinear triples
+    const angle=longestEdgeAngle(verts),box=fitOrientedBox(verts,angle);
+    return {kind:'triangle',cx:box.cx,cy:box.cy,hw:box.hw,hh:box.hh,rotation:angle*180/Math.PI};
+  }
+  if(!isRectangleish(verts))return null;
+  const angle=longestEdgeAngle(verts),box=fitOrientedBox(verts,angle);
+  const aspect=Math.min(box.hw,box.hh)/Math.max(box.hw,box.hh);
+  const isSquare=aspect>0.88;
+  const hw=isSquare?(box.hw+box.hh)/2:box.hw;
+  return {kind:isSquare?'square':'rect',cx:box.cx,cy:box.cy,hw,hh:isSquare?hw:box.hh,rotation:angle*180/Math.PI};
+}
+function shapeFromRecognition(result){
+  if(result.kind==='line')return {type:'line',x0:result.x0,y0:result.y0,x1:result.x1,y1:result.y1,rotation:0,flipH:false,flipV:false};
+  const type=result.kind==='circle'?'circle':result.kind==='ellipse'?'ellipse':result.kind==='triangle'?'triangle':'rect';
+  return {type,x0:result.cx-result.hw,y0:result.cy-result.hh,x1:result.cx+result.hw,y1:result.cy+result.hh,rotation:result.rotation||0,flipH:false,flipV:false};
+}
+// Maps the ORIGINAL freehand stroke's pressure onto the corrected shape by arc-length position
+// (0=stroke start, 1=stroke end) rather than flattening to one constant value — the corrected path
+// is clean, but the brush's natural thick/thin character along it is kept rather than mechanised.
+function buildPressureProfile(rawPoints){
+  const cum=[0];
+  for(let i=1;i<rawPoints.length;i++)cum.push(cum[i-1]+Math.hypot(rawPoints[i].x-rawPoints[i-1].x,rawPoints[i].y-rawPoints[i-1].y));
+  const total=cum[cum.length-1]||1;
+  return t=>{
+    const target=t*total;
+    let lo=0,hi=cum.length-1;
+    while(lo<hi-1){const mid=(lo+hi)>>1;if(cum[mid]<target)lo=mid;else hi=mid;}
+    const segLen=cum[hi]-cum[lo]||1,localT=(target-cum[lo])/segLen;
+    return rawPoints[lo].pressure+(rawPoints[hi].pressure-rawPoints[lo].pressure)*localT;
+  };
+}
+function applyPressureProfile(points,profile){
+  const n=points.length;
+  return points.map((p,i)=>({...p,pressure:profile(n>1?i/(n-1):0)}));
+}
+function resetHoldState(){
+  clearTimeout(holdTimer);holdTimer=null;holdAnchor=null;holdTriggered=false;holdCorrectedShape=null;holdPressureProfile=null;
+}
+// Called on every freehand pointermove — (re)arms a debounce-style timer that only actually
+// resets when the pencil has moved meaningfully since the last reset, so ordinary micro-jitter
+// while the hand is genuinely holding still doesn't keep pushing the hold out indefinitely.
+function maybeArmHoldTimer(p){
+  if(holdTriggered)return;
+  if(!holdAnchor||Math.hypot(p.x-holdAnchor.x,p.y-holdAnchor.y)>HOLD_MOVE_TOLERANCE){
+    holdAnchor={x:p.x,y:p.y};
+    clearTimeout(holdTimer);
+    holdTimer=setTimeout(triggerHoldRecognition,HOLD_MS);
+  }
+}
+function triggerHoldRecognition(){
+  if(!drawing||holdTriggered||eraserActive||shapeDrawStroke||continueStrokeId||currentPoints.length<6)return;
+  const result=recognizeShape(currentPoints);
+  if(!result)return; // low confidence — do nothing, the freehand stroke is untouched
+  const shape=shapeFromRecognition(result);
+  const profile=buildPressureProfile(currentPoints);
+  const correctedPoints=applyPressureProfile(shapeToPoints(shape),profile);
+  holdCorrectedShape=shape;holdPressureProfile=profile;holdTriggered=true;
+  holdAdjustBaseHw=Math.max(0.5,Math.abs(shape.x1-shape.x0)/2);
+  holdAdjustBaseHh=Math.max(0.5,Math.abs(shape.y1-shape.y0)/2);
+  holdAdjustAnchorDist=Math.hypot(holdAdjustBaseHw,holdAdjustBaseHh)||1;
+  animateHoldSnap(currentPoints.slice(),correctedPoints);
+  setStatus('✨ Held — corrected to a clean '+(result.kind==='square'?'square':result.kind)+'. Release to keep it.');
+}
+// Subtle "snap" feedback: a short cross-fade from the freehand stroke to the corrected geometry,
+// reusing renderStroke's existing alphaMul rather than a popup or any new UI. Purely visual —
+// currentPoints only actually becomes the corrected geometry once the animation finishes, so an
+// interrupted animation (fast release) still leaves a consistent final state via the pointerup
+// handler reading holdCorrectedShape/currentPoints itself.
+function animateHoldSnap(rawPoints,correctedPoints){
+  const brush=BrushEngine.getBrush(activeBrushId),settings=currentSettings(),duration=160;
+  const start=performance.now();
+  function frame(now){
+    if(!holdTriggered)return; // cancelled (e.g. pointerup/cancel already finalised or reset it)
+    const t=Math.min(1,(now-start)/duration);
+    lctx.clearRect(0,0,W,H);
+    if(t<1)BrushEngine.renderStroke(lctx,{id:'hold-old',brushId:activeBrushId,color:currentColor,points:rawPoints},brush,settings,1-t);
+    BrushEngine.renderStroke(lctx,{id:'hold-new',brushId:activeBrushId,color:currentColor,points:correctedPoints},brush,settings,Math.min(1,t*1.3+0.15));
+    redraw();
+    if(t<1)requestAnimationFrame(frame);
+    else{currentPoints=correctedPoints;lastRenderedIndex=correctedPoints.length;}
+  }
+  requestAnimationFrame(frame);
+}
+// While the Pencil is still down after a snap, further movement adjusts the recognised shape
+// instead of resuming freehand accumulation — a line's far end follows the Pencil (angle/length),
+// closed shapes scale radially from their fitted centre (distance from centre relative to where
+// the shape sat right when it snapped). Kept deliberately simple: no rotation-aware corner
+// dragging, per "if held adjustment complicates or destabilises the implementation, leave it for
+// refinement" — this covers the examples in the brief without touching commit/undo logic at all,
+// since it only ever mutates currentPoints, exactly like ordinary freehand pointermove does.
+function adjustHeldShape(p){
+  const shape=holdCorrectedShape;if(!shape)return;
+  if(shape.type==='line'){
+    shape.x1=p.x;shape.y1=p.y;
+  }else{
+    const cx=(shape.x0+shape.x1)/2,cy=(shape.y0+shape.y1)/2;
+    const curDist=Math.hypot(p.x-cx,p.y-cy)||0.01;
+    const scale=Math.max(0.3,Math.min(3,curDist/holdAdjustAnchorDist));
+    shape.x0=cx-holdAdjustBaseHw*scale;shape.x1=cx+holdAdjustBaseHw*scale;
+    shape.y0=cy-holdAdjustBaseHh*scale;shape.y1=cy+holdAdjustBaseHh*scale;
+  }
+  const pts=applyPressureProfile(shapeToPoints(shape),holdPressureProfile);
+  currentPoints=pts;lastRenderedIndex=pts.length;
+  lctx.clearRect(0,0,W,H);
+  BrushEngine.renderStroke(lctx,{id:'hold-adjust',brushId:activeBrushId,color:currentColor,points:pts},BrushEngine.getBrush(activeBrushId),currentSettings());
+  redraw();
+}
 function enterEditPath(strokeId){
   const stroke=strokes.find(s=>s.id===strokeId);if(!stroke)return;
   const layer=layers.find(l=>l.id===stroke.layerId);
@@ -1954,7 +2215,12 @@ boot();
 // Read-only introspection for debugging/testing — mirrors the small hooks already used for
 // Seamlessly Creative suite integration (see the bottom of this file once frozen into the
 // suite), just exposed unconditionally here since it's harmless and useful standalone too.
-window.__sketchpadGetState=()=>({strokeCount:strokes.length,strokes,placed,motifs,activeBrushId,eraserActive,selectedStrokeId,layout,layers:layers.map(l=>({id:l.id,name:l.name,visible:l.visible,locked:l.locked,opacity:l.opacity})),activeLayerId,pathEditStrokeId,pathEditNodes,pathEditClosed,copiedBrushStyle,continueStrokeId,joinPendingStrokeId,paintMode,paintInsideTargetId,armedShapeType,constrainShape});
+window.__sketchpadGetState=()=>({strokeCount:strokes.length,strokes,placed,motifs,activeBrushId,eraserActive,selectedStrokeId,layout,layers:layers.map(l=>({id:l.id,name:l.name,visible:l.visible,locked:l.locked,opacity:l.opacity})),activeLayerId,pathEditStrokeId,pathEditNodes,pathEditClosed,copiedBrushStyle,continueStrokeId,joinPendingStrokeId,paintMode,paintInsideTargetId,armedShapeType,constrainShape,holdTriggered,holdCorrectedShape,currentPointsLength:currentPoints.length});
+// Test-only hook exposing recognizeShape() directly for unit-style checks of the recognizer's
+// confidence thresholds on a raw point set, without needing to drive a real 420ms Pencil hold —
+// the real interaction (debounce timer, rAF snap animation, adjust-while-holding, commit) is
+// exercised separately via real pointer events and real waits, not through this hook.
+window.__sketchpadRecognizeShape=(points)=>recognizeShape(points);
 // Debug-only: max alpha found in a small box around (x,y) on a given layer's OWN canvas (not
 // the live preview) — lets a test confirm "is anything actually rendered on the layer itself
 // here", independent of what the live preview is showing on top of it.
