@@ -125,6 +125,15 @@ canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-a
    rather than just a smaller/fainter copy of a real one. */
 .path-node.mid{width:20px;height:20px;margin-left:-10px;margin-top:-10px;background:transparent;border:2px dashed var(--muted);opacity:.7;box-shadow:none}
 .path-node.mid:active{opacity:1;border-color:var(--pink)}
+/* Join Path picking mode: the ORIGIN endpoint (already chosen, step 2) stays put and visually
+   distinct in gold so it's obvious which end is being joined; every TARGET endpoint (other open
+   paths' ends, plus this same path's opposite end for the self-join -> Close Shape redirect)
+   pulses green so it reads as "tap one of these", not just another draggable node. */
+.path-node.join-origin{background:var(--orange);border-color:var(--orange);cursor:default;box-shadow:0 0 0 6px rgba(255,180,95,.3),0 2px 8px rgba(0,0,0,.4)}
+.path-node.join-target{background:var(--green);border-color:var(--green);cursor:pointer;animation:joinTargetPulse 1.1s ease-in-out infinite}
+.path-node.join-target.self-endpoint{border-style:dashed}
+@keyframes joinTargetPulse{0%,100%{box-shadow:0 0 0 0 rgba(115,212,140,.55),0 2px 8px rgba(0,0,0,.4)}50%{box-shadow:0 0 0 9px rgba(115,212,140,0),0 2px 8px rgba(0,0,0,.4)}}
+#joinPickBar{position:absolute;left:12px;top:12px;z-index:17;width:270px;max-width:calc(100% - 24px);background:var(--sideBg);border:1px solid var(--line);border-radius:22px;padding:14px;box-shadow:0 18px 50px rgba(0,0,0,.35)}
 @media(max-width:900px){.app{padding:8px;gap:8px}.sidebar{width:270px}.btn,.tool-btn{font-size:12px;padding:9px 11px}.toolbar{padding:10px}}
 </style>
 </head>
@@ -213,6 +222,10 @@ canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-a
   </div>
   <div id="pathEditHint" class="hint">Drag a node to move it. Tap a small dashed dot between two nodes to add one there. Tap a node to select it, then use the buttons above.</div>
   <button id="pathEditDoneBtn" class="btn primary" style="width:100%;margin-top:10px;">✓ Done</button>
+</div><div id="joinPickBar" style="display:none;">
+  <div class="section-title">⋈ Choose Endpoint to Join</div>
+  <div class="hint">The gold node is the endpoint you're joining from. Tap any pulsing green endpoint to connect it there.</div>
+  <button id="joinCancelBtn" class="btn mini" style="width:100%;margin-top:10px;">✕ Cancel</button>
 </div></div>
     <div id="status" class="status">✨ Apple Pencil draws | one finger protected | two fingers pan/pinch/rotate | two-finger tap Undo | three-finger tap Redo | Capture Motif saves drawing ✨</div>
   </main>
@@ -593,7 +606,10 @@ function renderTray(){const tray=$('motifTray');tray.innerHTML='';$('motifEmpty'
 // "no unexpected destruction of unrelated content" needs in practice.
 function selectAt(x,y){
   if(pathEditStrokeId)commitEditPath();
-  if(joinPendingStrokeId){handleJoinTap(x,y);return;}
+  // While choosing a Join target, only the highlighted endpoint markers themselves (rendered in
+  // renderJoinTargets, with their own pointerup handlers) are selectable — a tap anywhere else on
+  // the canvas is a no-op rather than a "nearest endpoint" guess.
+  if(joinPendingStrokeId){setStatus('⋈ Tap a highlighted endpoint, or Cancel.');return;}
   const p=screenToCanvas(x,y);
   selected=null;selectedStrokeId=null;
   for(let i=placed.length-1;i>=0;i--){const m=placed[i];if(Math.abs(p.x-m.x)<m.w*m.s/2&&Math.abs(p.y-m.y)<m.h*m.s/2){selected=m.id;break}}
@@ -750,7 +766,7 @@ function updateSymAxis(){const a=$('symAxis');if(!a)return;if(symMode==='off'){a
 function updateSelectionBox(){const box=$('selectionBox'),m=getSel();if(!m){box.style.display='none';return}const rect=canvas.getBoundingClientRect(),wrapRect=wrap.getBoundingClientRect();const cx=rect.left+rect.width/2-wrapRect.left,cy=rect.top+rect.height/2-wrapRect.top;const a=rot*Math.PI/180;const px=(m.x-W/2)*zoom,py=(m.y-H/2)*zoom;const sx=cx+px*Math.cos(a)-py*Math.sin(a),sy=cy+px*Math.sin(a)+py*Math.cos(a);box.style.display='block';box.style.width=(m.w*m.s*zoom)+'px';box.style.height=(m.h*m.s*zoom)+'px';box.style.left=(sx-m.w*m.s*zoom/2)+'px';box.style.top=(sy-m.h*m.s*zoom/2)+'px';box.style.transform=`rotate(${rot+m.r}deg)`;}
 function updateSelectedControls(){const m=getSel();if(m){$('motifScale').value=Math.round(m.s*100);$('motifScaleVal').textContent=Math.round(m.s*100)+'%';}}
 function syncMode(){$('drawModeBtn').classList.toggle('active',mode==='draw');$('editModeBtn').classList.toggle('active',mode==='edit');canvas.style.cursor=mode==='draw'?'crosshair':'grab';setStatus(mode==='draw'?'✏️ Draw Mode: Apple Pencil draws, two fingers move the canvas.':'↔️ Edit Mode: tap motif with Pencil/mouse, then move, scale, rotate or flip.');}
-$('drawModeBtn').onclick=()=>{if(pathEditStrokeId)commitEditPath();mode='draw';selected=null;selectedStrokeId=null;syncStrokeSelectionUI();syncMode();redraw()};$('editModeBtn').onclick=()=>{mode='edit';syncMode()};$('captureBtn').onclick=captureMotif;$('undoBtn').onclick=undo;$('redoBtn').onclick=redo;$('resetRot').onclick=()=>{rot=0;applyTransform()};
+$('drawModeBtn').onclick=()=>{if(pathEditStrokeId)commitEditPath();if(joinPendingStrokeId)endJoinPick();mode='draw';selected=null;selectedStrokeId=null;syncStrokeSelectionUI();syncMode();redraw()};$('editModeBtn').onclick=()=>{mode='edit';syncMode()};$('captureBtn').onclick=captureMotif;$('undoBtn').onclick=undo;$('redoBtn').onclick=redo;$('resetRot').onclick=()=>{rot=0;applyTransform()};
 // Clear Drawing only clears the ACTIVE layer's strokes — clearing the whole document across
 // every layer from one button would be far too easy to trigger by accident once layers are
 // holding genuinely different content (Sketch vs Colour vs Outline).
@@ -1148,8 +1164,14 @@ function startContinuePath(){
   setStatus('↳ Continue Path: draw from the highlighted end with Apple Pencil to extend this stroke.');
   redraw();
 }
-// Join Path: commits pending edits, then arms canvas taps (in Edit mode) to look for the
-// nearest endpoint of a DIFFERENT open stroke on the same layer — see handleJoinTap/performJoin.
+// Join Path: endpoint-to-endpoint picking, not desktop-style multi-select. Commits pending node
+// edits, then enters a temporary "Choose Endpoint to Join" mode: every compatible endpoint on
+// every other open path (same layer) lights up as a tappable target, the origin endpoint stays
+// visible and visually distinct, and a Cancel button backs out without changing anything. Tapping
+// a target endpoint joins directly to THAT stroke's exact endpoint coordinates (no nearest-point
+// search against an arbitrary tap location), which is what keeps the join snapped with no stray
+// connecting segment. Tapping the opposite end of the SAME path is treated as Close Shape rather
+// than a path joined to itself.
 function startJoinPath(){
   if(!pathEditStrokeId||!pathEditNodes||selectedNodeIndex==null||pathEditClosed)return;
   const isEnd=selectedNodeIndex===0||selectedNodeIndex===pathEditNodes.length-1;
@@ -1159,26 +1181,72 @@ function startJoinPath(){
   commitEditPath();
   joinPendingStrokeId=strokeId;joinPendingFromEnd=fromEnd;
   mode='edit';syncMode();
-  setStatus('⋈ Join Path: tap the endpoint of another open path on the same layer to join with it.');
+  $('joinPickBar').style.display='block';
+  renderJoinTargets();
+  setStatus('⋈ Choose Endpoint to Join: tap a highlighted endpoint, or Cancel.');
 }
-function handleJoinTap(screenX,screenY){
-  const p=screenToCanvas(screenX,screenY);
+function endJoinPick(){
+  joinPendingStrokeId=null;joinPendingFromEnd=false;
+  $('joinPickBar').style.display='none';
+  $('pathNodeOverlay').innerHTML='';
+}
+// Renders the origin endpoint (gold, inert) plus every compatible target endpoint (pulsing
+// green) as real tappable elements in the node overlay — the only things selectable while
+// picking, so the user is never asked to guess which end of which object connects where.
+function renderJoinTargets(){
+  const host=$('pathNodeOverlay');host.innerHTML='';
   const strokeA=strokes.find(s=>s.id===joinPendingStrokeId);
-  joinPendingStrokeId=null;
-  if(!strokeA)return;
-  const TOL=44;
-  let best=null,bestDist=TOL,bestFromEnd=false;
+  if(!strokeA){endJoinPick();return;}
+  const ptsA=strokeA.nodes?nodesToPoints(strokeA.nodes,false):strokeA.points;
+  if(!ptsA||ptsA.length<2){endJoinPick();return;}
+  const originPt=joinPendingFromEnd?ptsA[ptsA.length-1]:ptsA[0];
+  const originEl=document.createElement('div');
+  const op=canvasToScreen(originPt.x,originPt.y);
+  originEl.className='path-node join-origin';
+  originEl.style.left=op.x+'px';originEl.style.top=op.y+'px';
+  host.appendChild(originEl);
   strokes.forEach(s=>{
-    if(s.id===strokeA.id||s.closed||s.layerId!==strokeA.layerId)return;
+    if(s.closed||s.layerId!==strokeA.layerId)return;
     const pts=s.nodes?nodesToPoints(s.nodes,false):s.points;
-    if(!pts||!pts.length)return;
-    const dStart=Math.hypot(p.x-pts[0].x,p.y-pts[0].y);
-    const dEnd=Math.hypot(p.x-pts[pts.length-1].x,p.y-pts[pts.length-1].y);
-    if(dStart<bestDist){bestDist=dStart;best=s;bestFromEnd=false;}
-    if(dEnd<bestDist){bestDist=dEnd;best=s;bestFromEnd=true;}
+    if(!pts||pts.length<2)return;
+    [{pt:pts[0],fromEnd:false},{pt:pts[pts.length-1],fromEnd:true}].forEach(({pt,fromEnd})=>{
+      const isSelf=s.id===strokeA.id;
+      if(isSelf&&fromEnd===joinPendingFromEnd)return; // that's the origin marker itself, not a target
+      const el=document.createElement('div');
+      const pos=canvasToScreen(pt.x,pt.y);
+      el.className='path-node join-target'+(isSelf?' self-endpoint':'');
+      el.style.left=pos.x+'px';el.style.top=pos.y+'px';
+      el.addEventListener('pointerup',e=>{
+        if(!isPen(e))return;
+        e.stopPropagation();e.preventDefault();
+        if(isSelf){
+          endJoinPick();
+          closeSelectedStrokeAsShape(strokeA);
+        }else{
+          const strokeAId=strokeA.id,fromEnd0=joinPendingFromEnd;
+          endJoinPick();
+          performJoin(strokes.find(x=>x.id===strokeAId),fromEnd0,s,fromEnd);
+        }
+      });
+      host.appendChild(el);
+    });
   });
-  if(!best){setStatus('⋈ No compatible endpoint nearby — tap closer to another open path\'s end on the same layer.');return;}
-  performJoin(strokeA,joinPendingFromEnd,best,bestFromEnd);
+}
+$('joinCancelBtn').addEventListener('pointerup',e=>{e.preventDefault();endJoinPick();setStatus('⋈ Join cancelled.');});
+// Reached when the user picks the opposite end of the SAME path while choosing a Join target —
+// "join a path to itself" isn't a real operation, Close Shape is what that gesture actually means.
+function closeSelectedStrokeAsShape(stroke){
+  if(!stroke||stroke.closed)return;
+  const nodes=stroke.nodes||pointsToNodes(stroke.points);
+  if(!nodes||nodes.length<3){setStatus('◯ Need at least 3 points to close a shape.');return;}
+  stroke.nodes=nodes;
+  stroke.closed=true;
+  stroke.points=nodesToPoints(nodes,true);
+  rebuildLayer(stroke.layerId);
+  selectedStrokeId=stroke.id;selected=null;
+  syncStrokeSelectionUI();
+  pushHist();redraw();
+  setStatus('◯ That\'s the same path\'s other end — closed the shape instead of joining it to itself.');
 }
 // The joined stroke keeps strokeA's brush/settings (the path that was selected/pending when
 // Join was invoked) rather than silently picking one — status message says so explicitly, per
