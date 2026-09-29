@@ -208,7 +208,7 @@ canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-a
       <div class="hint">New strokes go onto the active (highlighted) layer. Tap a row to make it active.</div>
     </section>
     <section class="section"><div class="section-title">📐 Repeat Layouts</div><div class="grid"><button class="layout-btn active" data-layout="grid">Grid</button><button class="layout-btn" data-layout="halfDrop">Half Drop</button><button class="layout-btn" data-layout="halfBrick">Half Brick</button><button class="layout-btn" data-layout="diamond">Diamond</button><button class="layout-btn" data-layout="ogee">Ogee</button><button class="layout-btn" data-layout="tossed">Tossed</button></div></section>
-    <section class="section"><div class="section-title">🔧 Selected Motif</div><div class="slider-row"><label>Size</label><input id="motifScale" type="range" min="15" max="300" value="100"><span id="motifScaleVal">100%</span></div><div class="row"><button id="rotL" class="btn mini">↺</button><button id="rotR" class="btn mini">↻</button><button id="flipH" class="btn mini">Flip H</button><button id="flipV" class="btn mini">Flip V</button><button id="deleteSel" class="btn mini danger">Delete</button></div></section>
+    <section class="section"><div class="section-title">🔧 Selected Motif</div><div class="slider-row"><label>Size</label><input id="motifScale" type="range" min="15" max="300" value="100"><span id="motifScaleVal">100%</span></div><div class="row"><button id="rotL" class="btn mini">↺</button><button id="rotR" class="btn mini">↻</button><button id="flipH" class="btn mini">Flip H</button><button id="flipV" class="btn mini">Flip V</button><button id="deleteSel" class="btn mini danger">Delete</button></div><div class="row" style="margin-top:6px;"><button id="editMotifBtn" class="btn mini primary" style="flex:1 1 100%;display:none;">✏️ Edit Motif</button></div><div class="row" style="margin-top:6px;"><button id="duplicateMotifBtn" class="btn mini" style="flex:1 1 45%;display:none;">⧉ Duplicate</button><button id="makeIndependentBtn" class="btn mini" style="flex:1 1 45%;display:none;">🔓 Make Independent</button></div></section>
     <section class="section" id="strokeSelectSection" style="display:none;">
       <div class="section-title">🖊️ Selected Stroke</div>
       <div id="strokeRecipe" class="recipe-text"></div>
@@ -255,7 +255,7 @@ canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-a
     </section>
   </aside>
   <main class="workspace">
-    <div class="toolbar"><button id="undoBtn" class="tool-btn">↩️ Undo</button><button id="redoBtn" class="tool-btn">↪️ Redo</button><button id="symToggle" class="tool-btn">🦋 Symmetry Off</button><button id="tilingBtn" class="tool-btn active">Tiling On</button><button id="guidesBtn" class="tool-btn active">📐 Guides</button><button id="resetRot" class="tool-btn">0° Rotation</button><button id="paintModePill" class="pill" style="display:none;cursor:pointer;">🎨 Paint Inside — tap for Free Paint</button><button id="clearDrawing" class="tool-btn danger">Clear Drawing</button><button id="exportBtn" class="tool-btn primary">📸 Export</button><div class="toolbar-spacer"></div><button id="themeToggle" class="tool-btn">☀️ Light Mode</button><div id="zoomPill" class="pill">100%</div><div id="layoutPill" class="pill">📍 Grid Mode</div></div>
+    <div class="toolbar"><button id="undoBtn" class="tool-btn">↩️ Undo</button><button id="redoBtn" class="tool-btn">↪️ Redo</button><button id="symToggle" class="tool-btn">🦋 Symmetry Off</button><button id="tilingBtn" class="tool-btn active">Tiling On</button><button id="guidesBtn" class="tool-btn active">📐 Guides</button><button id="resetRot" class="tool-btn">0° Rotation</button><button id="paintModePill" class="pill" style="display:none;cursor:pointer;">🎨 Paint Inside — tap for Free Paint</button><button id="editMotifBar" class="pill" style="display:none;cursor:pointer;background:var(--accentTeal);border:1px solid rgba(92,184,171,.5);font:inherit;">✏️ Editing: <span id="editMotifBarName"></span> — tap Done</button><button id="clearDrawing" class="tool-btn danger">Clear Drawing</button><button id="exportBtn" class="tool-btn primary">📸 Export</button><div class="toolbar-spacer"></div><button id="themeToggle" class="tool-btn">☀️ Light Mode</button><div id="zoomPill" class="pill">100%</div><div id="layoutPill" class="pill">📍 Grid Mode</div></div>
     <div id="canvasWrap" class="canvas-wrap"><div id="symPopover" class="sym-pop"><div class="section-title">🦋 Symmetry</div><div class="grid"><button class="sym-btn btn active" data-sym="off">Off</button><button class="sym-btn btn" data-sym="vertical">Vertical</button><button class="sym-btn btn" data-sym="horizontal">Horizontal</button><button class="sym-btn btn" data-sym="quad">Quad</button><button class="sym-btn btn" data-sym="diamond">Diamond</button></div><div class="slider-row"><label>Axis X</label><input id="symX" type="range" min="0" max="1800" value="900"><span id="symXVal">50%</span></div><div class="slider-row"><label>Axis Y</label><input id="symY" type="range" min="0" max="1800" value="900"><span id="symYVal">50%</span></div><div class="row"><button id="symCentre" class="btn mini">Centre Axis</button><button id="symClose" class="btn mini">Done</button></div><div class="hint">Move the mirror point to make flowers, leaves and playful asymmetric symmetry.</div></div><canvas id="canvas" width="1800" height="1800"></canvas><div id="selectionBox" class="selection-box"><div id="resizeHandle" class="handle"></div><div id="rotateHandle" class="rotHandle"></div></div><div id="symAxis" class="sym-axis"></div><div id="rotateChip" class="rotate-chip">Canvas 0°</div><div id="pathNodeOverlay"></div><div id="pathEditBar" class="sym-pop" style="display:none;">
   <div class="section-title">✎ Edit Path</div>
   <div class="row"><button id="nodeSmoothBtn" class="btn mini">⌒ Smooth</button><button id="nodeCornerBtn" class="btn mini">⌐ Corner</button></div>
@@ -343,6 +343,11 @@ let holdAdjustBaseHw=0,holdAdjustBaseHh=0,holdAdjustAnchorDist=1,holdAdjustAncho
 // THE SNAP before any adjustment starts at all.
 const ADJUST_DEAD_ZONE=16;
 let symMode='off',symX=W/2,symY=H/2,drawing=false;let motifs=[],placed=[],selected=null,traces=[],traceLocked=true;let bgImg=null,bgOpacity=1,bgShown=true;
+// While editing a Motif Source, the outer pattern's strokes/layers/history are stashed here and the
+// live globals temporarily hold the motif's own editable content instead. Persisted across autosave
+// so an interrupted (browser-closed) mid-edit session can be safely auto-finished on the next boot
+// rather than silently losing either the motif edits or the outer pattern.
+let editingMotifId=null,editingMotifStash=null;
 let history=[],hIndex=-1;let touchState=null;let lastTouchEnd=0;
 const $=id=>document.getElementById(id);
 function setStatus(t){$('status').textContent=t;}
@@ -445,7 +450,7 @@ function restore(s){
   const layerMeta=JSON.parse(s.layersJSON||'[]');
   applyLayerMeta(layerMeta,s.activeLayerId);
   rebuildAllLayers();
-  placed=JSON.parse(s.placed).map(p=>({...p,img:motifs[p.motifIndex]?.img||p.img}));
+  placed=JSON.parse(s.placed).map(p=>({...p,img:(motifs.find(x=>x.id===p.motifId)||{}).img||p.img}));
   selected=s.selected;selectedStrokeId=s.selectedStrokeId||null;
   exitEditPath(true);
   syncStrokeSelectionUI();renderLayersList();redraw();
@@ -543,7 +548,7 @@ let activeTemplate=null;
 // the outline shape; an imported Magic Builder export uses `shape` - both are read here.
 function applyBricks(bricksArr,name,key){
  placed=(bricksArr||[]).map(b=>{const w=(b.w/100)*TILE,h=(b.h/100)*TILE;
-  return {id:crypto.randomUUID(),motifIndex:null,img:null,slotShape:b.shape||b.type||'oval',role:b.role||'filler',
+  return {id:crypto.randomUUID(),motifId:null,img:null,slotShape:b.shape||b.type||'oval',role:b.role||'filler',
    x:C+(b.x/100)*TILE,y:C+(b.y/100)*TILE,w,h,boxW:w,boxH:h,s:1,r:b.rot||0,fx:1,fy:1};});
  selected=placed[0]?.id||null;activeTemplate=key||null;mode='edit';syncMode();syncTemplateUI();pushHist();redraw();
  setStatus('📐 '+(name||'Template')+' loaded - tap a motif to fill the next slot.');
@@ -566,16 +571,16 @@ $('templateImportInput').onchange=e=>{
 };
 // Fills the selected empty slot if there is one, else the first remaining empty slot, else
 // (no template active, or all slots filled) falls back to a plain free-placed motif.
-function placeMotif(motifIdx,img){
+function placeMotif(motifId,img){
  let slot=placed.find(p=>p.id===selected&&!p.img)||placed.find(p=>!p.img);
  if(slot){
   const boxW=slot.boxW||slot.w,boxH=slot.boxH||slot.h,fit=Math.min(boxW/img.width,boxH/img.height);
-  slot.w=img.width*fit;slot.h=img.height*fit;slot.motifIndex=motifIdx;slot.img=img;selected=slot.id;
+  slot.w=img.width*fit;slot.h=img.height*fit;slot.motifId=motifId;slot.img=img;selected=slot.id;
  }else{
-  placed.push({id:crypto.randomUUID(),motifIndex:motifIdx,img,x:W/2,y:H/2,w:Math.min(320,img.width),h:Math.min(320,img.height),s:1,r:0,fx:1,fy:1});
+  placed.push({id:crypto.randomUUID(),motifId,img,x:W/2,y:H/2,w:Math.min(320,img.width),h:Math.min(320,img.height),s:1,r:0,fx:1,fy:1});
   selected=placed[placed.length-1].id;
  }
- mode='edit';syncMode();pushHist();redraw();
+ mode='edit';syncMode();pushHist();redraw();updateSelectedControls();
 }
 // Same point-transform math as the original app's symmetryPairs (segment pairs -> per-point,
 // since the transforms are uniform along a segment either way) — one transform function per
@@ -781,9 +786,67 @@ wrap.addEventListener('touchstart',e=>{e.preventDefault();const now=Date.now();t
 wrap.addEventListener('touchmove',e=>{e.preventDefault();if(!touchState)return;const cur=copyTouches(e.touches);touchState.moved=true;if(cur.length===1&&touchState.n===1){return}if(cur.length>=2&&touchState.start.length>=2){const s=touchState.start,c=cur;const sd=dist(s[0],s[1]),cd=dist(c[0],c[1]);const sa=ang(s[0],s[1]),ca=ang(c[0],c[1]);const sm=mid(s[0],s[1]),cm=mid(c[0],c[1]);zoom=Math.min(4,Math.max(.2,touchState.zoom*(cd/sd)));rot=touchState.rot+(ca-sa)*180/Math.PI;panX=touchState.panX+(cm.x-sm.x);panY=touchState.panY+(cm.y-sm.y);applyTransform();}}, {passive:false});
 wrap.addEventListener('touchend',e=>{e.preventDefault();if(!touchState)return;const dt=Date.now()-touchState.time;const tap=!touchState.moved&&dt<260;if(tap&&touchState.n===2){undo();lastTouchEnd=Date.now()}else if(tap&&touchState.n===3){redo();lastTouchEnd=Date.now()}touchState=null;}, {passive:false});
 function copyTouches(t){return Array.from(t).map(v=>({x:v.clientX,y:v.clientY}))}function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y)||1}function ang(a,b){return Math.atan2(b.y-a.y,b.x-a.x)}function mid(a,b){return{x:(a.x+b.x)/2,y:(a.y+b.y)/2}}
-function captureMotif(){updateComposite();const imgData=compositeCtx.getImageData(0,0,W,H).data;let minX=W,minY=H,maxX=0,maxY=0,found=false;for(let y=0;y<H;y+=2){for(let x=0;x<W;x+=2){if(imgData[(y*W+x)*4+3]>8){found=true;if(x<minX)minX=x;if(y<minY)minY=y;if(x>maxX)maxX=x;if(y>maxY)maxY=y;}}}if(!found){setStatus('Nothing to capture yet — draw with Apple Pencil first.');return}minX=Math.max(0,minX-24);minY=Math.max(0,minY-24);maxX=Math.min(W,maxX+24);maxY=Math.min(H,maxY+24);const tw=maxX-minX,th=maxY-minY,tmp=document.createElement('canvas');tmp.width=tw;tmp.height=th;tmp.getContext('2d').drawImage(compositeCanvas,minX,minY,tw,th,0,0,tw,th);addMotif(tmp.toDataURL('image/png'),'Motif '+(motifs.length+1),true);strokes=[];rebuildAllLayers();selectedStrokeId=null;syncStrokeSelectionUI();pushHist();redraw();setStatus('✂️ Captured drawing (all visible layers) as Motif '+motifs.length+' and cleared strokes.');}
-function addMotif(src,name,placeNow=false){const img=new Image();img.onload=()=>{const idx=motifs.push({img,src,name})-1;if(placeNow)placeMotif(idx,img);renderTray();pushHist();redraw();};img.src=src;}
-function renderTray(){const tray=$('motifTray');tray.innerHTML='';$('motifEmpty').style.display=motifs.length?'none':'block';motifs.forEach((m,i)=>{const card=document.createElement('div');card.className='motif-card';card.innerHTML=`<img src="${m.src}" alt=""><button class="x">×</button><div class="small">${m.name}</div>`;card.querySelector('img').onclick=()=>placeMotif(i,m.img);card.querySelector('.x').onclick=()=>{motifs.splice(i,1);placed=placed.filter(p=>p.motifIndex!==i);renderTray();pushHist();redraw();};tray.appendChild(card);});}
+// Renders the CURRENT strokes (all visible layers, flattened) to a cropped PNG data URL — shared
+// by Capture Motif and by finishing an Edit Motif session, so a motif's preview is generated the
+// exact same way whichever path produced it. Returns null when there's nothing to capture.
+function renderCurrentArtworkPreview(){
+  updateComposite();
+  const imgData=compositeCtx.getImageData(0,0,W,H).data;
+  let minX=W,minY=H,maxX=0,maxY=0,found=false;
+  for(let y=0;y<H;y+=2){for(let x=0;x<W;x+=2){if(imgData[(y*W+x)*4+3]>8){found=true;if(x<minX)minX=x;if(y<minY)minY=y;if(x>maxX)maxX=x;if(y>maxY)maxY=y;}}}
+  if(!found)return null;
+  minX=Math.max(0,minX-24);minY=Math.max(0,minY-24);maxX=Math.min(W,maxX+24);maxY=Math.min(H,maxY+24);
+  const tw=maxX-minX,th=maxY-minY,tmp=document.createElement('canvas');tmp.width=tw;tmp.height=th;
+  tmp.getContext('2d').drawImage(compositeCanvas,minX,minY,tw,th,0,0,tw,th);
+  return {src:tmp.toDataURL('image/png'),bounds:{minX,minY,w:tw,h:th}};
+}
+// Capture Motif must not be a one-way door: the rendered PNG below is only ever a cached preview
+// for placement/tiling performance — the motif's real, editable master artwork (every stroke,
+// with its nodes/shape/brushId/settings/pressure/closed/clipStrokeId exactly as drawn, plus the
+// layer structure Paint Inside relies on) is captured into entry.source BEFORE the canvas is
+// cleared, so Edit Motif can hand it straight back later with nothing lost or baked into pixels.
+function captureMotif(){
+  const preview=renderCurrentArtworkPreview();
+  if(!preview){setStatus('Nothing to capture yet — draw with Apple Pencil first.');return}
+  const source={
+    strokesJSON:JSON.stringify(strokes),
+    layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity}))),
+    bounds:preview.bounds,
+  };
+  addMotif(preview.src,'Motif '+(motifs.length+1),true,source);
+  strokes=[];rebuildAllLayers();selectedStrokeId=null;syncStrokeSelectionUI();pushHist();redraw();
+  setStatus('✂️ Captured as an editable motif and cleared the canvas — select it and tap Edit Motif any time to return to it.');
+}
+// Every motif gets a stable id (never a bare array index — placed[] instances and Edit Motif both
+// need something that survives another motif being deleted/reordered ahead of it). `source` is
+// null for a motif created before this architecture existed (a legacy, preview-only motif) or one
+// deliberately without editable data; Edit Motif checks for that and refuses cleanly rather than
+// inventing vector information that was never actually captured.
+function addMotif(src,name,placeNow=false,source=null){
+  const img=new Image();
+  img.onload=()=>{
+    const entry={id:crypto.randomUUID(),img,src,name,source};
+    motifs.push(entry);
+    if(placeNow)placeMotif(entry.id,img);
+    renderTray();pushHist();redraw();
+  };
+  img.src=src;
+}
+function renderTray(){
+  const tray=$('motifTray');tray.innerHTML='';
+  $('motifEmpty').style.display=motifs.length?'none':'block';
+  motifs.forEach(m=>{
+    const card=document.createElement('div');card.className='motif-card';
+    card.innerHTML=`<img src="${m.src}" alt=""><button class="x">×</button><div class="small">${m.name}</div>`;
+    card.querySelector('img').onclick=()=>placeMotif(m.id,m.img);
+    card.querySelector('.x').onclick=()=>{
+      motifs=motifs.filter(x=>x.id!==m.id);
+      placed=placed.filter(p=>p.motifId!==m.id);
+      renderTray();pushHist();redraw();
+    };
+    tray.appendChild(card);
+  });
+}
 // Locked layers are skipped entirely during hit-testing — you can't select (and so can't edit,
 // erase, reassign or path-edit) a stroke that lives on a layer you've locked, which is what
 // "no unexpected destruction of unrelated content" needs in practice.
@@ -1158,7 +1221,20 @@ $('rotateHandle').addEventListener('pointerdown',e=>{const m=getSel();if(!m||!is
  $('rotateHandle').addEventListener('pointermove',onMove);$('rotateHandle').addEventListener('pointerup',onUp,{once:true});});
 function updateSymAxis(){const a=$('symAxis');if(!a)return;if(symMode==='off'){a.style.display='none';return}const rect=canvas.getBoundingClientRect(),wrapRect=wrap.getBoundingClientRect();const cx=rect.left+rect.width/2-wrapRect.left,cy=rect.top+rect.height/2-wrapRect.top;const rr=rot*Math.PI/180;const px=(symX-W/2)*zoom,py=(symY-H/2)*zoom;a.style.display='block';a.style.left=(cx+px*Math.cos(rr)-py*Math.sin(rr))+'px';a.style.top=(cy+px*Math.sin(rr)+py*Math.cos(rr))+'px';}
 function updateSelectionBox(){const box=$('selectionBox'),m=getSel();if(!m){box.style.display='none';return}const rect=canvas.getBoundingClientRect(),wrapRect=wrap.getBoundingClientRect();const cx=rect.left+rect.width/2-wrapRect.left,cy=rect.top+rect.height/2-wrapRect.top;const a=rot*Math.PI/180;const px=(m.x-W/2)*zoom,py=(m.y-H/2)*zoom;const sx=cx+px*Math.cos(a)-py*Math.sin(a),sy=cy+px*Math.sin(a)+py*Math.cos(a);box.style.display='block';box.style.width=(m.w*m.s*zoom)+'px';box.style.height=(m.h*m.s*zoom)+'px';box.style.left=(sx-m.w*m.s*zoom/2)+'px';box.style.top=(sy-m.h*m.s*zoom/2)+'px';box.style.transform=`rotate(${rot+m.r}deg)`;}
-function updateSelectedControls(){const m=getSel();if(m){$('motifScale').value=Math.round(m.s*100);$('motifScaleVal').textContent=Math.round(m.s*100)+'%';}}
+function updateSelectedControls(){
+ const m=getSel();
+ if(m){$('motifScale').value=Math.round(m.s*100);$('motifScaleVal').textContent=Math.round(m.s*100)+'%';}
+ const hasMotif=!!(m&&m.motifId);
+ const entry=hasMotif?motifs.find(x=>x.id===m.motifId):null;
+ $('editMotifBtn').style.display=hasMotif?'block':'none';
+ $('duplicateMotifBtn').style.display=hasMotif?'inline-block':'none';
+ $('makeIndependentBtn').style.display=hasMotif?'inline-block':'none';
+ if(hasMotif){
+  const legacy=!entry||!entry.source;
+  $('editMotifBtn').disabled=legacy;
+  $('editMotifBtn').title=legacy?'This motif was captured before editable sources existed — it has no editable artwork to return to.':'';
+ }
+}
 function syncMode(){$('drawModeBtn').classList.toggle('active',mode==='draw');$('editModeBtn').classList.toggle('active',mode==='edit');canvas.style.cursor=mode==='draw'?'crosshair':'grab';setStatus(mode==='draw'?'✏️ Draw Mode: Apple Pencil draws, two fingers move the canvas.':'↔️ Edit Mode: tap motif with Pencil/mouse, then move, scale, rotate or flip.');}
 $('drawModeBtn').onclick=()=>{if(pathEditStrokeId)commitEditPath();if(joinPendingStrokeId)endJoinPick();armedShapeType=null;syncShapeToolUI();mode='draw';selected=null;selectedStrokeId=null;syncStrokeSelectionUI();syncMode();redraw()};$('editModeBtn').onclick=()=>{armedShapeType=null;syncShapeToolUI();mode='edit';syncMode()};$('captureBtn').onclick=captureMotif;$('undoBtn').onclick=undo;$('redoBtn').onclick=redo;$('resetRot').onclick=()=>{rot=0;applyTransform()};
 // Clear Drawing only clears the ACTIVE layer's strokes — clearing the whole document across
@@ -2160,7 +2236,97 @@ bindTapButton($('simplifyPathBtn'),simplifyCurrentPath);
 $('moreSettingsToggle').onclick=()=>{const box=$('moreSettings');const showing=box.style.display!=='none';box.style.display=showing?'none':'block';$('moreSettingsToggle').textContent=showing?'⚙️ More Settings':'⚙️ Hide Settings';};
 renderBrushFamilies();syncRecents();syncFavorites();syncControlsFromSettings();
 document.querySelectorAll('.layout-btn').forEach(b=>b.onclick=()=>{document.querySelectorAll('.layout-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');layout=b.dataset.layout;$('layoutPill').textContent='📍 '+b.textContent+' Mode';redraw();});$('tilingBtn').onclick=()=>{showTiling=!showTiling;$('tilingBtn').classList.toggle('active',showTiling);$('tilingBtn').textContent=showTiling?'Tiling On':'Tiling Off';redraw();};$('guidesBtn').onclick=()=>{showGuides=!showGuides;$('guidesBtn').classList.toggle('active',showGuides);redraw();};
-$('motifScale').oninput=e=>{const m=getSel();if(!m)return;m.s=+e.target.value/100;$('motifScaleVal').textContent=e.target.value+'%';redraw();};$('motifScale').onchange=pushHist;$('rotL').onclick=()=>{const m=getSel();if(m){m.r-=15;pushHist();redraw();}};$('rotR').onclick=()=>{const m=getSel();if(m){m.r+=15;pushHist();redraw();}};$('flipH').onclick=()=>{const m=getSel();if(m){m.fx*=-1;pushHist();redraw();}};$('flipV').onclick=()=>{const m=getSel();if(m){m.fy*=-1;pushHist();redraw();}};$('deleteSel').onclick=()=>{placed=placed.filter(p=>p.id!==selected);selected=null;pushHist();redraw();};
+$('motifScale').oninput=e=>{const m=getSel();if(!m)return;m.s=+e.target.value/100;$('motifScaleVal').textContent=e.target.value+'%';redraw();};$('motifScale').onchange=pushHist;$('rotL').onclick=()=>{const m=getSel();if(m){m.r-=15;pushHist();redraw();}};$('rotR').onclick=()=>{const m=getSel();if(m){m.r+=15;pushHist();redraw();}};$('flipH').onclick=()=>{const m=getSel();if(m){m.fx*=-1;pushHist();redraw();}};$('flipV').onclick=()=>{const m=getSel();if(m){m.fy*=-1;pushHist();redraw();}};$('deleteSel').onclick=()=>{placed=placed.filter(p=>p.id!==selected);selected=null;pushHist();redraw();updateSelectedControls();};
+
+// --- Non-destructive Motif editing: Motif Source (motifs[] entry, with .source = editable master
+// data) vs Motif Instance (placed[] entry, referencing a source by stable .motifId with its own
+// transform). Entering Edit Motif temporarily swaps the live strokes/layers globals for the
+// source's content so every existing tool (brushes, path editing, Paint Inside, shapes) just works
+// unmodified; finishing swaps them back and regenerates the source's cached preview image, which
+// every linked instance shares — so one edit updates every instance sharing that source at once.
+function duplicateMotifInstance(){
+ const m=getSel();if(!m)return;
+ const copy={...m,id:crypto.randomUUID(),x:m.x+40,y:m.y+40};
+ placed.push(copy);selected=copy.id;
+ pushHist();redraw();updateSelectedControls();
+ setStatus('⧉ Duplicated — new instance shares the same motif source.');
+}
+function makeIndependentMotif(){
+ const m=getSel();if(!m||!m.motifId)return;
+ const entry=motifs.find(x=>x.id===m.motifId);if(!entry)return;
+ const clone={id:crypto.randomUUID(),img:entry.img,src:entry.src,name:entry.name+' (independent)',source:entry.source?JSON.parse(JSON.stringify(entry.source)):null};
+ motifs.push(clone);
+ m.motifId=clone.id;
+ renderTray();pushHist();redraw();updateSelectedControls();
+ setStatus('🔓 This instance now has its own independent motif — editing it won\'t affect the others.');
+}
+function enterEditMotif(){
+ if(editingMotifId)return;
+ const m=getSel();if(!m||!m.motifId)return;
+ const entry=motifs.find(x=>x.id===m.motifId);
+ if(!entry||!entry.source){setStatus('⚠️ This motif has no editable source (captured before editable motifs existed) — it can only be placed, not edited.');return}
+ if(pathEditStrokeId)commitEditPath();
+ if(joinPendingStrokeId)endJoinPick();
+ armedShapeType=null;syncShapeToolUI();
+ editingMotifStash={
+  strokesJSON:JSON.stringify(strokes),
+  layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity}))),
+  activeLayerId,mode,
+ };
+ editingMotifId=entry.id;
+ // Edit Motif sessions get their own throwaway undo history so mistakes/undos made while inside
+ // a motif's source can never corrupt or leak into the outer pattern's own undo stack.
+ history=[];hIndex=-1;
+ strokes=JSON.parse(entry.source.strokesJSON);
+ applyLayerMeta(entry.source.layersJSON?JSON.parse(entry.source.layersJSON):[],null);
+ rebuildAllLayers();renderLayersList();
+ selected=null;selectedStrokeId=null;syncStrokeSelectionUI();
+ // Default to Draw Mode inside the session — the user can still switch to Edit Mode with the
+ // normal toolbar button to select/move/path-edit existing strokes, exactly as outside a motif
+ // edit session; nothing here needs its own separate mode.
+ mode='draw';syncMode();
+ $('editMotifBar').style.display='inline-flex';$('editMotifBarName').textContent=entry.name;
+ pushHist();redraw();
+ setStatus('✏️ Editing motif "'+entry.name+'" — tap Done in the toolbar when finished.');
+}
+function finishEditMotif(){
+ if(!editingMotifId)return;
+ if(pathEditStrokeId)commitEditPath();
+ const entry=motifs.find(x=>x.id===editingMotifId);
+ const stash=editingMotifStash;
+ const preview=renderCurrentArtworkPreview();
+ const finish=()=>{
+  strokes=JSON.parse(stash.strokesJSON||'[]');
+  applyLayerMeta(stash.layersJSON?JSON.parse(stash.layersJSON):[],stash.activeLayerId);
+  rebuildAllLayers();renderLayersList();
+  selected=null;selectedStrokeId=null;syncStrokeSelectionUI();
+  mode=stash.mode||'edit';syncMode();
+  editingMotifId=null;editingMotifStash=null;
+  $('editMotifBar').style.display='none';
+  pushHist();redraw();
+  setStatus('✓ Motif updated — every linked instance now reflects your changes.');
+ };
+ if(entry&&preview){
+  entry.source={strokesJSON:JSON.stringify(strokes),layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity}))),bounds:preview.bounds};
+  const img=new Image();
+  img.onload=()=>{
+   entry.img=img;entry.src=preview.src;
+   placed.forEach(p=>{if(p.motifId===entry.id)p.img=img;});
+   renderTray();
+   finish();
+  };
+  img.src=preview.src;
+ }else{
+  // Motif was fully erased during editing — keep its OLD source/preview rather than destroying
+  // the only remaining copy of the artwork.
+  if(entry)setStatus('⚠️ Motif looked empty — kept the previous version instead of erasing it.');
+  finish();
+ }
+}
+$('editMotifBtn').onclick=enterEditMotif;
+$('duplicateMotifBtn').onclick=duplicateMotifInstance;
+$('makeIndependentBtn').onclick=makeIndependentMotif;
+$('editMotifBar').onclick=finishEditMotif;
 $('motifInput').onchange=e=>Array.from(e.target.files).forEach(f=>{const r=new FileReader();r.onload=ev=>addMotif(ev.target.result,f.name,false);r.readAsDataURL(f);});
 $('bgInput').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{const img=new Image();img.onload=()=>{bgImg=img;bgShown=true;$('bgEmpty').style.display='none';$('bgControls').style.display='block';redraw();setStatus('🧱 Background pattern loaded.');scheduleAutosave();};img.src=ev.target.result;};r.readAsDataURL(f);e.target.value='';};
 $('bgOpacitySlider').oninput=e=>{bgOpacity=+e.target.value/100;$('bgOpacityVal').textContent=e.target.value+'%';redraw();scheduleAutosave();};
@@ -2202,7 +2368,9 @@ async function saveDocNow(){
       layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity}))),
       activeLayerId,
       placedJSON:JSON.stringify(placed.map(p=>({...p,img:null}))),
-      motifs:motifs.map(m=>({src:m.src,name:m.name})),
+      motifs:motifs.map(m=>({id:m.id,src:m.src,name:m.name,source:m.source||null})),
+      editingMotifId,
+      editingMotifStash:editingMotifStash?JSON.stringify(editingMotifStash):null,
       bgSrc:bgImg?bgImg.src:null,bgOpacity,bgShown,
       layout,activeTemplate,
       savedAt:Date.now(),
@@ -2216,7 +2384,10 @@ async function restoreDocOnBoot(){
     const doc=await new Promise((res,rej)=>{const tx=db.transaction(DOC_STORE,'readonly');const r=tx.objectStore(DOC_STORE).get(DOC_KEY);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});
     if(!doc)return false;
     motifs=[];
-    for(const m of (doc.motifs||[])){await new Promise(res=>{const img=new Image();img.onload=()=>{motifs.push({img,src:m.src,name:m.name});res();};img.onerror=res;img.src=m.src;});}
+    // Legacy saves stored motifs as {src,name} only — no id, no editable source. Assign a fresh
+    // id in load order so placed[] (below) has something stable to resolve against, but leave
+    // source null rather than inventing vector data that was never actually captured.
+    for(const m of (doc.motifs||[])){await new Promise(res=>{const img=new Image();img.onload=()=>{motifs.push({id:m.id||crypto.randomUUID(),img,src:m.src,name:m.name,source:m.source||null});res();};img.onerror=res;img.src=m.src;});}
     renderTray();
     // Strokes must be parsed BEFORE applyLayerMeta, since migrating strokes with no valid
     // layerId onto the fallback layer (old, pre-layers documents) happens inside it.
@@ -2224,7 +2395,35 @@ async function restoreDocOnBoot(){
     applyLayerMeta(doc.layersJSON?JSON.parse(doc.layersJSON):[],doc.activeLayerId);
     rebuildAllLayers();
     renderLayersList();
-    placed=JSON.parse(doc.placedJSON||'[]').map(p=>({...p,img:motifs[p.motifIndex]?.img||null}));
+    placed=JSON.parse(doc.placedJSON||'[]').map(p=>{
+      // Legacy instances reference motifs by array position (motifIndex); new ones by stable id.
+      const motifId=p.motifId||((p.motifIndex!=null&&motifs[p.motifIndex])?motifs[p.motifIndex].id:null);
+      return {...p,motifId,img:(motifs.find(x=>x.id===motifId)||{}).img||null};
+    });
+    // If the app was closed mid-Edit-Motif session, the strokes/layers just loaded above are
+    // actually the motif's own in-progress content, not the outer pattern's. Auto-finish that
+    // session right now — commit it as the motif's real source, regenerate its preview, update
+    // every linked instance, then swap the outer pattern's stashed content back in — rather than
+    // trying to resume the interactive sub-session (boot() always discards undo history anyway,
+    // so there's nothing extra to preserve by resuming instead of finishing).
+    if(doc.editingMotifId&&doc.editingMotifStash){
+      const entry=motifs.find(m=>m.id===doc.editingMotifId);
+      const stash=JSON.parse(doc.editingMotifStash);
+      if(entry){
+        const preview=renderCurrentArtworkPreview();
+        if(preview){
+          entry.source={strokesJSON:JSON.stringify(strokes),layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity}))),bounds:preview.bounds};
+          await new Promise(res=>{const img=new Image();img.onload=()=>{entry.img=img;entry.src=preview.src;placed.forEach(p=>{if(p.motifId===entry.id)p.img=img;});res();};img.onerror=res;img.src=preview.src;});
+        }
+      }
+      strokes=JSON.parse(stash.strokesJSON||'[]');
+      applyLayerMeta(stash.layersJSON?JSON.parse(stash.layersJSON):[],stash.activeLayerId);
+      rebuildAllLayers();
+      renderLayersList();
+      renderTray();
+      mode=stash.mode||'edit';
+      editingMotifId=null;editingMotifStash=null;
+    }
     layout=doc.layout||'grid';activeTemplate=doc.activeTemplate||null;
     document.querySelectorAll('.layout-btn').forEach(x=>x.classList.toggle('active',x.dataset.layout===layout));
     $('layoutPill').textContent='📍 '+layout+' Mode';
