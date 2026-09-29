@@ -888,14 +888,27 @@ function renderPathNodeOverlay(){
     el.style.left=pos.x+'px';el.style.top=pos.y+'px';
     el.addEventListener('pointerdown',e=>{
       e.stopPropagation();e.preventDefault();
-      selectedNodeIndex=i;renderPathNodeOverlay();
+      // IMPORTANT: never call renderPathNodeOverlay() (a full innerHTML rebuild) while a drag
+      // is in progress — it would destroy this very element mid-drag, silently breaking pointer
+      // capture and the move/up listeners attached below (this was a real bug: dragging did
+      // nothing because the handle vanished out from under the pointer on the first move).
+      // Only the dragged node's own on-screen position is touched during the drag; the full
+      // overlay (which also refreshes the "add node" midpoint markers) is safe to rebuild once
+      // the drag actually ends.
+      if(selectedNodeIndex!==i){
+        selectedNodeIndex=i;
+        host.querySelectorAll('.path-node').forEach(n=>n.classList.remove('selected'));
+        el.classList.add('selected');
+      }
       try{el.setPointerCapture(e.pointerId);}catch(err){}
       const onMove=ev=>{
         const p=screenToCanvas(ev.clientX,ev.clientY);
         pathEditNodes[i].x=p.x;pathEditNodes[i].y=p.y;
-        renderPathNodeOverlay();renderPathLivePreview();redraw();
+        const np=canvasToScreen(p.x,p.y);
+        el.style.left=np.x+'px';el.style.top=np.y+'px';
+        renderPathLivePreview();redraw();
       };
-      const onUp=()=>{el.removeEventListener('pointermove',onMove);};
+      const onUp=()=>{el.removeEventListener('pointermove',onMove);renderPathNodeOverlay();};
       el.addEventListener('pointermove',onMove);
       el.addEventListener('pointerup',onUp,{once:true});
     });
