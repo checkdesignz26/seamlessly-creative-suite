@@ -332,8 +332,16 @@ let armedShapeType=null,constrainShape=false,shapeDrawStroke=null,shapeDrawStart
 // starts; once true, further pointermoves adjust the recognised shape instead of accumulating more
 // freehand points (see adjustHeldShape).
 const HOLD_MS=420,HOLD_MOVE_TOLERANCE=9;
-let holdTimer=null,holdAnchor=null,holdTriggered=false,holdCorrectedShape=null,holdPressureProfile=null;
-let holdAdjustBaseHw=0,holdAdjustBaseHh=0,holdAdjustAnchorDist=1;
+let holdTimer=null,holdAnchor=null,holdTriggered=false,holdCorrectedShape=null,holdPressureProfile=null,holdRecognitionSnapshot=null;
+let holdAdjustBaseHw=0,holdAdjustBaseHh=0,holdAdjustAnchorDist=1,holdAdjustAnchorPos=null,holdAdjustBaseX1=0,holdAdjustBaseY1=0;
+// Real Apple Pencil keeps emitting pointermove events even while the hand is "holding still" —
+// a few px of natural tremor, not intentional movement. Adjust-while-holding must absorb that
+// completely (it used to recompute a resize on every single one of those micro-moves, which could
+// shrink a freshly-snapped shape the instant the hold fired if the Pencil wasn't sitting EXACTLY
+// on the fitted boundary — the actual bug behind "the corrected shape is smaller than what I
+// drew"). ADJUST_DEAD_ZONE is how far the Pencil has to move from where it was AT THE MOMENT OF
+// THE SNAP before any adjustment starts at all.
+const ADJUST_DEAD_ZONE=16;
 let symMode='off',symX=W/2,symY=H/2,drawing=false;let motifs=[],placed=[],selected=null,traces=[],traceLocked=true;let bgImg=null,bgOpacity=1,bgShown=true;
 let history=[],hIndex=-1;let touchState=null;let lastTouchEnd=0;
 const $=id=>document.getElementById(id);
@@ -1688,30 +1696,45 @@ function applyPressureProfile(points,profile){
   return points.map((p,i)=>({...p,pressure:profile(n>1?i/(n-1):0)}));
 }
 function resetHoldState(){
-  clearTimeout(holdTimer);holdTimer=null;holdAnchor=null;holdTriggered=false;holdCorrectedShape=null;holdPressureProfile=null;
+  clearTimeout(holdTimer);holdTimer=null;holdAnchor=null;holdTriggered=false;holdCorrectedShape=null;holdPressureProfile=null;holdAdjustAnchorPos=null;holdRecognitionSnapshot=null;
 }
 // Called on every freehand pointermove — (re)arms a debounce-style timer that only actually
 // resets when the pencil has moved meaningfully since the last reset, so ordinary micro-jitter
-// while the hand is genuinely holding still doesn't keep pushing the hold out indefinitely.
+// while the hand is genuinely holding still doesn't keep pushing the hold out indefinitely. Also
+// snapshots currentPoints at that same moment: pushRawPoint keeps recording new points for the
+// whole time the Pencil is down (correct — normal freehand fidelity shouldn't stop just because a
+// hold might be starting), but those extra points end up densely clustered right at the final
+// position while the hand settles. Feeding THAT cluster into recognition, rather than the gesture
+// as it stood the moment it actually finished, skews both the fitted size and occasionally the
+// shape classification itself — this snapshot is what recognition actually uses instead.
 function maybeArmHoldTimer(p){
   if(holdTriggered)return;
   if(!holdAnchor||Math.hypot(p.x-holdAnchor.x,p.y-holdAnchor.y)>HOLD_MOVE_TOLERANCE){
     holdAnchor={x:p.x,y:p.y};
+    holdRecognitionSnapshot=currentPoints.slice();
     clearTimeout(holdTimer);
     holdTimer=setTimeout(triggerHoldRecognition,HOLD_MS);
   }
 }
 function triggerHoldRecognition(){
-  if(!drawing||holdTriggered||eraserActive||shapeDrawStroke||continueStrokeId||currentPoints.length<6)return;
-  const result=recognizeShape(currentPoints);
+  if(!drawing||holdTriggered||eraserActive||shapeDrawStroke||continueStrokeId)return;
+  const sourcePoints=(holdRecognitionSnapshot&&holdRecognitionSnapshot.length>=6)?holdRecognitionSnapshot:currentPoints;
+  if(sourcePoints.length<6)return;
+  const result=recognizeShape(sourcePoints);
   if(!result)return; // low confidence — do nothing, the freehand stroke is untouched
   const shape=shapeFromRecognition(result);
-  const profile=buildPressureProfile(currentPoints);
+  const profile=buildPressureProfile(sourcePoints);
   const correctedPoints=applyPressureProfile(shapeToPoints(shape),profile);
   holdCorrectedShape=shape;holdPressureProfile=profile;holdTriggered=true;
   holdAdjustBaseHw=Math.max(0.5,Math.abs(shape.x1-shape.x0)/2);
   holdAdjustBaseHh=Math.max(0.5,Math.abs(shape.y1-shape.y0)/2);
   holdAdjustAnchorDist=Math.hypot(holdAdjustBaseHw,holdAdjustBaseHh)||1;
+  holdAdjustBaseX1=shape.x1;holdAdjustBaseY1=shape.y1;
+  // Anchor is where the Pencil actually was the instant recognition fired (the stroke's own last
+  // recorded point, since nothing new was pushed during the hold-still period) — adjustHeldShape
+  // measures all movement relative to THIS, not to the fitted shape's geometry, which is what
+  // makes it immune to the fitted boundary not landing exactly under the Pencil tip.
+  holdAdjustAnchorPos={...currentPoints[currentPoints.length-1]};
   animateHoldSnap(currentPoints.slice(),correctedPoints);
   setStatus('✨ Held — corrected to a clean '+(result.kind==='square'?'square':result.kind)+'. Release to keep it.');
 }
@@ -1743,13 +1766,27 @@ function animateHoldSnap(rawPoints,correctedPoints){
 // refinement" — this covers the examples in the brief without touching commit/undo logic at all,
 // since it only ever mutates currentPoints, exactly like ordinary freehand pointermove does.
 function adjustHeldShape(p){
-  const shape=holdCorrectedShape;if(!shape)return;
+  const shape=holdCorrectedShape;if(!shape||!holdAdjustAnchorPos)return;
+  const dx=p.x-holdAdjustAnchorPos.x,dy=p.y-holdAdjustAnchorPos.y;
   if(shape.type==='line'){
-    shape.x1=p.x;shape.y1=p.y;
+    const dist=Math.hypot(dx,dy);
+    if(dist<ADJUST_DEAD_ZONE)return; // natural Pencil jitter — leave the just-snapped endpoint exactly where it is
+    // Shrink the movement vector by the dead-zone radius so the endpoint starts moving smoothly
+    // from zero right at the dead-zone boundary (no jump), tracking the Pencil for anything beyond it.
+    const k=1-ADJUST_DEAD_ZONE/dist;
+    shape.x1=holdAdjustBaseX1+dx*k;shape.y1=holdAdjustBaseY1+dy*k;
   }else{
     const cx=(shape.x0+shape.x1)/2,cy=(shape.y0+shape.y1)/2;
-    const curDist=Math.hypot(p.x-cx,p.y-cy)||0.01;
-    const scale=Math.max(0.3,Math.min(3,curDist/holdAdjustAnchorDist));
+    // Measured as a CHANGE in distance-from-centre relative to where the Pencil was when the
+    // shape snapped — not the raw distance-from-centre itself — so it doesn't matter whether the
+    // anchor position happened to sit exactly on the fitted boundary, closer in, or further out;
+    // only deliberate movement away from wherever it started causes any resize.
+    const anchorDistFromCentre=Math.hypot(holdAdjustAnchorPos.x-cx,holdAdjustAnchorPos.y-cy);
+    const curDistFromCentre=Math.hypot(p.x-cx,p.y-cy);
+    const delta=curDistFromCentre-anchorDistFromCentre;
+    if(Math.abs(delta)<ADJUST_DEAD_ZONE)return; // natural Pencil jitter — leave the just-snapped size exactly as it is
+    const effectiveDelta=delta-Math.sign(delta)*ADJUST_DEAD_ZONE;
+    const scale=Math.max(0.3,Math.min(3,1+effectiveDelta/holdAdjustAnchorDist));
     shape.x0=cx-holdAdjustBaseHw*scale;shape.x1=cx+holdAdjustBaseHw*scale;
     shape.y0=cy-holdAdjustBaseHh*scale;shape.y1=cy+holdAdjustBaseHh*scale;
   }
@@ -2221,6 +2258,7 @@ window.__sketchpadGetState=()=>({strokeCount:strokes.length,strokes,placed,motif
 // the real interaction (debounce timer, rAF snap animation, adjust-while-holding, commit) is
 // exercised separately via real pointer events and real waits, not through this hook.
 window.__sketchpadRecognizeShape=(points)=>recognizeShape(points);
+window.__sketchpadDebugCurrentPoints=()=>currentPoints.map(p=>({x:p.x,y:p.y}));
 // Debug-only: max alpha found in a small box around (x,y) on a given layer's OWN canvas (not
 // the live preview) — lets a test confirm "is anything actually rendered on the layer itself
 // here", independent of what the live preview is showing on top of it.
