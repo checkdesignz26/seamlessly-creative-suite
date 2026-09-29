@@ -134,6 +134,7 @@ canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-a
 .path-node.join-target.self-endpoint{border-style:dashed}
 @keyframes joinTargetPulse{0%,100%{box-shadow:0 0 0 0 rgba(115,212,140,.55),0 2px 8px rgba(0,0,0,.4)}50%{box-shadow:0 0 0 9px rgba(115,212,140,0),0 2px 8px rgba(0,0,0,.4)}}
 #joinPickBar{position:absolute;left:12px;top:12px;z-index:17;width:270px;max-width:calc(100% - 24px);background:var(--sideBg);border:1px solid var(--line);border-radius:22px;padding:14px;box-shadow:0 18px 50px rgba(0,0,0,.35)}
+#paintModePill{background:var(--accentTeal);border:1px solid rgba(92,184,171,.5);font:inherit}
 @media(max-width:900px){.app{padding:8px;gap:8px}.sidebar{width:270px}.btn,.tool-btn{font-size:12px;padding:9px 11px}.toolbar{padding:10px}}
 </style>
 </head>
@@ -200,13 +201,15 @@ canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-a
         <button id="copyBrushStyleBtn" class="btn mini" style="flex:1 1 45%;">Copy Style</button>
         <button id="applyBrushStyleBtn" class="btn mini" style="flex:1 1 45%;" disabled>Apply Style</button>
       </div>
+      <button id="paintInsideBtn" class="btn mini" style="width:100%;margin-top:6px;" disabled>🎨 Paint Inside This Shape</button>
+      <div id="paintInsideHint" class="hint"></div>
       <div class="hint" style="margin-top:10px;">Tap a different brush below to re-apply it to this stroke — geometry doesn't change, only appearance.</div>
       <div id="strokeReassignSwatches" class="brush-family-row" style="margin-top:6px;"></div>
       <button id="deleteStrokeBtn" class="btn mini danger" style="width:100%;margin-top:8px;">Delete Stroke</button>
     </section>
   </aside>
   <main class="workspace">
-    <div class="toolbar"><button id="undoBtn" class="tool-btn">↩️ Undo</button><button id="redoBtn" class="tool-btn">↪️ Redo</button><button id="symToggle" class="tool-btn">🦋 Symmetry Off</button><button id="tilingBtn" class="tool-btn active">Tiling On</button><button id="guidesBtn" class="tool-btn active">📐 Guides</button><button id="resetRot" class="tool-btn">0° Rotation</button><button id="clearDrawing" class="tool-btn danger">Clear Drawing</button><button id="exportBtn" class="tool-btn primary">📸 Export</button><div class="toolbar-spacer"></div><button id="themeToggle" class="tool-btn">☀️ Light Mode</button><div id="zoomPill" class="pill">100%</div><div id="layoutPill" class="pill">📍 Grid Mode</div></div>
+    <div class="toolbar"><button id="undoBtn" class="tool-btn">↩️ Undo</button><button id="redoBtn" class="tool-btn">↪️ Redo</button><button id="symToggle" class="tool-btn">🦋 Symmetry Off</button><button id="tilingBtn" class="tool-btn active">Tiling On</button><button id="guidesBtn" class="tool-btn active">📐 Guides</button><button id="resetRot" class="tool-btn">0° Rotation</button><button id="paintModePill" class="pill" style="display:none;cursor:pointer;">🎨 Paint Inside — tap for Free Paint</button><button id="clearDrawing" class="tool-btn danger">Clear Drawing</button><button id="exportBtn" class="tool-btn primary">📸 Export</button><div class="toolbar-spacer"></div><button id="themeToggle" class="tool-btn">☀️ Light Mode</button><div id="zoomPill" class="pill">100%</div><div id="layoutPill" class="pill">📍 Grid Mode</div></div>
     <div id="canvasWrap" class="canvas-wrap"><div id="symPopover" class="sym-pop"><div class="section-title">🦋 Symmetry</div><div class="grid"><button class="sym-btn btn active" data-sym="off">Off</button><button class="sym-btn btn" data-sym="vertical">Vertical</button><button class="sym-btn btn" data-sym="horizontal">Horizontal</button><button class="sym-btn btn" data-sym="quad">Quad</button><button class="sym-btn btn" data-sym="diamond">Diamond</button></div><div class="slider-row"><label>Axis X</label><input id="symX" type="range" min="0" max="1800" value="900"><span id="symXVal">50%</span></div><div class="slider-row"><label>Axis Y</label><input id="symY" type="range" min="0" max="1800" value="900"><span id="symYVal">50%</span></div><div class="row"><button id="symCentre" class="btn mini">Centre Axis</button><button id="symClose" class="btn mini">Done</button></div><div class="hint">Move the mirror point to make flowers, leaves and playful asymmetric symmetry.</div></div><canvas id="canvas" width="1800" height="1800"></canvas><div id="selectionBox" class="selection-box"><div id="resizeHandle" class="handle"></div><div id="rotateHandle" class="rotHandle"></div></div><div id="symAxis" class="sym-axis"></div><div id="rotateChip" class="rotate-chip">Canvas 0°</div><div id="pathNodeOverlay"></div><div id="pathEditBar" class="sym-pop" style="display:none;">
   <div class="section-title">✎ Edit Path</div>
   <div class="row"><button id="nodeSmoothBtn" class="btn mini">⌒ Smooth</button><button id="nodeCornerBtn" class="btn mini">⌐ Corner</button></div>
@@ -262,6 +265,12 @@ let copiedBrushStyle=null; // {brushId,settings} — session-only clipboard for 
 let pathEditStrokeId=null,pathEditNodes=null,pathEditClosed=false,selectedNodeIndex=null; // Edit Path mode state
 let continueStrokeId=null,continueBasePoints=null; // Continue Path: next drawn stroke extends this one instead of starting a new one
 let joinPendingStrokeId=null,joinPendingFromEnd=false; // Join Path: waiting for a tap on another stroke's endpoint
+// Paint Inside: 'free' is completely unchanged normal painting. 'inside' tags every NEW raster
+// stroke with clipStrokeId=paintInsideTargetId (the closed vector path chosen as the boundary);
+// the clip itself is applied live at render time from that path's CURRENT geometry (see
+// renderStrokeClipped), never baked into pixels — that's what makes editing the boundary's nodes
+// later, or briefly opening/reclosing it, "just work" with no repainting required.
+let paintMode='free',paintInsideTargetId=null;
 let symMode='off',symX=W/2,symY=H/2,drawing=false;let motifs=[],placed=[],selected=null,traces=[],traceLocked=true;let bgImg=null,bgOpacity=1,bgShown=true;
 let history=[],hIndex=-1;let touchState=null;let lastTouchEnd=0;
 const $=id=>document.getElementById(id);
@@ -277,12 +286,49 @@ function makeLayer(name){
 // The default document: Sketch at the bottom, then Colour, then Outline on top — matches the
 // brief's suggested starting point (Outline above Colour) so paint never has to fight z-order.
 function defaultLayers(){return [makeLayer('Sketch'),makeLayer('Colour'),makeLayer('Outline')];}
+// ---- Paint Inside clipping ---------------------------------------------------------------------
+// A raster stroke tagged with clipStrokeId is clipped at RENDER TIME against whatever that target
+// vector stroke's geometry currently is — never baked into pixels. That single design choice is
+// what makes every "non-destructive" requirement fall out for free: dragging a node on the
+// boundary re-clips already-painted colour on the very next rebuild with no repainting, and if the
+// boundary stroke is later opened (closed:false) the lookup below simply stops finding a usable
+// clip target, so the paint reverts to fully visible instead of vanishing — closing the shape
+// again immediately resumes clipping. The raw stroke geometry (including any paint that spilled
+// outside while drawing loosely) is always kept in full; only what's VISIBLE is clipped.
+function findClipTargetStroke(clipStrokeId){
+  if(!clipStrokeId)return null;
+  const t=strokes.find(s=>s.id===clipStrokeId);
+  return (t&&t.closed)?t:null;
+}
+// Clipping is applied at render time INSIDE rebuildLayer/appendStrokeToLayer for whatever layer
+// a clipped raster stroke lives on — so editing a boundary's geometry/closed state only actually
+// becomes visible once every layer holding paint clipped by it is rebuilt too, not just the
+// boundary stroke's own (usually Outline) layer. Call this anywhere a stroke's closed flag or
+// node geometry changes and gets committed.
+function rebuildLayersClippedBy(strokeId){
+  const layerIds=new Set(strokes.filter(s=>s.clipStrokeId===strokeId).map(s=>s.layerId));
+  layerIds.forEach(id=>rebuildLayer(id));
+}
+function renderStrokeClipped(ctx,stroke,brush,settings,alphaMul){
+  const target=stroke.clipStrokeId?findClipTargetStroke(stroke.clipStrokeId):null;
+  if(!target){BrushEngine.renderStroke(ctx,stroke,brush,settings,alphaMul);return;}
+  const pts=target.nodes?nodesToPoints(target.nodes,true):target.points;
+  if(!pts||pts.length<3){BrushEngine.renderStroke(ctx,stroke,brush,settings,alphaMul);return;}
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x,pts[0].y);
+  for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);
+  ctx.closePath();
+  ctx.clip();
+  BrushEngine.renderStroke(ctx,stroke,brush,settings,alphaMul);
+  ctx.restore();
+}
 function rebuildLayer(layerId){
   const layer=layers.find(l=>l.id===layerId);if(!layer)return;
   layer.ctx.clearRect(0,0,W,H);
   strokes.filter(s=>s.layerId===layerId).forEach(s=>{
     const brush=BrushEngine.getBrush(s.brushId),settings=s.settings||BrushEngine.getSettings(s.brushId);
-    BrushEngine.renderStroke(layer.ctx,s,brush,settings);
+    renderStrokeClipped(layer.ctx,s,brush,settings);
   });
 }
 // Same as rebuildLayer but renders one stroke faintly — used while Edit Path is live, as a
@@ -299,14 +345,14 @@ function rebuildLayerDimmed(layerId,dimStrokeId,alpha){
     // alpha is passed straight into renderStroke's per-dab opacity now — stampDab sets its own
     // ctx.globalAlpha for every dab it stamps, so an outer ctx.globalAlpha set here would have
     // been silently overwritten and never actually dimmed (or hidden) anything.
-    BrushEngine.renderStroke(layer.ctx,s,brush,settings,s.id===dimStrokeId?alpha:1);
+    renderStrokeClipped(layer.ctx,s,brush,settings,s.id===dimStrokeId?alpha:1);
   });
 }
 function rebuildAllLayers(){layers.forEach(l=>rebuildLayer(l.id));}
 function appendStrokeToLayer(stroke){
   const layer=layers.find(l=>l.id===stroke.layerId);if(!layer)return;
   const brush=BrushEngine.getBrush(stroke.brushId),settings=stroke.settings||BrushEngine.getSettings(stroke.brushId);
-  BrushEngine.renderStroke(layer.ctx,stroke,brush,settings);
+  renderStrokeClipped(layer.ctx,stroke,brush,settings);
 }
 function updateComposite(){compositeCtx.clearRect(0,0,W,H);layers.forEach(l=>{if(!l.visible)return;compositeCtx.save();compositeCtx.globalAlpha=l.opacity/100;compositeCtx.drawImage(l.canvas,0,0);compositeCtx.restore();});}
 function snapshot(){
@@ -482,9 +528,13 @@ function renderLivePreviewIncremental(){
   const from=Math.max(0,lastRenderedIndex-1);
   const slice=currentPoints.slice(from);
   if(slice.length<1)return;
+  // Paint Inside clips the live preview the exact same way as the committed stroke (renderStroke-
+  // Clipped, not a cheaper approximation) — clip() is a native, near-free canvas op, so there's no
+  // real cost to paying for full-quality clipping on every incremental slice while drawing.
+  const clipStrokeId=(paintMode==='inside')?paintInsideTargetId:null;
   symmetryTransforms().forEach(tf=>{
     const pts=slice.map(pt=>{const t=tf(pt);return{x:t.x,y:t.y,pressure:pt.pressure};});
-    BrushEngine.renderStroke(lctx,{id:currentStrokeId,brushId:activeBrushId,color:currentColor,points:pts},brush,settings);
+    renderStrokeClipped(lctx,{id:currentStrokeId,brushId:activeBrushId,color:currentColor,points:pts,clipStrokeId},brush,settings);
   });
   lastRenderedIndex=currentPoints.length;
 }
@@ -558,9 +608,14 @@ canvas.addEventListener('pointerup',e=>{
   if(eraserActive){
     if(eraseCandidates.size){
       const layer=getActiveLayer();
+      // Erasing a Paint Inside boundary along with everything else it crossed shouldn't destroy
+      // the paint it was clipping — same "target just stops resolving" fallback as deleting or
+      // opening one, so those layers need rebuilding too, not just the erased strokes' own layer.
+      const clippedLayerIds=new Set(strokes.filter(s=>eraseCandidates.has(s.clipStrokeId)).map(s=>s.layerId));
       strokes=strokes.filter(s=>!eraseCandidates.has(s.id));
       if(selectedStrokeId&&eraseCandidates.has(selectedStrokeId)){selectedStrokeId=null;syncStrokeSelectionUI();}
       if(layer)rebuildLayer(layer.id);
+      clippedLayerIds.forEach(id=>rebuildLayer(id));
     }
     eraseCandidates.clear();liveActive=false;lctx.clearRect(0,0,W,H);
     pushHist();redraw();return;
@@ -579,9 +634,14 @@ canvas.addEventListener('pointerup',e=>{
   }
   if(currentPoints.length>=1){
     const settingsSnapshot=Object.assign({},currentSettings());
+    // Tag with the current Paint Inside target (if any) at the moment the stroke is COMMITTED —
+    // clipStrokeId is a plain field on the stroke, so it rides along automatically through
+    // Undo/Redo history and project save/reload (both already serialise the whole strokes array
+    // generically) with no extra persistence code needed.
+    const clipStrokeId=(paintMode==='inside')?paintInsideTargetId:null;
     symmetryTransforms().forEach(tf=>{
       const pts=currentPoints.map(pt=>{const t=tf(pt);return{x:t.x,y:t.y,pressure:pt.pressure};});
-      const stroke={id:crypto.randomUUID(),brushId:activeBrushId,layerId:activeLayerId,color:currentColor,settings:Object.assign({},settingsSnapshot),points:pts,nodes:null,closed:false};
+      const stroke={id:crypto.randomUUID(),brushId:activeBrushId,layerId:activeLayerId,color:currentColor,settings:Object.assign({},settingsSnapshot),points:pts,nodes:null,closed:false,clipStrokeId};
       strokes.push(stroke);appendStrokeToLayer(stroke);
     });
     BrushEngine.touchRecent(activeBrushId);syncRecents();
@@ -635,6 +695,14 @@ function syncStrokeSelectionUI(){
   section.style.display=selectedStrokeId?'block':'none';
   if(selectedStrokeId){renderStrokeReassignSwatches();syncStrokeRecipeUI();}
   $('applyBrushStyleBtn').disabled=!copiedBrushStyle||!selectedStrokeId;
+  const stroke=strokes.find(s=>s.id===selectedStrokeId);
+  const paintBtn=$('paintInsideBtn'),paintHint=$('paintInsideHint');
+  if(paintBtn){
+    paintBtn.disabled=!stroke||!stroke.closed;
+    paintHint.textContent=!stroke?'':stroke.closed
+      ?'Painting inside switches to the Colour layer — the outline stays a fully independent, editable vector path.'
+      :'Only closed shapes can hold paint — use ◯ Close Shape first.';
+  }
 }
 function renderStrokeReassignSwatches(){
   const host=$('strokeReassignSwatches');host.innerHTML='';
@@ -780,9 +848,13 @@ $('clearDrawing').onclick=()=>{
 $('deleteStrokeBtn').onclick=()=>{
   if(!selectedStrokeId)return;
   const stroke=strokes.find(s=>s.id===selectedStrokeId);
+  const clippedLayerIds=stroke?new Set(strokes.filter(s=>s.clipStrokeId===stroke.id).map(s=>s.layerId)):new Set();
   strokes=strokes.filter(s=>s.id!==selectedStrokeId);
   selectedStrokeId=null;
-  if(stroke)rebuildLayer(stroke.layerId);
+  // Deleting a Paint Inside boundary doesn't touch the paint it clipped — findClipTargetStroke
+  // just stops finding it on the next render, same as opening the shape, so the paint reverts to
+  // fully visible instead of vanishing along with the boundary.
+  if(stroke){rebuildLayer(stroke.layerId);clippedLayerIds.forEach(id=>rebuildLayer(id));}
   syncStrokeSelectionUI();pushHist();redraw();
 };
 $('strokeWidthCtl').oninput=e=>{
@@ -826,6 +898,36 @@ $('applyBrushStyleBtn').onclick=()=>{
   setStatus('✅ Brush style applied.');
 };
 $('editPathBtn').onclick=()=>{if(selectedStrokeId)enterEditPath(selectedStrokeId);};
+// ---- Paint Inside -----------------------------------------------------------------------------
+// Free Paint (default) is completely untouched normal painting. Paint Inside tags every new
+// raster stroke with the chosen closed path's id (see clipStrokeId above renderStrokeClipped) —
+// the vector shape itself is never touched, rasterised, or merged into; it stays exactly as
+// independently editable as any other closed path (Edit Path, brush/width changes, Break/Open
+// Shape all keep working on it normally).
+function syncPaintModePill(){
+  const pill=$('paintModePill');if(!pill)return;
+  pill.style.display=(paintMode==='inside')?'inline-block':'none';
+}
+function startPaintInside(){
+  const stroke=strokes.find(s=>s.id===selectedStrokeId);
+  if(!stroke||!stroke.closed)return;
+  paintMode='inside';paintInsideTargetId=stroke.id;
+  // Prefer a layer actually named "Colour" (the default raster layer) — if it's been renamed or
+  // removed, fall back to whatever layer is already active rather than forcing one into existence.
+  const colourLayer=layers.find(l=>{const n=l.name.trim().toLowerCase();return n==='colour'||n==='color';});
+  if(colourLayer)activeLayerId=colourLayer.id;
+  mode='draw';selected=null;selectedStrokeId=null;
+  syncStrokeSelectionUI();syncMode();renderLayersList();syncPaintModePill();
+  setStatus('🎨 Paint Inside: draw loosely with Apple Pencil on "'+(getActiveLayer()?getActiveLayer().name:'')+'" — colour outside the shape stays hidden, the outline stays untouched.');
+  redraw();
+}
+function setFreePaintMode(){
+  paintMode='free';paintInsideTargetId=null;
+  syncPaintModePill();
+  setStatus('✏️ Free Paint: painting anywhere again.');
+}
+$('paintInsideBtn').onclick=startPaintInside;
+$('paintModePill').onclick=setFreePaintMode;
 
 // ---- Brush panel: family list, recents, favourites, quick controls -----------------------
 function makeBrushSwatch(b){
@@ -974,7 +1076,7 @@ function commitEditPath(){
   }catch(err){
     console.warn('[sketchpad] path edit commit failed — kept the stroke as it was before editing',err);
   }finally{
-    if(stroke)rebuildLayer(stroke.layerId);
+    if(stroke){rebuildLayer(stroke.layerId);rebuildLayersClippedBy(stroke.id);}
     pushHist();
     exitEditPath();
     redraw();
@@ -1095,7 +1197,14 @@ function breakPathAtSelectedNode(){
     const rotated=pathEditNodes.slice(selectedNodeIndex).concat(pathEditNodes.slice(0,selectedNodeIndex+1));
     pathEditNodes=rotated;pathEditClosed=false;selectedNodeIndex=0;
     renderPathNodeOverlay();renderPathLivePreview();redraw();
-    setStatus('🔓 Shape opened at that node — Continue, Join and Close Shape are available again.');
+    // If this shape is a Paint Inside boundary, opening it doesn't touch the paint at all — it
+    // just stops finding a usable clip target (see findClipTargetStroke), so the paint shows
+    // fully unclipped until the shape is closed again. Worth telling the user explicitly here
+    // rather than letting the clip silently disappear with no explanation.
+    const hasClippedPaint=strokes.some(s=>s.clipStrokeId===stroke.id);
+    setStatus(hasClippedPaint
+      ?'🔓 Shape opened — its Paint Inside colour is kept but shown unclipped until you close the shape again.'
+      :'🔓 Shape opened at that node — Continue, Join and Close Shape are available again.');
     return;
   }
   if(selectedNodeIndex<=0||selectedNodeIndex>=pathEditNodes.length-1){
@@ -1242,7 +1351,7 @@ function closeSelectedStrokeAsShape(stroke){
   stroke.nodes=nodes;
   stroke.closed=true;
   stroke.points=nodesToPoints(nodes,true);
-  rebuildLayer(stroke.layerId);
+  rebuildLayer(stroke.layerId);rebuildLayersClippedBy(stroke.id);
   selectedStrokeId=stroke.id;selected=null;
   syncStrokeSelectionUI();
   pushHist();redraw();
@@ -1378,7 +1487,7 @@ boot();
 // Read-only introspection for debugging/testing — mirrors the small hooks already used for
 // Seamlessly Creative suite integration (see the bottom of this file once frozen into the
 // suite), just exposed unconditionally here since it's harmless and useful standalone too.
-window.__sketchpadGetState=()=>({strokeCount:strokes.length,strokes,placed,motifs,activeBrushId,eraserActive,selectedStrokeId,layout,layers:layers.map(l=>({id:l.id,name:l.name,visible:l.visible,locked:l.locked,opacity:l.opacity})),activeLayerId,pathEditStrokeId,pathEditNodes,pathEditClosed,copiedBrushStyle,continueStrokeId,joinPendingStrokeId});
+window.__sketchpadGetState=()=>({strokeCount:strokes.length,strokes,placed,motifs,activeBrushId,eraserActive,selectedStrokeId,layout,layers:layers.map(l=>({id:l.id,name:l.name,visible:l.visible,locked:l.locked,opacity:l.opacity})),activeLayerId,pathEditStrokeId,pathEditNodes,pathEditClosed,copiedBrushStyle,continueStrokeId,joinPendingStrokeId,paintMode,paintInsideTargetId});
 // Debug-only: max alpha found in a small box around (x,y) on a given layer's OWN canvas (not
 // the live preview) — lets a test confirm "is anything actually rendered on the layer itself
 // here", independent of what the live preview is showing on top of it.
