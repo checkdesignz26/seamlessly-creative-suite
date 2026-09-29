@@ -180,6 +180,24 @@ canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-a
       <button id="captureBtn" class="btn primary" style="width:100%;margin-top:10px;">✂️ Capture Motif</button>
       <div class="hint">Apple Pencil draws. One finger no longer pans while drawing. Use two fingers to pan, pinch and rotate.</div>
     </section>
+    <section class="section" id="shapesSection">
+      <div class="section-title">🔷 Shapes</div>
+      <div class="grid">
+        <button class="btn mini shape-btn" data-shape="line">╱ Line</button>
+        <button class="btn mini shape-btn" data-shape="rect">▭ Rectangle</button>
+        <button class="btn mini shape-btn" data-shape="roundRect">▢ Rounded Rect</button>
+        <button class="btn mini shape-btn" data-shape="ellipse">⬭ Ellipse</button>
+        <button class="btn mini shape-btn" data-shape="circle">◯ Circle</button>
+        <button class="btn mini shape-btn" data-shape="triangle">△ Triangle</button>
+        <button class="btn mini shape-btn" data-shape="diamond">◇ Diamond</button>
+        <button class="btn mini shape-btn" data-shape="polygon">⬡ Polygon</button>
+        <button class="btn mini shape-btn" data-shape="star">☆ Star</button>
+        <button class="btn mini shape-btn" data-shape="heart">♡ Heart</button>
+        <button class="btn mini shape-btn" data-shape="spiral">🌀 Spiral</button>
+      </div>
+      <button id="shapeConstrainBtn" class="btn mini" style="width:100%;margin-top:8px;">🔒 Constrain (Square/Circle)</button>
+      <div id="shapeToolHint" class="hint">Tap a shape, then draw it on the canvas with Apple Pencil — drag to size it, lift to place. Tap the shape button again to cancel.</div>
+    </section>
     <section class="section" id="layersSection">
       <div class="section-title">📚 Layers</div>
       <div id="layersList"></div>
@@ -194,6 +212,7 @@ canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-a
     <section class="section" id="strokeSelectSection" style="display:none;">
       <div class="section-title">🖊️ Selected Stroke</div>
       <div id="strokeRecipe" class="recipe-text"></div>
+      <div class="slider-row"><label>Layer</label><select id="strokeLayerSelect" style="flex:1;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);"></select></div>
       <div class="slider-row"><label>Width</label><input id="strokeWidthCtl" type="range" min="1" max="120" value="6"><span id="strokeWidthVal">6</span></div>
       <div class="row" style="margin-top:6px;flex-wrap:wrap;">
         <button id="useThisBrushBtn" class="btn mini" style="flex:1 1 45%;">Use This Brush</button>
@@ -205,6 +224,33 @@ canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-a
       <div id="paintInsideHint" class="hint"></div>
       <div class="hint" style="margin-top:10px;">Tap a different brush below to re-apply it to this stroke — geometry doesn't change, only appearance.</div>
       <div id="strokeReassignSwatches" class="brush-family-row" style="margin-top:6px;"></div>
+      <div class="section-title" style="margin-top:12px;">✥ Move / Transform</div>
+      <div class="hint">Drag the shape on the canvas to move it (in Edit Mode). Geometry and appearance stay separate — these never change the brush.</div>
+      <div class="row" style="margin-top:6px;">
+        <button id="shapeSmallerBtn" class="btn mini" style="flex:1">🔍− Smaller</button>
+        <button id="shapeBiggerBtn" class="btn mini" style="flex:1">🔍+ Bigger</button>
+      </div>
+      <div class="row" style="margin-top:6px;">
+        <button id="shapeRotLBtn" class="btn mini" style="flex:1">↺ Rotate</button>
+        <button id="shapeRotRBtn" class="btn mini" style="flex:1">↻ Rotate</button>
+      </div>
+      <div class="row" style="margin-top:6px;">
+        <button id="shapeFlipHBtn" class="btn mini" style="flex:1">Flip H</button>
+        <button id="shapeFlipVBtn" class="btn mini" style="flex:1">Flip V</button>
+      </div>
+      <button id="duplicateStrokeBtn" class="btn mini" style="width:100%;margin-top:6px;">⧉ Duplicate</button>
+      <div id="shapeParamsBox" style="display:none;">
+        <div class="section-title" style="margin-top:12px;">🔷 Shape Controls</div>
+        <div id="shapeParamCornerRow" class="slider-row" style="display:none;"><label>Corner</label><input id="shapeParamCorner" type="range" min="0" max="90" value="30"><span id="shapeParamCornerVal">30%</span></div>
+        <div id="shapeParamSidesRow" class="slider-row" style="display:none;"><label>Sides</label><input id="shapeParamSides" type="range" min="3" max="12" value="6"><span id="shapeParamSidesVal">6</span></div>
+        <div id="shapeParamPointsRow" class="slider-row" style="display:none;"><label>Points</label><input id="shapeParamPoints" type="range" min="3" max="16" value="5"><span id="shapeParamPointsVal">5</span></div>
+        <div id="shapeParamInnerRow" class="slider-row" style="display:none;"><label>Depth</label><input id="shapeParamInner" type="range" min="10" max="90" value="50"><span id="shapeParamInnerVal">50%</span></div>
+        <div id="shapeParamTurnsRow" class="slider-row" style="display:none;"><label>Turns</label><input id="shapeParamTurns" type="range" min="1" max="8" value="3"><span id="shapeParamTurnsVal">3</span></div>
+        <div id="shapeParamSpacingRow" class="slider-row" style="display:none;"><label>Spacing</label><input id="shapeParamSpacing" type="range" min="20" max="100" value="60"><span id="shapeParamSpacingVal">60%</span></div>
+        <button id="shapeDirBtn" class="btn mini" style="width:100%;display:none;">↻ Direction: Clockwise</button>
+        <button id="shapeConvertBtn" class="btn mini primary" style="width:100%;margin-top:8px;">Convert to Path</button>
+        <div class="hint">While it stays a Shape, resizing keeps its clean mathematical geometry. Convert to Path to freely edit individual nodes (this cannot be undone back into a parametric shape).</div>
+      </div>
       <button id="deleteStrokeBtn" class="btn mini danger" style="width:100%;margin-top:8px;">Delete Stroke</button>
     </section>
   </aside>
@@ -271,6 +317,12 @@ let joinPendingStrokeId=null,joinPendingFromEnd=false; // Join Path: waiting for
 // renderStrokeClipped), never baked into pixels — that's what makes editing the boundary's nodes
 // later, or briefly opening/reclosing it, "just work" with no repainting required.
 let paintMode='free',paintInsideTargetId=null;
+// Shape Tool: armedShapeType is null (freehand drawing, unchanged) or one of SHAPE_TYPES — a
+// pointerdown on the canvas then starts a drag-to-size gesture instead of a freehand stroke (see
+// the shape branch inside the main canvas pointerdown/move/up handlers). One-shot: creating a
+// shape disarms it and drops back to freehand, matching "after creation the new shape should
+// automatically become selected" rather than staying in shape-stamping mode.
+let armedShapeType=null,constrainShape=false,shapeDrawStroke=null,shapeDrawStart=null;
 let symMode='off',symX=W/2,symY=H/2,drawing=false;let motifs=[],placed=[],selected=null,traces=[],traceLocked=true;let bgImg=null,bgOpacity=1,bgShown=true;
 let history=[],hIndex=-1;let touchState=null;let lastTouchEnd=0;
 const $=id=>document.getElementById(id);
@@ -568,8 +620,18 @@ canvas.addEventListener('pointerdown',e=>{
   const layer=getActiveLayer();
   if(!layer||layer.locked){setStatus('🔒 "'+(layer?layer.name:'')+'" is locked — unlock it in Layers to draw.');return;}
   e.preventDefault();try{canvas.setPointerCapture(e.pointerId);}catch(err){} // capture is best-effort — a stroke must still start even if it's refused
-  drawing=true;
   const p=screenToCanvas(e.clientX,e.clientY),pressure=(e.pressure&&e.pressure>0)?e.pressure:.5;
+  if(armedShapeType){
+    drawing=true;shapeDrawStart=p;
+    const shape=defaultShapeParams(armedShapeType);
+    updateShapeDragBox(shape,p,p,constrainShape);
+    shapeDrawStroke={id:crypto.randomUUID(),brushId:activeBrushId,layerId:activeLayerId,color:currentColor,settings:Object.assign({},currentSettings()),points:shapeToPoints(shape),nodes:null,closed:SHAPE_CLOSED[armedShapeType],clipStrokeId:(paintMode==='inside')?paintInsideTargetId:null,shape};
+    liveActive=true;lctx.clearRect(0,0,W,H);
+    renderStrokeClipped(lctx,shapeDrawStroke,BrushEngine.getBrush(activeBrushId),shapeDrawStroke.settings);
+    redraw();
+    return;
+  }
+  drawing=true;
   if(eraserActive){
     eraseCandidates.clear();
     eraseAt(p.x,p.y,currentSettings().size/2);
@@ -598,6 +660,14 @@ canvas.addEventListener('pointermove',e=>{
   if(!drawing||!isPen(e))return;
   e.preventDefault();
   const p=screenToCanvas(e.clientX,e.clientY),pressure=(e.pressure&&e.pressure>0)?e.pressure:.5;
+  if(shapeDrawStroke){
+    updateShapeDragBox(shapeDrawStroke.shape,shapeDrawStart,p,constrainShape);
+    shapeDrawStroke.points=shapeToPoints(shapeDrawStroke.shape);
+    lctx.clearRect(0,0,W,H);
+    renderStrokeClipped(lctx,shapeDrawStroke,BrushEngine.getBrush(shapeDrawStroke.brushId),shapeDrawStroke.settings);
+    redraw();
+    return;
+  }
   if(eraserActive){eraseAt(p.x,p.y,currentSettings().size/2);renderEraserCursor(p.x,p.y,currentSettings().size/2);redraw();return}
   pushRawPoint(p.x,p.y,pressure);
   renderLivePreviewIncremental();redraw();
@@ -605,6 +675,27 @@ canvas.addEventListener('pointermove',e=>{
 canvas.addEventListener('pointerup',e=>{
   if(!drawing)return;
   drawing=false;
+  if(shapeDrawStroke){
+    const stroke=shapeDrawStroke;
+    // A tap with no real drag would create an invisible zero-size shape — give it a sensible
+    // default size centred on the tap instead, a common "tap to place a default shape" affordance.
+    const w=Math.abs(stroke.shape.x1-stroke.shape.x0),h=Math.abs(stroke.shape.y1-stroke.shape.y0);
+    if(stroke.shape.type!=='line'&&Math.hypot(w,h)<10){
+      const cx=stroke.shape.x0,cy=stroke.shape.y0,half=140;
+      stroke.shape.x0=cx-half;stroke.shape.y0=cy-half;stroke.shape.x1=cx+half;stroke.shape.y1=cy+half;
+      stroke.points=shapeToPoints(stroke.shape);
+    }
+    strokes.push(stroke);appendStrokeToLayer(stroke);
+    selectedStrokeId=stroke.id;selected=null;
+    shapeDrawStroke=null;shapeDrawStart=null;
+    liveActive=false;lctx.clearRect(0,0,W,H);
+    armedShapeType=null;syncShapeToolUI();
+    mode='edit';syncMode();syncStrokeSelectionUI();
+    BrushEngine.touchRecent(stroke.brushId);syncRecents();
+    pushHist();redraw();
+    setStatus('🔷 Shape created and selected — resize/rotate below, or Convert to Path to edit nodes.');
+    return;
+  }
   if(eraserActive){
     if(eraseCandidates.size){
       const layer=getActiveLayer();
@@ -652,6 +743,7 @@ canvas.addEventListener('pointerup',e=>{
 canvas.addEventListener('pointercancel',()=>{
   drawing=false;currentPoints=[];eraseCandidates.clear();liveActive=false;lctx.clearRect(0,0,W,H);
   if(continueStrokeId){const s=strokes.find(x=>x.id===continueStrokeId);if(s)rebuildLayer(s.layerId);continueStrokeId=null;continueBasePoints=null;}
+  shapeDrawStroke=null;shapeDrawStart=null;
   redraw();
 });
 wrap.addEventListener('touchstart',e=>{e.preventDefault();const now=Date.now();touchState={n:e.touches.length,start:copyTouches(e.touches),last:copyTouches(e.touches),moved:false,time:now,zoom,panX,panY,rot};}, {passive:false});
@@ -676,18 +768,31 @@ function selectAt(x,y){
   if(!selected){
     // Hit tolerance grows a little for thin strokes so a thin 2px line isn't effectively
     // unselectable — never smaller than a comfortable ~18px finger/pencil target either way.
+    // Closed shapes (rectangles, circles...) are also selectable by tapping ANYWHERE inside their
+    // fill, not just near the outline — expected behaviour for a shape, not just a thin stroke.
     const lockedIds=new Set(layers.filter(l=>l.locked).map(l=>l.id));
     let best=null,bestDist=Infinity;
     for(let i=strokes.length-1;i>=0;i--){
       const s=strokes[i];if(lockedIds.has(s.layerId))continue;
       const settings=s.settings||BrushEngine.getSettings(s.brushId);
       const tolerance=Math.max(18,(settings.size||6)/2+12);
-      const d=distanceToPolyline(p.x,p.y,s.points);
+      let d=distanceToPolyline(p.x,p.y,s.points);
+      if(s.closed&&pointInPolygon(p.x,p.y,s.points))d=0;
       if(d<tolerance&&d<bestDist){bestDist=d;best=s.id;}
     }
     selectedStrokeId=best;
   }
   updateSelectedControls();syncStrokeSelectionUI();redraw();
+}
+function pointInPolygon(px,py,pts){
+  if(!pts||pts.length<3)return false;
+  let inside=false;
+  for(let i=0,j=pts.length-1;i<pts.length;j=i++){
+    const xi=pts[i].x,yi=pts[i].y,xj=pts[j].x,yj=pts[j].y;
+    const intersect=((yi>py)!==(yj>py))&&(px<(xj-xi)*(py-yi)/(yj-yi)+xi);
+    if(intersect)inside=!inside;
+  }
+  return inside;
 }
 function syncStrokeSelectionUI(){
   const section=$('strokeSelectSection');
@@ -703,6 +808,143 @@ function syncStrokeSelectionUI(){
       ?'Painting inside switches to the Colour layer — the outline stays a fully independent, editable vector path.'
       :'Only closed shapes can hold paint — use ◯ Close Shape first.';
   }
+  syncShapeParamsUI(stroke);
+  syncStrokeLayerSelect(stroke);
+}
+function syncStrokeLayerSelect(stroke){
+  const sel=$('strokeLayerSelect');if(!sel||!stroke)return;
+  sel.innerHTML='';
+  layers.slice().reverse().forEach(l=>{
+    const opt=document.createElement('option');
+    opt.value=l.id;opt.textContent=l.name+(l.locked?' 🔒':'');
+    sel.appendChild(opt);
+  });
+  sel.value=stroke.layerId;
+}
+// Shows the live parametric controls (corner radius, sides, star points/depth, spiral turns/
+// spacing/direction) only for the fields the SELECTED shape's own type actually has, and only
+// while it's still a Shape object — once Convert to Path removes stroke.shape these numbers no
+// longer mean anything, so the whole box hides and only the ordinary node editor applies.
+function syncShapeParamsUI(stroke){
+  const box=$('shapeParamsBox');if(!box)return;
+  const shape=stroke&&stroke.shape;
+  box.style.display=shape?'block':'none';
+  if(!shape)return;
+  const show=(id,on)=>{$(id).style.display=on?'':'none';};
+  show('shapeParamCornerRow',shape.type==='roundRect');
+  show('shapeParamSidesRow',shape.type==='polygon');
+  show('shapeParamPointsRow',shape.type==='star');
+  show('shapeParamInnerRow',shape.type==='star');
+  show('shapeParamTurnsRow',shape.type==='spiral');
+  show('shapeParamSpacingRow',shape.type==='spiral');
+  $('shapeDirBtn').style.display=shape.type==='spiral'?'':'none';
+  if(shape.type==='roundRect'){$('shapeParamCorner').value=shape.cornerRadius;$('shapeParamCornerVal').textContent=Math.round(shape.cornerRadius)+'%';}
+  if(shape.type==='polygon'){$('shapeParamSides').value=shape.sides;$('shapeParamSidesVal').textContent=shape.sides;}
+  if(shape.type==='star'){
+    $('shapeParamPoints').value=shape.starPoints;$('shapeParamPointsVal').textContent=shape.starPoints;
+    $('shapeParamInner').value=shape.innerRatio;$('shapeParamInnerVal').textContent=Math.round(shape.innerRatio)+'%';
+  }
+  if(shape.type==='spiral'){
+    $('shapeParamTurns').value=shape.turns;$('shapeParamTurnsVal').textContent=shape.turns;
+    $('shapeParamSpacing').value=shape.spacing;$('shapeParamSpacingVal').textContent=Math.round(shape.spacing)+'%';
+    $('shapeDirBtn').textContent=shape.dir>=0?'↻ Direction: Clockwise':'↺ Direction: Counter-clockwise';
+  }
+}
+function selectedShapeStroke(){const s=strokes.find(x=>x.id===selectedStrokeId);return (s&&s.shape)?s:null;}
+function updateSelectedShapeParam(mutate){
+  const stroke=selectedShapeStroke();if(!stroke)return;
+  mutate(stroke.shape);
+  stroke.points=shapeToPoints(stroke.shape);
+  rebuildLayer(stroke.layerId);rebuildLayersClippedBy(stroke.id);
+  redraw();
+}
+// ---- Generic stroke transforms (move/scale/rotate/flip/duplicate) — work on ANY selected
+// stroke, not just Shapes, since "geometry = points, appearance = brush" applies equally to a
+// hand-drawn stroke. For a Shape object these edit stroke.shape and re-run shapeToPoints (so it
+// stays a clean parametric shape); for anything else they transform .points/.nodes directly.
+function strokeBBox(stroke){
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  stroke.points.forEach(p=>{if(p.x<minX)minX=p.x;if(p.x>maxX)maxX=p.x;if(p.y<minY)minY=p.y;if(p.y>maxY)maxY=p.y;});
+  return {minX,minY,maxX,maxY,cx:(minX+maxX)/2,cy:(minY+maxY)/2};
+}
+function transformStrokePoints(stroke,fn){
+  stroke.points=stroke.points.map(p=>{const t=fn(p.x,p.y);return {...p,x:t.x,y:t.y};});
+  if(stroke.nodes)stroke.nodes=stroke.nodes.map(n=>{const t=fn(n.x,n.y);return {...n,x:t.x,y:t.y};});
+}
+function translateStrokeGeometry(stroke,dx,dy){
+  transformStrokePoints(stroke,(x,y)=>({x:x+dx,y:y+dy}));
+  if(stroke.shape){stroke.shape.x0+=dx;stroke.shape.y0+=dy;stroke.shape.x1+=dx;stroke.shape.y1+=dy;}
+}
+function withSelectedStroke(fn){
+  const stroke=strokes.find(s=>s.id===selectedStrokeId);if(!stroke)return;
+  fn(stroke);
+  rebuildLayer(stroke.layerId);rebuildLayersClippedBy(stroke.id);
+  pushHist();redraw();
+}
+function scaleSelectedStroke(factor){
+  withSelectedStroke(stroke=>{
+    if(stroke.shape){
+      const s=stroke.shape,cx=(s.x0+s.x1)/2,cy=(s.y0+s.y1)/2;
+      s.x0=cx+(s.x0-cx)*factor;s.x1=cx+(s.x1-cx)*factor;s.y0=cy+(s.y0-cy)*factor;s.y1=cy+(s.y1-cy)*factor;
+      stroke.points=shapeToPoints(s);
+    }else{
+      const b=strokeBBox(stroke);
+      transformStrokePoints(stroke,(x,y)=>({x:b.cx+(x-b.cx)*factor,y:b.cy+(y-b.cy)*factor}));
+    }
+  });
+}
+function rotateSelectedStroke(deg){
+  withSelectedStroke(stroke=>{
+    if(stroke.shape){
+      stroke.shape.rotation=(stroke.shape.rotation||0)+deg;
+      stroke.points=shapeToPoints(stroke.shape);
+    }else{
+      const b=strokeBBox(stroke),rad=deg*Math.PI/180,cosR=Math.cos(rad),sinR=Math.sin(rad);
+      transformStrokePoints(stroke,(x,y)=>{const dx=x-b.cx,dy=y-b.cy;return {x:b.cx+dx*cosR-dy*sinR,y:b.cy+dx*sinR+dy*cosR};});
+    }
+  });
+}
+function flipSelectedStroke(axis){
+  withSelectedStroke(stroke=>{
+    if(stroke.shape){
+      if(axis==='h')stroke.shape.flipH=!stroke.shape.flipH;else stroke.shape.flipV=!stroke.shape.flipV;
+      stroke.points=shapeToPoints(stroke.shape);
+    }else{
+      const b=strokeBBox(stroke);
+      transformStrokePoints(stroke,(x,y)=>axis==='h'?{x:2*b.cx-x,y}:{x,y:2*b.cy-y});
+    }
+  });
+}
+function duplicateSelectedStroke(){
+  const stroke=strokes.find(s=>s.id===selectedStrokeId);if(!stroke)return;
+  const copy=JSON.parse(JSON.stringify(stroke));
+  copy.id=crypto.randomUUID();
+  const offset=40;
+  copy.points=copy.points.map(p=>({...p,x:p.x+offset,y:p.y+offset}));
+  if(copy.nodes)copy.nodes=copy.nodes.map(n=>({...n,x:n.x+offset,y:n.y+offset}));
+  if(copy.shape){copy.shape.x0+=offset;copy.shape.y0+=offset;copy.shape.x1+=offset;copy.shape.y1+=offset;}
+  strokes.push(copy);appendStrokeToLayer(copy);
+  selectedStrokeId=copy.id;
+  syncStrokeSelectionUI();
+  pushHist();redraw();
+  setStatus('⧉ Duplicated.');
+}
+// Convert to Path deletes stroke.shape outright rather than keeping it alongside the nodes — from
+// this point on stroke.nodes/points is the ONLY geometry, editable exactly like a hand-drawn path
+// (move nodes, add/delete, Smooth/Corner, Break/Open, Continue, Join, Simplify), and there is no
+// parametric fallback left to accidentally show a stale "original" shape underneath.
+function convertShapeToPath(){
+  const stroke=strokes.find(s=>s.id===selectedStrokeId);if(!stroke||!stroke.shape)return;
+  const nodes=SHAPE_POLYGONAL[stroke.shape.type]
+    ?stroke.points.map(p=>({x:p.x,y:p.y,pressure:p.pressure,type:'corner'}))
+    :pointsToNodes(stroke.points);
+  stroke.nodes=nodes;
+  stroke.shape=null;
+  stroke.points=nodesToPoints(nodes,stroke.closed);
+  rebuildLayer(stroke.layerId);rebuildLayersClippedBy(stroke.id);
+  syncStrokeSelectionUI();
+  pushHist();redraw();
+  setStatus('✎ Converted to an editable path — use Edit Path to move, add or delete individual nodes.');
 }
 function renderStrokeReassignSwatches(){
   const host=$('strokeReassignSwatches');host.innerHTML='';
@@ -814,9 +1056,58 @@ $('duplicateLayerBtn').onclick=()=>{
   renderLayersList();rebuildLayer(copy.id);pushHist();redraw();
   setStatus('⧉ Duplicated "'+src.name+'".');
 };
-let dragMotif=null;canvas.addEventListener('pointerdown',e=>{if(mode!=='edit'||!isPen(e))return;selectAt(e.clientX,e.clientY);if(selected){const p=screenToCanvas(e.clientX,e.clientY),m=getSel();dragMotif={dx:p.x-m.x,dy:p.y-m.y};canvas.setPointerCapture(e.pointerId);}});
-canvas.addEventListener('pointermove',e=>{if(!dragMotif||mode!=='edit')return;const p=screenToCanvas(e.clientX,e.clientY),m=getSel();if(m){m.x=p.x-dragMotif.dx;m.y=p.y-dragMotif.dy;redraw();}});
-canvas.addEventListener('pointerup',()=>{if(dragMotif){dragMotif=null;pushHist();}});
+let dragMotif=null,dragStroke=null;
+canvas.addEventListener('pointerdown',e=>{
+  if(mode!=='edit'||!isPen(e))return;
+  // A stroke only starts moving on a tap-and-drag of the stroke it ALREADY selected — the very
+  // first tap that selects it never arms a drag. Requiring that extra intentional step (select,
+  // then drag) is what keeps an ordinary re-select tap, or the Pencil wobbling slightly, from
+  // ever silently nudging geometry — "prevent accidental shape movement" while still letting the
+  // canvas be the natural way to move something once you've actually chosen it.
+  const prevSelectedStrokeId=selectedStrokeId;
+  selectAt(e.clientX,e.clientY);
+  if(selected){
+    const p=screenToCanvas(e.clientX,e.clientY),m=getSel();
+    dragMotif={dx:p.x-m.x,dy:p.y-m.y};try{canvas.setPointerCapture(e.pointerId);}catch(err){}
+  }else if(selectedStrokeId&&selectedStrokeId===prevSelectedStrokeId){
+    const p=screenToCanvas(e.clientX,e.clientY);
+    dragStroke={strokeId:selectedStrokeId,startX:p.x,startY:p.y,totalDx:0,totalDy:0,moved:false};
+    try{canvas.setPointerCapture(e.pointerId);}catch(err){}
+  }
+});
+canvas.addEventListener('pointermove',e=>{
+  if(mode!=='edit')return;
+  if(dragMotif){const p=screenToCanvas(e.clientX,e.clientY),m=getSel();if(m){m.x=p.x-dragMotif.dx;m.y=p.y-dragMotif.dy;redraw();}return;}
+  if(dragStroke){
+    const stroke=strokes.find(s=>s.id===dragStroke.strokeId);if(!stroke)return;
+    const p=screenToCanvas(e.clientX,e.clientY);
+    const dx=p.x-dragStroke.startX,dy=p.y-dragStroke.startY;
+    // A tiny jitter shouldn't nudge geometry on a plain re-select tap — only start moving once the
+    // pencil has genuinely travelled, and only then hide the real layer copy (live-preview-only,
+    // same no-ghost technique Edit Path already uses) so there's never a stray "before" copy.
+    if(!dragStroke.moved&&Math.hypot(dx,dy)<5)return;
+    if(!dragStroke.moved){dragStroke.moved=true;rebuildLayerDimmed(stroke.layerId,stroke.id,0);}
+    dragStroke.totalDx+=dx;dragStroke.totalDy+=dy;
+    dragStroke.startX=p.x;dragStroke.startY=p.y;
+    lctx.clearRect(0,0,W,H);
+    const preview={...stroke,points:stroke.points.map(pt=>({...pt,x:pt.x+dragStroke.totalDx,y:pt.y+dragStroke.totalDy}))};
+    renderStrokeClipped(lctx,preview,BrushEngine.getBrush(stroke.brushId),stroke.settings||BrushEngine.getSettings(stroke.brushId));
+    liveActive=true;
+    redraw();
+  }
+});
+canvas.addEventListener('pointerup',()=>{
+  if(dragMotif){dragMotif=null;pushHist();}
+  if(dragStroke){
+    if(dragStroke.moved){
+      const stroke=strokes.find(s=>s.id===dragStroke.strokeId);
+      if(stroke){translateStrokeGeometry(stroke,dragStroke.totalDx,dragStroke.totalDy);rebuildLayer(stroke.layerId);rebuildLayersClippedBy(stroke.id);}
+      liveActive=false;lctx.clearRect(0,0,W,H);
+      pushHist();redraw();
+    }
+    dragStroke=null;
+  }
+});
 function getSel(){return placed.find(p=>p.id===selected)}
 // On-canvas resize/rotate handles, mirroring Magic Builder's brick handles - the same two
 // gestures as the sidebar's Size slider and rotate buttons, just directly on the selection box
@@ -834,7 +1125,7 @@ function updateSymAxis(){const a=$('symAxis');if(!a)return;if(symMode==='off'){a
 function updateSelectionBox(){const box=$('selectionBox'),m=getSel();if(!m){box.style.display='none';return}const rect=canvas.getBoundingClientRect(),wrapRect=wrap.getBoundingClientRect();const cx=rect.left+rect.width/2-wrapRect.left,cy=rect.top+rect.height/2-wrapRect.top;const a=rot*Math.PI/180;const px=(m.x-W/2)*zoom,py=(m.y-H/2)*zoom;const sx=cx+px*Math.cos(a)-py*Math.sin(a),sy=cy+px*Math.sin(a)+py*Math.cos(a);box.style.display='block';box.style.width=(m.w*m.s*zoom)+'px';box.style.height=(m.h*m.s*zoom)+'px';box.style.left=(sx-m.w*m.s*zoom/2)+'px';box.style.top=(sy-m.h*m.s*zoom/2)+'px';box.style.transform=`rotate(${rot+m.r}deg)`;}
 function updateSelectedControls(){const m=getSel();if(m){$('motifScale').value=Math.round(m.s*100);$('motifScaleVal').textContent=Math.round(m.s*100)+'%';}}
 function syncMode(){$('drawModeBtn').classList.toggle('active',mode==='draw');$('editModeBtn').classList.toggle('active',mode==='edit');canvas.style.cursor=mode==='draw'?'crosshair':'grab';setStatus(mode==='draw'?'✏️ Draw Mode: Apple Pencil draws, two fingers move the canvas.':'↔️ Edit Mode: tap motif with Pencil/mouse, then move, scale, rotate or flip.');}
-$('drawModeBtn').onclick=()=>{if(pathEditStrokeId)commitEditPath();if(joinPendingStrokeId)endJoinPick();mode='draw';selected=null;selectedStrokeId=null;syncStrokeSelectionUI();syncMode();redraw()};$('editModeBtn').onclick=()=>{mode='edit';syncMode()};$('captureBtn').onclick=captureMotif;$('undoBtn').onclick=undo;$('redoBtn').onclick=redo;$('resetRot').onclick=()=>{rot=0;applyTransform()};
+$('drawModeBtn').onclick=()=>{if(pathEditStrokeId)commitEditPath();if(joinPendingStrokeId)endJoinPick();armedShapeType=null;syncShapeToolUI();mode='draw';selected=null;selectedStrokeId=null;syncStrokeSelectionUI();syncMode();redraw()};$('editModeBtn').onclick=()=>{armedShapeType=null;syncShapeToolUI();mode='edit';syncMode()};$('captureBtn').onclick=captureMotif;$('undoBtn').onclick=undo;$('redoBtn').onclick=redo;$('resetRot').onclick=()=>{rot=0;applyTransform()};
 // Clear Drawing only clears the ACTIVE layer's strokes — clearing the whole document across
 // every layer from one button would be far too easy to trigger by accident once layers are
 // holding genuinely different content (Sketch vs Colour vs Outline).
@@ -845,6 +1136,44 @@ $('clearDrawing').onclick=()=>{
   rebuildLayer(layer.id);selectedStrokeId=null;syncStrokeSelectionUI();pushHist();redraw();
   setStatus('🧹 Cleared "'+layer.name+'".');
 };
+// ---- Shape Tool panel ---------------------------------------------------------------------------
+function syncShapeToolUI(){
+  document.querySelectorAll('.shape-btn').forEach(b=>b.classList.toggle('active',b.dataset.shape===armedShapeType));
+  $('shapeConstrainBtn').classList.toggle('active',constrainShape);
+  $('shapeToolHint').textContent=armedShapeType
+    ?'Draw the '+armedShapeType+' on the canvas with Apple Pencil — drag to size it, lift to place. Tap the button again to cancel.'
+    :'Tap a shape, then draw it on the canvas with Apple Pencil — drag to size it, lift to place. Tap the shape button again to cancel.';
+}
+document.querySelectorAll('.shape-btn').forEach(btn=>{
+  btn.onclick=()=>{
+    const type=btn.dataset.shape;
+    armedShapeType=(armedShapeType===type)?null:type; // tap again to cancel
+    if(armedShapeType){if(pathEditStrokeId)commitEditPath();if(joinPendingStrokeId)endJoinPick();mode='draw';selected=null;selectedStrokeId=null;syncStrokeSelectionUI();syncMode();}
+    syncShapeToolUI();redraw();
+  };
+});
+$('shapeConstrainBtn').onclick=()=>{constrainShape=!constrainShape;syncShapeToolUI();};
+$('shapeParamCorner').oninput=e=>updateSelectedShapeParam(s=>{s.cornerRadius=+e.target.value;$('shapeParamCornerVal').textContent=e.target.value+'%';});
+$('shapeParamCorner').onchange=()=>pushHist();
+$('shapeParamSides').oninput=e=>updateSelectedShapeParam(s=>{s.sides=+e.target.value;$('shapeParamSidesVal').textContent=e.target.value;});
+$('shapeParamSides').onchange=()=>pushHist();
+$('shapeParamPoints').oninput=e=>updateSelectedShapeParam(s=>{s.starPoints=+e.target.value;$('shapeParamPointsVal').textContent=e.target.value;});
+$('shapeParamPoints').onchange=()=>pushHist();
+$('shapeParamInner').oninput=e=>updateSelectedShapeParam(s=>{s.innerRatio=+e.target.value;$('shapeParamInnerVal').textContent=e.target.value+'%';});
+$('shapeParamInner').onchange=()=>pushHist();
+$('shapeParamTurns').oninput=e=>updateSelectedShapeParam(s=>{s.turns=+e.target.value;$('shapeParamTurnsVal').textContent=e.target.value;});
+$('shapeParamTurns').onchange=()=>pushHist();
+$('shapeParamSpacing').oninput=e=>updateSelectedShapeParam(s=>{s.spacing=+e.target.value;$('shapeParamSpacingVal').textContent=e.target.value+'%';});
+$('shapeParamSpacing').onchange=()=>pushHist();
+$('shapeDirBtn').onclick=()=>{updateSelectedShapeParam(s=>{s.dir=-(s.dir||1);});syncShapeParamsUI(selectedShapeStroke());pushHist();};
+$('shapeConvertBtn').onclick=convertShapeToPath;
+$('shapeSmallerBtn').onclick=()=>scaleSelectedStroke(0.9);
+$('shapeBiggerBtn').onclick=()=>scaleSelectedStroke(1/0.9);
+$('shapeRotLBtn').onclick=()=>rotateSelectedStroke(-15);
+$('shapeRotRBtn').onclick=()=>rotateSelectedStroke(15);
+$('shapeFlipHBtn').onclick=()=>flipSelectedStroke('h');
+$('shapeFlipVBtn').onclick=()=>flipSelectedStroke('v');
+$('duplicateStrokeBtn').onclick=duplicateSelectedStroke;
 $('deleteStrokeBtn').onclick=()=>{
   if(!selectedStrokeId)return;
   const stroke=strokes.find(s=>s.id===selectedStrokeId);
@@ -866,6 +1195,21 @@ $('strokeWidthCtl').oninput=e=>{
   $('strokeRecipe').textContent=formatRecipe(stroke.brushId,stroke.settings);
 };
 $('strokeWidthCtl').onchange=()=>pushHist();
+// Layer reassignment for the selected stroke — new strokes still simply go on the active layer
+// (unchanged), this is specifically for moving an EXISTING stroke/shape to a different one
+// afterwards, same simple Outline/Colour/Sketch layer set, no new layers created by this.
+$('strokeLayerSelect').onchange=e=>{
+  const stroke=strokes.find(s=>s.id===selectedStrokeId);if(!stroke)return;
+  const target=layers.find(l=>l.id===e.target.value);if(!target)return;
+  if(target.locked){setStatus('🔒 "'+target.name+'" is locked — unlock it first to move a stroke there.');syncStrokeLayerSelect(stroke);return;}
+  const oldLayerId=stroke.layerId;
+  stroke.layerId=target.id;
+  activeLayerId=target.id;
+  rebuildLayer(oldLayerId);rebuildLayer(target.id);
+  renderLayersList();
+  pushHist();redraw();
+  setStatus('📚 Moved to "'+target.name+'".');
+};
 // Loads the EXACT settings this stroke was drawn with into the active drawing brush — not just
 // "the same brush family", the actual numbers, so new strokes drawn next genuinely match it.
 $('useThisBrushBtn').onclick=()=>{
@@ -1030,6 +1374,115 @@ function nodesToPoints(nodes,closed=false,samplesPerSeg=14){
   if(closed){out.push({...out[0]});}
   else{const last=nodes[n-1];out.push({x:last.x,y:last.y,pressure:last.pressure});}
   return out;
+}
+// ---- Vector Shapes ------------------------------------------------------------------------------
+// A shape is just a stroke (same points/nodes/closed/brushId/settings/clipStrokeId fields, same
+// rebuildLayer/renderStrokeClipped/Paint Inside/save-reload path as any hand-drawn stroke) with one
+// extra field: stroke.shape, a small parametric description. shapeToPoints() is the single source
+// of truth for a shape's geometry — move/scale/rotate/flip and the live param sliders (corner
+// radius, sides, star points, spiral turns...) all just edit the numbers in stroke.shape and re-run
+// it, so there is never a second/hidden copy of the geometry sitting underneath (the same bug this
+// app already fixed once for Edit Path). "Convert to Path" deletes stroke.shape entirely and hands
+// the SAME points over to the existing node editor — from that moment on there is no parametric
+// object left to fall back to, by design.
+const SHAPE_TYPES=['line','rect','roundRect','ellipse','circle','triangle','diamond','polygon','star','heart','spiral'];
+// Shapes with a closed, filled silhouette — these are exactly the ones Paint Inside can target.
+const SHAPE_CLOSED={line:false,rect:true,roundRect:true,ellipse:true,circle:true,triangle:true,diamond:true,polygon:true,star:true,heart:true,spiral:false};
+// Vertex-exact shapes: shapeLocalPoints() already returns their real corners with nothing sampled
+// in between, so Convert to Path can hand those straight to the node editor as 'corner' nodes
+// instead of running RDP simplification (which would round off deliberately sharp corners).
+const SHAPE_POLYGONAL={line:true,rect:true,triangle:true,diamond:true,polygon:true,star:true};
+function defaultShapeParams(type){
+  const p={type,x0:0,y0:0,x1:0,y1:0,rotation:0,flipH:false,flipV:false};
+  if(type==='roundRect')p.cornerRadius=30; // 0-100, % of the shorter half-extent
+  if(type==='polygon')p.sides=6;
+  if(type==='star'){p.starPoints=5;p.innerRatio=50;}
+  if(type==='spiral'){p.turns=3;p.spacing=60;p.dir=1;}
+  return p;
+}
+// Local unit-space geometry: bbox centre at the origin, half-extents of exactly 1 on each axis —
+// shapeToPoints() below is what scales/rotates/flips/translates this into real canvas coordinates,
+// so every shape type only has to describe its own silhouette once, in isolation from the drag box.
+function shapeLocalPoints(shape){
+  switch(shape.type){
+    case 'rect':return [{x:-1,y:-1},{x:1,y:-1},{x:1,y:1},{x:-1,y:1}];
+    case 'triangle':return [{x:0,y:-1},{x:1,y:1},{x:-1,y:1}];
+    case 'diamond':return [{x:0,y:-1},{x:1,y:0},{x:0,y:1},{x:-1,y:0}];
+    case 'polygon':{
+      const n=Math.max(3,Math.round(shape.sides||6)),out=[];
+      for(let i=0;i<n;i++){const a=-Math.PI/2+i*2*Math.PI/n;out.push({x:Math.cos(a),y:Math.sin(a)});}
+      return out;
+    }
+    case 'star':{
+      const n=Math.max(3,Math.round(shape.starPoints||5)),inner=Math.max(0.05,Math.min(0.95,(shape.innerRatio!=null?shape.innerRatio:50)/100)),out=[];
+      for(let i=0;i<n*2;i++){const a=-Math.PI/2+i*Math.PI/n,r=(i%2===0)?1:inner;out.push({x:Math.cos(a)*r,y:Math.sin(a)*r});}
+      return out;
+    }
+    case 'roundRect':{
+      const r=Math.max(0,Math.min(1,(shape.cornerRadius!=null?shape.cornerRadius:30)/100)),out=[],segs=6;
+      // Sample a quarter-circle arc at each of the 4 corners, straight edges implied between them.
+      const arc=(cx,cy,startA)=>{for(let i=0;i<=segs;i++){const a=startA+i*(Math.PI/2)/segs;out.push({x:cx+Math.cos(a)*r,y:cy+Math.sin(a)*r});}};
+      arc(1-r,-1+r,-Math.PI/2);
+      arc(1-r,1-r,0);
+      arc(-1+r,1-r,Math.PI/2);
+      arc(-1+r,-1+r,Math.PI);
+      return out;
+    }
+    case 'ellipse':case 'circle':{
+      const out=[],segs=48;
+      for(let i=0;i<segs;i++){const a=i*2*Math.PI/segs;out.push({x:Math.cos(a),y:Math.sin(a)});}
+      return out;
+    }
+    case 'heart':{
+      const out=[],segs=48,xs=16,ys=17.5;
+      for(let i=0;i<=segs;i++){
+        const t=i/segs*2*Math.PI;
+        const x=16*Math.pow(Math.sin(t),3);
+        const y=-(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t));
+        out.push({x:x/xs,y:y/ys});
+      }
+      return out;
+    }
+    case 'spiral':{
+      const turns=Math.max(0.5,shape.turns||3),dir=shape.dir||1;
+      const tightness=Math.max(0.1,Math.min(1,(shape.spacing!=null?shape.spacing:60)/100));
+      const steps=Math.max(24,Math.round(turns*24)),out=[];
+      const startR=1-tightness*0.9; // tighter spacing -> more turns visible within the same outer radius
+      for(let i=0;i<=steps;i++){
+        const t=i/steps,a=dir*t*turns*2*Math.PI,r=startR*(1-t)*0.15+t*1;
+        out.push({x:Math.cos(a)*r,y:Math.sin(a)*r});
+      }
+      return out;
+    }
+    default:return [{x:-1,y:-1},{x:1,y:1}];
+  }
+}
+// Turns a shape's parametric description into real canvas points: build in local unit space,
+// flip (in the shape's own frame, so a flipped+rotated shape mirrors around ITS axis, not the
+// canvas's), rotate, then scale to the drag box's half-extents and move to its centre.
+function shapeToPoints(shape){
+  if(shape.type==='line'){
+    return [{x:shape.x0,y:shape.y0,pressure:0.65},{x:shape.x1,y:shape.y1,pressure:0.65}];
+  }
+  const cx=(shape.x0+shape.x1)/2,cy=(shape.y0+shape.y1)/2;
+  const hw=Math.max(0.5,Math.abs(shape.x1-shape.x0)/2),hh=Math.max(0.5,Math.abs(shape.y1-shape.y0)/2);
+  const rot=(shape.rotation||0)*Math.PI/180,cosR=Math.cos(rot),sinR=Math.sin(rot);
+  return shapeLocalPoints(shape).map(p=>{
+    const lx=(shape.flipH?-p.x:p.x)*hw,ly=(shape.flipV?-p.y:p.y)*hh;
+    return {x:cx+lx*cosR-ly*sinR,y:cy+lx*sinR+ly*cosR,pressure:0.65};
+  });
+}
+// Drag-to-create: normalises whichever corner was dragged into x0<->x1 order isn't needed (the
+// renderer doesn't care about sign), constrain forces a 1:1 box from the same drag start point.
+function updateShapeDragBox(shape,start,cur,constrain){
+  if(shape.type==='line'){shape.x0=start.x;shape.y0=start.y;shape.x1=cur.x;shape.y1=cur.y;return;}
+  let x1=cur.x,y1=cur.y;
+  const forceSquare=constrain||shape.type==='circle';
+  if(forceSquare){
+    const w=x1-start.x,h=y1-start.y,side=Math.max(Math.abs(w),Math.abs(h));
+    x1=start.x+(w<0?-1:1)*side;y1=start.y+(h<0?-1:1)*side;
+  }
+  shape.x0=start.x;shape.y0=start.y;shape.x1=x1;shape.y1=y1;
 }
 function enterEditPath(strokeId){
   const stroke=strokes.find(s=>s.id===strokeId);if(!stroke)return;
@@ -1487,7 +1940,7 @@ boot();
 // Read-only introspection for debugging/testing — mirrors the small hooks already used for
 // Seamlessly Creative suite integration (see the bottom of this file once frozen into the
 // suite), just exposed unconditionally here since it's harmless and useful standalone too.
-window.__sketchpadGetState=()=>({strokeCount:strokes.length,strokes,placed,motifs,activeBrushId,eraserActive,selectedStrokeId,layout,layers:layers.map(l=>({id:l.id,name:l.name,visible:l.visible,locked:l.locked,opacity:l.opacity})),activeLayerId,pathEditStrokeId,pathEditNodes,pathEditClosed,copiedBrushStyle,continueStrokeId,joinPendingStrokeId,paintMode,paintInsideTargetId});
+window.__sketchpadGetState=()=>({strokeCount:strokes.length,strokes,placed,motifs,activeBrushId,eraserActive,selectedStrokeId,layout,layers:layers.map(l=>({id:l.id,name:l.name,visible:l.visible,locked:l.locked,opacity:l.opacity})),activeLayerId,pathEditStrokeId,pathEditNodes,pathEditClosed,copiedBrushStyle,continueStrokeId,joinPendingStrokeId,paintMode,paintInsideTargetId,armedShapeType,constrainShape});
 // Debug-only: max alpha found in a small box around (x,y) on a given layer's OWN canvas (not
 // the live preview) — lets a test confirm "is anything actually rendered on the layer itself
 // here", independent of what the live preview is showing on top of it.
