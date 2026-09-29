@@ -3150,48 +3150,72 @@ function buildPatternWorkingCopy(sourceImage) {
   quickPatternWorkingCanvas = highQualityDownscale(sourceImage, Math.round(w * scale), Math.round(h * scale));
 }
 
+// Seamlessly Creative: render resolution vs. on-product footprint, decoupled.
+//
+// createPatternTileCanvas used to return one canvas whose own .width/.height served two different
+// jobs at once - the actual on-product FOOTPRINT of each repeat (what governs repeat density/
+// geometry - drawRepeatedTileLayer placed it at native size, canvasW/canvasH apart) AND the pixel
+// RESOLUTION available to hold source detail. Tying those together meant a small Pattern Scale
+// (the size actually wanted for something like a swimsuit repeat) forced a small resolution too -
+// no downscale algorithm can put more distinguishable detail into a destination that's just
+// genuinely few pixels wide, so a detailed illustrated pattern went soft exactly when scaled down
+// to a realistic small repeat size, regardless of how correct the downscale itself was.
+//
+// The fix: the returned canvas's raw .width/.height is now a RENDER resolution with its own floor
+// (MIN_RENDER_PX) independent of how small the footprint is - .displayWidth/.displayHeight (a new,
+// separate pair of properties) carry the actual on-product size, completely unchanged from before
+// (same baseTileSize=210, same scalePercent formula, same geometry). drawRepeatedTileLayer places
+// tiles canvasW/canvasH apart using ONLY .displayWidth/.displayHeight (repeat density/geometry
+// untouched) while drawing the higher-resolution bitmap into that smaller footprint via drawImage's
+// own destination-size scaling - the same imageSmoothingQuality='high' every product render already
+// sets, doing one further gentle downscale from real detail instead of tiling an already-averaged-
+// away small bitmap. Verified empirically (not assumed) that this measurably retains more
+// distinguishable detail than downscaling straight to the small footprint, even at Pattern Scale's
+// minimum.
+const MIN_RENDER_PX = 340;
+
 function createPatternTileCanvas(sourceImage, scalePercent = 100) {
   const scale = Math.max(0.18, Math.min(3.2, Number(scalePercent || 100) / 100));
   const effectiveSource = (sourceImage === quickPatternImage && quickPatternWorkingCanvas) ? quickPatternWorkingCanvas : sourceImage;
 
   // Smaller base tile = visible repeat on product mock-ups.
   // This avoids the "single sticker strip" look when users upload large 3600px pattern tiles.
-  //
-  // 210 -> 380 (Seamlessly Creative): drawRepeatedTileLayer below draws this canvas onto the
-  // product canvas at its own native pixel size (ctx.drawImage(tile,x,y,tile.width,tile.height) -
-  // no further scaling of the placed tile), so this number is BOTH the actual resolution budget a
-  // detailed illustrated pattern (fine line art, small motifs) gets to keep its own detail in, AND
-  // the on-product footprint each repeat occupies - the two aren't separable here, since nothing
-  // downstream re-scales the tile once it's placed. At 210px there simply weren't enough
-  // destination pixels left for fine detail to survive being downscaled into, no matter how good
-  // the downscale algorithm is (highQualityDownscale's own area-averaging was already correct/
-  // alias-free - 210px was the real ceiling, not the method). 380px keeps scalePercent's role
-  // exactly the same (same clamp range, same multiplier) and keeps the repeat genuinely tiling
-  // the same way - it just means each repeat is itself moderately larger/fewer-per-product at a
-  // given scalePercent than it was at 210px, in exchange for surviving downscale with real detail
-  // intact. There is no way to give detailed patterns more destination pixels without this
-  // trade-off; it's a hard consequence of a fixed-resolution product canvas, not a shortcut taken
-  // here.
-  const baseTileSize = 380;
+  // Governs ONLY the on-product footprint (displayW/displayH) now - see the block comment above.
+  const baseTileSize = 210;
   const sourceW = effectiveSource.naturalWidth || effectiveSource.width || 1200;
   const sourceH = effectiveSource.naturalHeight || effectiveSource.height || 1200;
   const aspect = sourceH / Math.max(1, sourceW);
 
-  const targetW = Math.max(70, Math.round(baseTileSize * scale));
-  const targetH = Math.max(70, Math.round(baseTileSize * aspect * scale));
+  const displayW = Math.max(70, Math.round(baseTileSize * scale));
+  const displayH = Math.max(70, Math.round(baseTileSize * aspect * scale));
 
-  return highQualityDownscale(effectiveSource, targetW, targetH);
+  // Render at whichever is bigger: the actual display footprint (so a LARGE Pattern Scale, already
+  // plenty of pixels, isn't inflated further for no benefit - keeps memory/perf identical to before
+  // in that case) or the quality floor (so a SMALL Pattern Scale still gets real detail to draw
+  // down from). Capped at a moderate absolute ceiling regardless of aspect ratio, so a very tall/
+  // wide upload can't balloon into a huge intermediate canvas.
+  const renderScaleFactor = Math.min(4, Math.max(1, MIN_RENDER_PX / Math.max(displayW, displayH)));
+  const renderW = Math.min(1400, Math.round(displayW * renderScaleFactor));
+  const renderH = Math.min(1400, Math.round(displayH * renderScaleFactor));
+
+  const tile = highQualityDownscale(effectiveSource, renderW, renderH);
+  tile.displayWidth = displayW;
+  tile.displayHeight = displayH;
+  return tile;
 }
 
 function drawRepeatedTileLayer(ctx, tile, canvasW, canvasH, offsetXPx = 0, offsetYPx = 0) {
-  if (!tile || !tile.width || !tile.height) return;
+  if (!tile) return;
+  const dw = tile.displayWidth || tile.width;
+  const dh = tile.displayHeight || tile.height;
+  if (!dw || !dh) return;
 
-  const startX = -tile.width * 2 + ((offsetXPx % tile.width) + tile.width) % tile.width;
-  const startY = -tile.height * 2 + ((offsetYPx % tile.height) + tile.height) % tile.height;
+  const startX = -dw * 2 + ((offsetXPx % dw) + dw) % dw;
+  const startY = -dh * 2 + ((offsetYPx % dh) + dh) % dh;
 
-  for (let y = startY; y < canvasH + tile.height * 2; y += tile.height) {
-    for (let x = startX; x < canvasW + tile.width * 2; x += tile.width) {
-      ctx.drawImage(tile, x, y, tile.width, tile.height);
+  for (let y = startY; y < canvasH + dh * 2; y += dh) {
+    for (let x = startX; x < canvasW + dw * 2; x += dw) {
+      ctx.drawImage(tile, x, y, dw, dh);
     }
   }
 }
@@ -3323,8 +3347,8 @@ async function renderMugMockupToCanvas(targetCanvas, options = {}) {
     const tile = createPatternTileCanvas(patternImg, scalePercent);
 
     const mugOffset = getEffectiveOffsetForProduct('mug');
-    const xOffset = mugOffset.x / 100 * tile.width;
-    const yOffset = mugOffset.y / 100 * tile.height;
+    const xOffset = mugOffset.x / 100 * (tile.displayWidth || tile.width);
+    const yOffset = mugOffset.y / 100 * (tile.displayHeight || tile.height);
 
     // Draw explicit repeated tiles for reliable Safari/Koder rendering.
     drawRepeatedTileLayer(pctx, tile, patternLayer.width, patternLayer.height, xOffset, yOffset);
@@ -3452,8 +3476,8 @@ async function renderLayeredProductToCanvas(targetCanvas, config) {
     const scalePercent = config.scalePercent || document.getElementById('quickScale')?.value || config.defaultScale || 100;
     const tile = createPatternTileCanvas(patternImg, scalePercent);
     const layeredOffset = getEffectiveOffsetForProduct(config.productKey || config.productName);
-    const xOffset = layeredOffset.x / 100 * tile.width;
-    const yOffset = layeredOffset.y / 100 * tile.height;
+    const xOffset = layeredOffset.x / 100 * (tile.displayWidth || tile.width);
+    const yOffset = layeredOffset.y / 100 * (tile.displayHeight || tile.height);
 
     drawRepeatedTileLayer(pctx, tile, patternLayer.width, patternLayer.height, xOffset, yOffset);
 
@@ -3600,8 +3624,8 @@ async function renderNotebookMockupToCanvas(targetCanvas, side = notebookSideMod
 
     const tile = createPatternTileCanvas(patternImg, scalePercent);
     const notebookOffset = getEffectiveOffsetForProduct('notebook');
-    const xOffset = notebookOffset.x / 100 * tile.width;
-    const yOffset = notebookOffset.y / 100 * tile.height;
+    const xOffset = notebookOffset.x / 100 * (tile.displayWidth || tile.width);
+    const yOffset = notebookOffset.y / 100 * (tile.displayHeight || tile.height);
 
     drawRepeatedTileLayer(pctx, tile, patternLayer.width, patternLayer.height, xOffset, yOffset);
 
@@ -4100,7 +4124,7 @@ async function renderGreetingCardMockupToCanvas(targetCanvas, mode = greetingCar
       const scalePercent = forcedScalePercent || getEffectiveScaleForProduct('greetingcard');
       const tile = createPatternTileCanvas(patternImg, scalePercent);
       const gcOffset = getEffectiveOffsetForProduct('greetingcard');
-      drawRepeatedTileLayer(pctx, tile, w, h, gcOffset.x / 100 * tile.width, gcOffset.y / 100 * tile.height);
+      drawRepeatedTileLayer(pctx, tile, w, h, gcOffset.x / 100 * (tile.displayWidth || tile.width), gcOffset.y / 100 * (tile.displayHeight || tile.height));
     }
 
     pctx.globalCompositeOperation = 'destination-in';
@@ -4172,7 +4196,7 @@ async function renderKitchenTowelMockupToCanvas(targetCanvas, forcedScalePercent
     const pctx = patternLayer.getContext('2d');
     pctx.imageSmoothingEnabled = true;
     pctx.imageSmoothingQuality = 'high';
-    drawRepeatedTileLayer(pctx, tile, w, h, offset.x / 100 * tile.width, offset.y / 100 * tile.height);
+    drawRepeatedTileLayer(pctx, tile, w, h, offset.x / 100 * (tile.displayWidth || tile.width), offset.y / 100 * (tile.displayHeight || tile.height));
 
     pctx.globalCompositeOperation = 'destination-in';
     pctx.drawImage(mask, 0, 0, w, h);
@@ -4370,7 +4394,7 @@ function compositeMilestonePattern(ctx, w, h, base, mask, product, forcedScalePe
   const pctx = patternLayer.getContext('2d');
   pctx.imageSmoothingEnabled = true;
   pctx.imageSmoothingQuality = 'high';
-  drawRepeatedTileLayer(pctx, tile, w, h, offset.x / 100 * tile.width, offset.y / 100 * tile.height);
+  drawRepeatedTileLayer(pctx, tile, w, h, offset.x / 100 * (tile.displayWidth || tile.width), offset.y / 100 * (tile.displayHeight || tile.height));
 
   pctx.globalCompositeOperation = 'destination-in';
   pctx.drawImage(mask, 0, 0, w, h);
@@ -4663,7 +4687,7 @@ async function renderBucketHatMockupToCanvas(targetCanvas, forcedScalePercent = 
     const pctx = patternLayer.getContext('2d');
     pctx.imageSmoothingEnabled = true;
     pctx.imageSmoothingQuality = 'high';
-    drawRepeatedTileLayer(pctx, tile, w, h, offset.x / 100 * tile.width, offset.y / 100 * tile.height);
+    drawRepeatedTileLayer(pctx, tile, w, h, offset.x / 100 * (tile.displayWidth || tile.width), offset.y / 100 * (tile.displayHeight || tile.height));
 
     pctx.globalCompositeOperation = 'destination-in';
     pctx.drawImage(mask, 0, 0, w, h);
@@ -4735,7 +4759,7 @@ async function renderBeachTowelMockupToCanvas(targetCanvas, forcedScalePercent =
     const pctx = patternLayer.getContext('2d');
     pctx.imageSmoothingEnabled = true;
     pctx.imageSmoothingQuality = 'high';
-    drawRepeatedTileLayer(pctx, tile, w, h, offset.x / 100 * tile.width, offset.y / 100 * tile.height);
+    drawRepeatedTileLayer(pctx, tile, w, h, offset.x / 100 * (tile.displayWidth || tile.width), offset.y / 100 * (tile.displayHeight || tile.height));
 
     pctx.globalCompositeOperation = 'destination-in';
     pctx.drawImage(mask, 0, 0, w, h);
@@ -4833,7 +4857,7 @@ async function renderBikiniSetMockupToCanvas(targetCanvas, forcedScalePercent = 
     const pctx = patternLayer.getContext('2d');
     pctx.imageSmoothingEnabled = true;
     pctx.imageSmoothingQuality = 'high';
-    drawRepeatedTileLayer(pctx, tile, w, h, offset.x / 100 * tile.width, offset.y / 100 * tile.height);
+    drawRepeatedTileLayer(pctx, tile, w, h, offset.x / 100 * (tile.displayWidth || tile.width), offset.y / 100 * (tile.displayHeight || tile.height));
 
     pctx.globalCompositeOperation = 'destination-in';
     pctx.drawImage(patternMask, 0, 0, w, h);
@@ -4963,7 +4987,7 @@ async function renderSwimsuitMockupToCanvas(targetCanvas, forcedScalePercent = n
     const pctx = patternLayer.getContext('2d');
     pctx.imageSmoothingEnabled = true;
     pctx.imageSmoothingQuality = 'high';
-    drawRepeatedTileLayer(pctx, tile, w, h, offset.x / 100 * tile.width, offset.y / 100 * tile.height);
+    drawRepeatedTileLayer(pctx, tile, w, h, offset.x / 100 * (tile.displayWidth || tile.width), offset.y / 100 * (tile.displayHeight || tile.height));
 
     pctx.globalCompositeOperation = 'destination-in';
     pctx.drawImage(patternMask, 0, 0, w, h);
