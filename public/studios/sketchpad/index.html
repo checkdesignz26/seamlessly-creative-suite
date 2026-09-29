@@ -96,6 +96,14 @@ canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-a
 .sym-btn{font-size:13px}
 .butterfly-on{background:linear-gradient(90deg,var(--purple),var(--pink))!important;box-shadow:0 0 0 4px rgba(255,142,214,.14),0 0 22px rgba(255,142,214,.34)}
 #themeToggle{font-weight:900}
+.brush-quickbar{background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:14px;padding:8px 10px;margin-top:10px}
+.brush-family-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:10px 0 6px;font-weight:800}
+.brush-family-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px}
+.brush-swatch{position:relative;width:56px;height:44px;border-radius:11px;border:2px solid var(--btnBorder);background:var(--btnBg);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;color:var(--text);text-align:center;padding:2px;line-height:1.15}
+.brush-swatch.active{border-color:var(--pink);box-shadow:0 0 0 2px rgba(255,142,214,.35)}
+.brush-swatch .fav-star{position:absolute;top:-7px;right:-7px;width:17px;height:17px;border-radius:50%;background:var(--panel2);border:1px solid var(--line);font-size:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted)}
+.brush-swatch .fav-star.active{background:var(--orange);color:#3a2e26;border-color:var(--orange)}
+#eraserToggle.active{background:var(--dangerBg)!important;border:1px solid var(--dangerBorder)!important}
 @media(max-width:900px){.app{padding:8px;gap:8px}.sidebar{width:270px}.btn,.tool-btn{font-size:12px;padding:9px 11px}.toolbar{padding:10px}}
 </style>
 </head>
@@ -114,9 +122,40 @@ canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-a
     </div><label class="upload accentPurple" style="margin-top:8px">📥 Import Template from Magic Builder<input id="templateImportInput" type="file" accept="application/json,.json" style="display:none"></label><button id="templateClear" class="btn mini danger" style="width:100%;margin-top:8px">✕ Clear Template</button><div class="hint">Pick a layout above, or import a template's layout exported from Magic Builder ("export for playground"), then tap a motif below to drop it into the next empty slot - bigger (hero) slots take your focal motifs, smaller (accent/filler) slots take details.</div></section>
     <section class="section"><div class="section-title">🖼️ Motif Tray</div><div id="motifTray" class="motif-tray"></div><div id="motifEmpty" class="hint">Captured drawings and uploaded motifs appear here.</div></section>
     <section class="section"><div class="section-title">📚 Trace Reference</div><label class="upload accentTeal">➕ Trace Artwork<input id="traceInput" type="file" accept="image/*" multiple style="display:none"></label><div id="traceList" class="trace-list" style="margin-top:8px"></div><div class="slider-row"><label>Opacity</label><input id="traceOpacity" type="range" min="5" max="100" value="35"><span id="traceOpacityVal">35%</span></div><div class="slider-row"><label>Scale</label><input id="traceScale" type="range" min="20" max="400" value="100"><span id="traceScaleVal">100%</span></div><div class="row"><button id="traceFit" class="btn mini">Fit</button><button id="traceCentre" class="btn mini">Centre</button><button id="traceLock" class="btn mini active">🔒 Locked</button><button id="traceClear" class="btn mini danger">Clear</button></div></section>
-    <section class="section"><div class="section-title">✏️ Draw</div><div class="mode-switch"><button id="drawModeBtn" class="btn active">✏️ Draw</button><button id="editModeBtn" class="btn">↔️ Edit</button></div><div class="grid" style="margin-top:10px"><button class="brush-btn active" data-brush="fine">Fine Line</button><button class="brush-btn" data-brush="mono">Monoline</button><button class="brush-btn" data-brush="eraser">Eraser</button></div><div class="slider-row"><label>Size</label><input id="brushSize" type="range" min="0.5" max="18" step="0.1" value="2.2"><span id="brushSizeVal">2.2</span></div><div class="row"><input id="brushColor" class="color" type="color" value="#000000"><button id="captureBtn" class="btn primary" style="flex:1">✂️ Capture Motif</button></div><div class="section-title" style="margin-top:14px">🖌️ Brush Studio</div><div class="brush-preview"><div id="brushDot" class="brush-dot"></div></div><div class="slider-row"><label>Opacity</label><input id="brushOpacity" type="range" min="5" max="100" value="100"><span id="brushOpacityVal">100%</span></div><div class="slider-row"><label>Spacing</label><input id="brushSpacing" type="range" min="1" max="40" value="1"><span id="brushSpacingVal">1</span></div><div class="slider-row"><label>Smooth</label><input id="brushSmooth" type="range" min="0" max="90" value="20"><span id="brushSmoothVal">20%</span></div><div class="row"><button id="saveBrush" class="btn mini primary">💾 Save Brush</button><button id="resetBrush" class="btn mini">Reset</button></div><div id="savedBrushes" class="grid" style="margin-top:8px"></div><div class="hint">Apple Pencil draws. One finger no longer pans while drawing. Use two fingers to pan, pinch and rotate.</div></section>
+    <section class="section" id="brushSection">
+      <div class="section-title">✏️ Draw</div>
+      <div class="mode-switch"><button id="drawModeBtn" class="btn active">✏️ Draw</button><button id="editModeBtn" class="btn">↔️ Edit</button></div>
+      <div class="brush-quickbar">
+        <div class="slider-row"><label>Size</label><input id="brushSize" type="range" min="1" max="120" value="6"><span id="brushSizeVal">6</span></div>
+        <div class="slider-row"><label>Opacity</label><input id="brushOpacity" type="range" min="1" max="100" value="100"><span id="brushOpacityVal">100%</span></div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <input id="brushColor" class="color" type="color" value="#000000">
+        <button id="eraserToggle" class="btn" style="flex:1">🧹 Eraser</button>
+      </div>
+      <div class="brush-family-title">Recent</div>
+      <div id="brushRecents" class="brush-family-row"></div>
+      <div class="brush-family-title">Favourites</div>
+      <div id="brushFavorites" class="brush-family-row"></div>
+      <div id="brushFamilies"></div>
+      <button id="moreSettingsToggle" class="btn mini" style="width:100%;margin-top:10px;">⚙️ More Settings</button>
+      <div id="moreSettings" style="display:none;">
+        <div class="slider-row"><label>Smooth</label><input id="brushSmooth" type="range" min="0" max="90" value="30"><span id="brushSmoothVal">30%</span></div>
+        <div class="slider-row"><label>Pres→Width</label><input id="pressureWidth" type="range" min="0" max="100" value="50"><span id="pressureWidthVal">50%</span></div>
+        <div class="slider-row"><label>Pres→Opac</label><input id="pressureOpacity" type="range" min="0" max="100" value="10"><span id="pressureOpacityVal">10%</span></div>
+        <div class="slider-row"><label>Spacing</label><input id="brushSpacingCtl" type="range" min="1" max="40" value="6"><span id="brushSpacingValCtl">6%</span></div>
+      </div>
+      <button id="captureBtn" class="btn primary" style="width:100%;margin-top:10px;">✂️ Capture Motif</button>
+      <div class="hint">Apple Pencil draws. One finger no longer pans while drawing. Use two fingers to pan, pinch and rotate.</div>
+    </section>
     <section class="section"><div class="section-title">📐 Repeat Layouts</div><div class="grid"><button class="layout-btn active" data-layout="grid">Grid</button><button class="layout-btn" data-layout="halfDrop">Half Drop</button><button class="layout-btn" data-layout="halfBrick">Half Brick</button><button class="layout-btn" data-layout="diamond">Diamond</button><button class="layout-btn" data-layout="ogee">Ogee</button><button class="layout-btn" data-layout="tossed">Tossed</button></div></section>
     <section class="section"><div class="section-title">🔧 Selected Motif</div><div class="slider-row"><label>Size</label><input id="motifScale" type="range" min="15" max="300" value="100"><span id="motifScaleVal">100%</span></div><div class="row"><button id="rotL" class="btn mini">↺</button><button id="rotR" class="btn mini">↻</button><button id="flipH" class="btn mini">Flip H</button><button id="flipV" class="btn mini">Flip V</button><button id="deleteSel" class="btn mini danger">Delete</button></div></section>
+    <section class="section" id="strokeSelectSection" style="display:none;">
+      <div class="section-title">🖊️ Selected Stroke</div>
+      <div class="hint" style="margin-top:0;">Tap a different brush to re-apply it to this stroke — the drawing itself doesn't change, only its appearance.</div>
+      <div id="strokeReassignSwatches" class="brush-family-row" style="margin-top:8px;"></div>
+      <button id="deleteStrokeBtn" class="btn mini danger" style="width:100%;margin-top:8px;">Delete Stroke</button>
+    </section>
   </aside>
   <main class="workspace">
     <div class="toolbar"><button id="undoBtn" class="tool-btn">↩️ Undo</button><button id="redoBtn" class="tool-btn">↪️ Redo</button><button id="symToggle" class="tool-btn">🦋 Symmetry Off</button><button id="tilingBtn" class="tool-btn active">Tiling On</button><button id="guidesBtn" class="tool-btn active">📐 Guides</button><button id="resetRot" class="tool-btn">0° Rotation</button><button id="clearDrawing" class="tool-btn danger">Clear Drawing</button><button id="exportBtn" class="tool-btn primary">📸 Export</button><div class="toolbar-spacer"></div><button id="themeToggle" class="tool-btn">☀️ Light Mode</button><div id="zoomPill" class="pill">100%</div><div id="layoutPill" class="pill">📍 Grid Mode</div></div>
@@ -124,25 +163,55 @@ canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-a
     <div id="status" class="status">✨ Apple Pencil draws | one finger protected | two fingers pan/pinch/rotate | two-finger tap Undo | three-finger tap Redo | Capture Motif saves drawing ✨</div>
   </main>
 </div>
+<script src="brush-engine.js"></script>
 <script>
 (()=>{
 'use strict';
 const canvas=document.getElementById('canvas'),ctx=canvas.getContext('2d'),wrap=document.getElementById('canvasWrap');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let zoom=.82,panX=0,panY=0,rot=0,showTiling=true,showGuides=true,layout='grid',mode='draw';
-const drawLayer=document.createElement('canvas');drawLayer.width=W;drawLayer.height=H;const dctx=drawLayer.getContext('2d');
-let brush='fine',brushSize=2.2,brushColor='#000',brushOpacity=1,brushSpacing=1,brushSmooth=.2,savedBrushes=[],symMode='off',symX=W/2,symY=H/2,drawing=false,last=null,points=[];let motifs=[],placed=[],selected=null,traces=[],traceLocked=true;let bgImg=null,bgOpacity=1,bgShown=true;
+// vectorLayer holds the permanent, replayable render of every committed stroke (rebuilt from
+// `strokes` — see rebuildVectorLayer/appendStrokeToVectorLayer). liveLayer holds only the
+// IN-PROGRESS stroke or eraser cursor, cleared at the start of each gesture and composited on
+// top while drawing/erasing so tiling/symmetry preview stays live without touching vectorLayer
+// (see BrushEngine.renderStroke and the pointer handlers below) — this is the "lower-cost live
+// preview while the pencil is moving, full-quality render when the stroke finishes" split.
+const vectorLayer=document.createElement('canvas');vectorLayer.width=W;vectorLayer.height=H;const vctx=vectorLayer.getContext('2d');
+const liveLayer=document.createElement('canvas');liveLayer.width=W;liveLayer.height=H;const lctx=liveLayer.getContext('2d');
+let liveActive=false;
+let strokes=[]; // retained, replayable, re-brushable — {id,brushId,color,points:[{x,y,pressure}]}
+let activeBrushId='smoothPen',eraserActive=false,currentColor='#000000';
+let currentPoints=[],currentStrokeId=null,smoothLast=null,lastRenderedIndex=0;
+let eraseCandidates=new Set();
+let selectedStrokeId=null;
+let symMode='off',symX=W/2,symY=H/2,drawing=false;let motifs=[],placed=[],selected=null,traces=[],traceLocked=true;let bgImg=null,bgOpacity=1,bgShown=true;
 let history=[],hIndex=-1;let touchState=null;let lastTouchEnd=0;
 const $=id=>document.getElementById(id);
 function setStatus(t){$('status').textContent=t;}
 function isPen(e){return e.pointerType==='pen'||e.pointerType==='mouse'}
-function snapshot(){return {draw:drawLayer.toDataURL(),placed:JSON.stringify(placed.map(p=>({...p,img:null}))),selected};}
-function pushHist(){history=history.slice(0,hIndex+1);history.push(snapshot());if(history.length>40)history.shift();hIndex=history.length-1;}
-function restore(s){if(!s)return;const img=new Image();img.onload=()=>{dctx.clearRect(0,0,W,H);dctx.drawImage(img,0,0);placed=JSON.parse(s.placed).map(p=>({...p,img:motifs[p.motifIndex]?.img||p.img}));selected=s.selected;redraw();};img.src=s.draw;}
+function currentBrushIdForSettings(){return eraserActive?'eraser':activeBrushId;}
+function currentSettings(){return BrushEngine.getSettings(currentBrushIdForSettings());}
+function rebuildVectorLayer(){
+  vctx.clearRect(0,0,W,H);
+  strokes.forEach(s=>{
+    const brush=BrushEngine.getBrush(s.brushId),settings=BrushEngine.getSettings(s.brushId);
+    BrushEngine.renderStroke(vctx,s,brush,settings);
+  });
+}
+function appendStrokeToVectorLayer(stroke){
+  const brush=BrushEngine.getBrush(stroke.brushId),settings=BrushEngine.getSettings(stroke.brushId);
+  BrushEngine.renderStroke(vctx,stroke,brush,settings);
+}
+function snapshot(){return {strokesJSON:JSON.stringify(strokes),placed:JSON.stringify(placed.map(p=>({...p,img:null}))),selected,selectedStrokeId};}
+function pushHist(){history=history.slice(0,hIndex+1);history.push(snapshot());if(history.length>40)history.shift();hIndex=history.length-1;scheduleAutosave();}
+// Synchronous now (no more toDataURL()/Image round-trip for the drawing layer) — cheaper AND
+// simpler: JSON-serialised stroke points are far smaller than a full 1800x1800 PNG snapshot per
+// undo step, and replaying them is deterministic so this never has to wait on an image decode.
+function restore(s){if(!s)return;strokes=JSON.parse(s.strokesJSON||'[]');rebuildVectorLayer();placed=JSON.parse(s.placed).map(p=>({...p,img:motifs[p.motifIndex]?.img||p.img}));selected=s.selected;selectedStrokeId=s.selectedStrokeId||null;syncStrokeSelectionUI();redraw();}
 function undo(){if(hIndex>0){hIndex--;restore(history[hIndex]);setStatus('↩️ Undo');}}
 function redo(){if(hIndex<history.length-1){hIndex++;restore(history[hIndex]);setStatus('↪️ Redo');}}
 function applyTransform(){canvas.style.transform=`translate(calc(-50% + ${panX}px), calc(-50% + ${panY}px)) scale(${zoom}) rotate(${rot}deg)`;$('zoomPill').textContent=Math.round(zoom*100)+'%';$('rotateChip').textContent='Canvas '+Math.round(rot)+'°';updateSelectionBox();updateSymAxis();}
 function screenToCanvas(x,y){const r=canvas.getBoundingClientRect();const cx=x-(r.left+r.width/2),cy=y-(r.top+r.height/2);const a=-rot*Math.PI/180;const ux=(cx*Math.cos(a)-cy*Math.sin(a))/zoom+W/2;const uy=(cx*Math.sin(a)+cy*Math.cos(a))/zoom+H/2;return {x:ux,y:uy};}
-function redraw(){if(redraw._q)return;redraw._q=requestAnimationFrame(()=>{redraw._q=0;ctx.clearRect(0,0,W,H);ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);drawBackground();drawTraces();if(showTiling)drawTiles();else ctx.drawImage(drawLayer,0,0);drawPlaced();if(showGuides)drawGuides();updateSelectionBox();});}
+function redraw(){if(redraw._q)return;redraw._q=requestAnimationFrame(()=>{redraw._q=0;ctx.clearRect(0,0,W,H);ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);drawBackground();drawTraces();if(showTiling)drawTiles();else{ctx.drawImage(vectorLayer,0,0);if(liveActive)ctx.drawImage(liveLayer,0,0);}drawPlaced();drawStrokeSelection();if(showGuides)drawGuides();updateSelectionBox();});}
 // A pattern (e.g. exported from Magic Builder) loaded as the base of the design - unlike Trace
 // Reference (a non-exported, freely-scaled/positioned tracing guide), this is sized to exactly
 // fill the guide-square tile, tiles using the same repeat offsets as the hand-drawn layer/motifs
@@ -151,7 +220,23 @@ function drawBackground(){if(!bgImg||!bgShown)return;ctx.save();ctx.globalAlpha=
 function drawGuides(){ctx.save();ctx.strokeStyle='rgba(54,60,110,.18)';ctx.lineWidth=3;for(let x=C;x<=C+TILE;x+=TILE/4){ctx.beginPath();ctx.moveTo(x,C);ctx.lineTo(x,C+TILE);ctx.stroke()}for(let y=C;y<=C+TILE;y+=TILE/4){ctx.beginPath();ctx.moveTo(C,y);ctx.lineTo(C+TILE,y);ctx.stroke()}ctx.strokeStyle='rgba(65,70,130,.62)';ctx.lineWidth=5;ctx.strokeRect(C,C,TILE,TILE);if(symMode!=='off'){ctx.strokeStyle='rgba(223,111,165,.75)';ctx.lineWidth=3;ctx.setLineDash([14,10]);if(symMode==='vertical'||symMode==='quad'||symMode==='diamond'){ctx.beginPath();ctx.moveTo(symX,C);ctx.lineTo(symX,C+TILE);ctx.stroke()}if(symMode==='horizontal'||symMode==='quad'||symMode==='diamond'){ctx.beginPath();ctx.moveTo(C,symY);ctx.lineTo(C+TILE,symY);ctx.stroke()}if(symMode==='diamond'){ctx.beginPath();ctx.moveTo(C,symY-(symX-C));ctx.lineTo(C+TILE,symY+(C+TILE-symX));ctx.stroke();ctx.beginPath();ctx.moveTo(C,symY+(symX-C));ctx.lineTo(C+TILE,symY-(C+TILE-symX));ctx.stroke();}}ctx.restore();}
 function drawTraces(){traces.forEach(t=>{ctx.save();ctx.globalAlpha=t.opacity;t.w=t.img.width*t.scale;t.h=t.img.height*t.scale;ctx.drawImage(t.img,t.x-t.w/2,t.y-t.h/2,t.w,t.h);ctx.restore();});}
 function offsets(){let arr=[[0,0]];if(!showTiling)return arr;for(let ix=-1;ix<=1;ix++)for(let iy=-1;iy<=1;iy++){let ox=ix*TILE,oy=iy*TILE;if(layout==='halfDrop'&&ix%2)oy+=TILE/2;if(layout==='halfBrick'&&iy%2)ox+=TILE/2;if(layout==='diamond'){ox+=iy*TILE/2}if(!(ix===0&&iy===0))arr.push([ox,oy]);}return arr;}
-function drawTiles(){offsets().forEach(([ox,oy])=>ctx.drawImage(drawLayer,ox,oy));}
+function drawTiles(){offsets().forEach(([ox,oy])=>{ctx.drawImage(vectorLayer,ox,oy);if(liveActive)ctx.drawImage(liveLayer,ox,oy);});}
+// Point-to-polyline distance, used for both stroke picking (selectAt) and eraser hit-testing
+// (eraseAt) — a stroke is "hit" when the tapped/erased point comes within a small threshold of
+// ANY of its segments, not just its endpoints.
+function distToSeg(px,py,ax,ay,bx,by){const dx=bx-ax,dy=by-ay;const len2=dx*dx+dy*dy;if(len2===0)return Math.hypot(px-ax,py-ay);let t=((px-ax)*dx+(py-ay)*dy)/len2;t=Math.max(0,Math.min(1,t));return Math.hypot(px-(ax+t*dx),py-(ay+t*dy));}
+function distanceToPolyline(px,py,pts){if(!pts||!pts.length)return Infinity;if(pts.length===1)return Math.hypot(px-pts[0].x,py-pts[0].y);let best=Infinity;for(let i=1;i<pts.length;i++){const d=distToSeg(px,py,pts[i-1].x,pts[i-1].y,pts[i].x,pts[i].y);if(d<best)best=d;}return best;}
+function drawStrokeSelection(){
+  if(!selectedStrokeId)return;
+  const stroke=strokes.find(s=>s.id===selectedStrokeId);
+  if(!stroke||!stroke.points.length)return;
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  stroke.points.forEach(p=>{if(p.x<minX)minX=p.x;if(p.y<minY)minY=p.y;if(p.x>maxX)maxX=p.x;if(p.y>maxY)maxY=p.y;});
+  const pad=16;
+  ctx.save();ctx.strokeStyle='rgba(255,142,214,.85)';ctx.lineWidth=3;ctx.setLineDash([10,7]);
+  ctx.strokeRect(minX-pad,minY-pad,(maxX-minX)+pad*2,(maxY-minY)+pad*2);
+  ctx.restore();
+}
 function drawPlaced(){placed.forEach(p=>{offsets().forEach(([ox,oy])=>{if(p.img)drawOne(p,ox,oy);else drawEmptySlot(p,ox,oy);});});}
 function drawOne(p,ox=0,oy=0){ctx.save();ctx.translate(p.x+ox,p.y+oy);ctx.rotate(p.r*Math.PI/180);ctx.scale(p.s*p.fx,p.s*p.fy);ctx.drawImage(p.img,-p.w/2,-p.h/2,p.w,p.h);ctx.restore();}
 // An unfilled Template slot: a dashed placeholder shape (same idea as Magic Builder's blank
@@ -233,21 +318,128 @@ function placeMotif(motifIdx,img){
  }
  mode='edit';syncMode();pushHist();redraw();
 }
-function strokeTo(x,y,pressure=.5){if(!last){last={x,y};return}let tx=x,ty=y;if(brushSmooth>0){tx=last.x+(x-last.x)*(1-brushSmooth);ty=last.y+(y-last.y)*(1-brushSmooth)}const pairs=symmetryPairs(last.x,last.y,tx,ty);pairs.forEach(v=>drawSegment(v[0],v[1],v[2],v[3],pressure));last={x:tx,y:ty};}
-function drawSegment(x1,y1,x2,y2,pressure=.5){dctx.save();dctx.lineCap='round';dctx.lineJoin='round';dctx.strokeStyle=brush==='eraser'?'rgba(0,0,0,1)':brushColor;dctx.globalAlpha=brush==='eraser'?1:brushOpacity;dctx.globalCompositeOperation=brush==='eraser'?'destination-out':'source-over';let sz=brush==='fine'?Math.max(.5,brushSize*(.35+pressure*.65)):brushSize;dctx.lineWidth=brush==='mono'?brushSize:sz;dctx.beginPath();dctx.moveTo(x1,y1);dctx.lineTo(x2,y2);dctx.stroke();dctx.restore();}
-function symmetryPairs(x1,y1,x2,y2){const out=[[x1,y1,x2,y2]];const vx=(x)=>2*symX-x,hy=(y)=>2*symY-y;if(symMode==='vertical'||symMode==='quad')out.push([vx(x1),y1,vx(x2),y2]);if(symMode==='horizontal'||symMode==='quad')out.push([x1,hy(y1),x2,hy(y2)]);if(symMode==='quad')out.push([vx(x1),hy(y1),vx(x2),hy(y2)]);if(symMode==='diamond'){out.push([vx(x1),y1,vx(x2),y2],[x1,hy(y1),x2,hy(y2)],[vx(x1),hy(y1),vx(x2),hy(y2)],[symX+(y1-symY),symY+(x1-symX),symX+(y2-symY),symY+(x2-symX)],[symX-(y1-symY),symY-(x1-symX),symX-(y2-symY),symY-(x2-symX)]);}return out;}
-canvas.addEventListener('pointerdown',e=>{if(!isPen(e))return;if(mode==='edit'){selectAt(e.clientX,e.clientY);return}e.preventDefault();canvas.setPointerCapture(e.pointerId);drawing=true;last=null;strokeTo(...Object.values(screenToCanvas(e.clientX,e.clientY)),e.pressure||.5);});
-canvas.addEventListener('pointermove',e=>{if(!drawing||!isPen(e))return;e.preventDefault();const p=screenToCanvas(e.clientX,e.clientY);strokeTo(p.x,p.y,e.pressure||.5);redraw();});
-canvas.addEventListener('pointerup',e=>{if(!drawing)return;drawing=false;last=null;pushHist();redraw();});
-canvas.addEventListener('pointercancel',()=>{drawing=false;last=null;});
+// Same point-transform math as the original app's symmetryPairs (segment pairs -> per-point,
+// since the transforms are uniform along a segment either way) — one transform function per
+// mirror/rotation, [0] always the identity (the stroke as physically drawn).
+function symmetryTransforms(){
+  const vx=x=>2*symX-x,hy=y=>2*symY-y;
+  const out=[p=>({x:p.x,y:p.y})];
+  if(symMode==='vertical'||symMode==='quad')out.push(p=>({x:vx(p.x),y:p.y}));
+  if(symMode==='horizontal'||symMode==='quad')out.push(p=>({x:p.x,y:hy(p.y)}));
+  if(symMode==='quad')out.push(p=>({x:vx(p.x),y:hy(p.y)}));
+  if(symMode==='diamond'){out.push(p=>({x:vx(p.x),y:p.y}),p=>({x:p.x,y:hy(p.y)}),p=>({x:vx(p.x),y:hy(p.y)}),p=>({x:symX+(p.y-symY),y:symY+(p.x-symX)}),p=>({x:symX-(p.y-symY),y:symY-(p.x-symX)}));}
+  return out;
+}
+// Incremental live preview: only replays the points captured SINCE the last call (one point of
+// overlap for continuity), so cost per pointermove is O(new points) rather than O(whole stroke
+// so far) — required to keep long strokes from getting slower as they get longer (see file
+// header on vectorLayer/liveLayer). liveLayer is cleared once at gesture start and never cleared
+// again mid-stroke, which is what makes this "only add, never redo" approach correct.
+function renderLivePreviewIncremental(){
+  const brush=BrushEngine.getBrush(activeBrushId),settings=currentSettings();
+  const from=Math.max(0,lastRenderedIndex-1);
+  const slice=currentPoints.slice(from);
+  if(slice.length<1)return;
+  symmetryTransforms().forEach(tf=>{
+    const pts=slice.map(pt=>{const t=tf(pt);return{x:t.x,y:t.y,pressure:pt.pressure};});
+    BrushEngine.renderStroke(lctx,{id:currentStrokeId,brushId:activeBrushId,color:currentColor,points:pts},brush,settings);
+  });
+  lastRenderedIndex=currentPoints.length;
+}
+// Same exponential-lerp stabilisation technique the original app already used in strokeTo(),
+// just applied here so the SAME smoothed points end up both in the live preview and in what
+// gets committed — smoothing only at commit time (after the stroke already looked different
+// while being drawn) would make the line visibly "jump" the instant the pencil lifts.
+function pushRawPoint(x,y,pressure){
+  const amount=currentSettings().smoothing/100;
+  let tx=x,ty=y;
+  if(smoothLast&&amount>0){tx=smoothLast.x+(x-smoothLast.x)*(1-amount);ty=smoothLast.y+(y-smoothLast.y)*(1-amount);}
+  smoothLast={x:tx,y:ty};
+  currentPoints.push({x:tx,y:ty,pressure});
+}
+function renderEraserCursor(x,y,radius){lctx.clearRect(0,0,W,H);lctx.save();lctx.globalAlpha=.35;lctx.fillStyle='#ff5b78';lctx.beginPath();lctx.arc(x,y,radius,0,Math.PI*2);lctx.fill();lctx.restore();}
+function eraseAt(x,y,radius){strokes.forEach(s=>{if(!eraseCandidates.has(s.id)&&distanceToPolyline(x,y,s.points)<radius)eraseCandidates.add(s.id);});}
+canvas.addEventListener('pointerdown',e=>{
+  if(!isPen(e))return;
+  if(mode==='edit'){selectAt(e.clientX,e.clientY);return}
+  e.preventDefault();try{canvas.setPointerCapture(e.pointerId);}catch(err){} // capture is best-effort — a stroke must still start even if it's refused
+  drawing=true;
+  const p=screenToCanvas(e.clientX,e.clientY),pressure=(e.pressure&&e.pressure>0)?e.pressure:.5;
+  if(eraserActive){
+    eraseCandidates.clear();
+    eraseAt(p.x,p.y,currentSettings().size/2);
+    renderEraserCursor(p.x,p.y,currentSettings().size/2);
+    liveActive=true;redraw();return;
+  }
+  currentStrokeId=crypto.randomUUID();currentPoints=[];smoothLast=null;lastRenderedIndex=0;
+  pushRawPoint(p.x,p.y,pressure);
+  lctx.clearRect(0,0,W,H);liveActive=true;
+  renderLivePreviewIncremental();redraw();
+});
+canvas.addEventListener('pointermove',e=>{
+  if(!drawing||!isPen(e))return;
+  e.preventDefault();
+  const p=screenToCanvas(e.clientX,e.clientY),pressure=(e.pressure&&e.pressure>0)?e.pressure:.5;
+  if(eraserActive){eraseAt(p.x,p.y,currentSettings().size/2);renderEraserCursor(p.x,p.y,currentSettings().size/2);redraw();return}
+  pushRawPoint(p.x,p.y,pressure);
+  renderLivePreviewIncremental();redraw();
+});
+canvas.addEventListener('pointerup',e=>{
+  if(!drawing)return;
+  drawing=false;
+  if(eraserActive){
+    if(eraseCandidates.size){strokes=strokes.filter(s=>!eraseCandidates.has(s.id));if(selectedStrokeId&&eraseCandidates.has(selectedStrokeId)){selectedStrokeId=null;syncStrokeSelectionUI();}rebuildVectorLayer();}
+    eraseCandidates.clear();liveActive=false;lctx.clearRect(0,0,W,H);
+    pushHist();redraw();return;
+  }
+  if(currentPoints.length>=1){
+    symmetryTransforms().forEach(tf=>{
+      const pts=currentPoints.map(pt=>{const t=tf(pt);return{x:t.x,y:t.y,pressure:pt.pressure};});
+      const stroke={id:crypto.randomUUID(),brushId:activeBrushId,color:currentColor,points:pts};
+      strokes.push(stroke);appendStrokeToVectorLayer(stroke);
+    });
+    BrushEngine.touchRecent(activeBrushId);syncRecents();
+  }
+  currentPoints=[];currentStrokeId=null;liveActive=false;lctx.clearRect(0,0,W,H);
+  pushHist();redraw();
+});
+canvas.addEventListener('pointercancel',()=>{drawing=false;currentPoints=[];eraseCandidates.clear();liveActive=false;lctx.clearRect(0,0,W,H);redraw();});
 wrap.addEventListener('touchstart',e=>{e.preventDefault();const now=Date.now();touchState={n:e.touches.length,start:copyTouches(e.touches),last:copyTouches(e.touches),moved:false,time:now,zoom,panX,panY,rot};}, {passive:false});
 wrap.addEventListener('touchmove',e=>{e.preventDefault();if(!touchState)return;const cur=copyTouches(e.touches);touchState.moved=true;if(cur.length===1&&touchState.n===1){return}if(cur.length>=2&&touchState.start.length>=2){const s=touchState.start,c=cur;const sd=dist(s[0],s[1]),cd=dist(c[0],c[1]);const sa=ang(s[0],s[1]),ca=ang(c[0],c[1]);const sm=mid(s[0],s[1]),cm=mid(c[0],c[1]);zoom=Math.min(4,Math.max(.2,touchState.zoom*(cd/sd)));rot=touchState.rot+(ca-sa)*180/Math.PI;panX=touchState.panX+(cm.x-sm.x);panY=touchState.panY+(cm.y-sm.y);applyTransform();}}, {passive:false});
 wrap.addEventListener('touchend',e=>{e.preventDefault();if(!touchState)return;const dt=Date.now()-touchState.time;const tap=!touchState.moved&&dt<260;if(tap&&touchState.n===2){undo();lastTouchEnd=Date.now()}else if(tap&&touchState.n===3){redo();lastTouchEnd=Date.now()}touchState=null;}, {passive:false});
 function copyTouches(t){return Array.from(t).map(v=>({x:v.clientX,y:v.clientY}))}function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y)||1}function ang(a,b){return Math.atan2(b.y-a.y,b.x-a.x)}function mid(a,b){return{x:(a.x+b.x)/2,y:(a.y+b.y)/2}}
-function captureMotif(){const imgData=dctx.getImageData(0,0,W,H).data;let minX=W,minY=H,maxX=0,maxY=0,found=false;for(let y=0;y<H;y+=2){for(let x=0;x<W;x+=2){if(imgData[(y*W+x)*4+3]>8){found=true;if(x<minX)minX=x;if(y<minY)minY=y;if(x>maxX)maxX=x;if(y>maxY)maxY=y;}}}if(!found){setStatus('Nothing to capture yet — draw with Apple Pencil first.');return}minX=Math.max(0,minX-24);minY=Math.max(0,minY-24);maxX=Math.min(W,maxX+24);maxY=Math.min(H,maxY+24);const tw=maxX-minX,th=maxY-minY,tmp=document.createElement('canvas');tmp.width=tw;tmp.height=th;tmp.getContext('2d').drawImage(drawLayer,minX,minY,tw,th,0,0,tw,th);addMotif(tmp.toDataURL('image/png'),'Motif '+(motifs.length+1),true);dctx.clearRect(0,0,W,H);pushHist();redraw();setStatus('✂️ Captured drawing as Motif '+motifs.length+' and cleared drawing layer.');}
+function captureMotif(){const imgData=vctx.getImageData(0,0,W,H).data;let minX=W,minY=H,maxX=0,maxY=0,found=false;for(let y=0;y<H;y+=2){for(let x=0;x<W;x+=2){if(imgData[(y*W+x)*4+3]>8){found=true;if(x<minX)minX=x;if(y<minY)minY=y;if(x>maxX)maxX=x;if(y>maxY)maxY=y;}}}if(!found){setStatus('Nothing to capture yet — draw with Apple Pencil first.');return}minX=Math.max(0,minX-24);minY=Math.max(0,minY-24);maxX=Math.min(W,maxX+24);maxY=Math.min(H,maxY+24);const tw=maxX-minX,th=maxY-minY,tmp=document.createElement('canvas');tmp.width=tw;tmp.height=th;tmp.getContext('2d').drawImage(vectorLayer,minX,minY,tw,th,0,0,tw,th);addMotif(tmp.toDataURL('image/png'),'Motif '+(motifs.length+1),true);strokes=[];rebuildVectorLayer();selectedStrokeId=null;syncStrokeSelectionUI();pushHist();redraw();setStatus('✂️ Captured drawing as Motif '+motifs.length+' and cleared drawing layer.');}
 function addMotif(src,name,placeNow=false){const img=new Image();img.onload=()=>{const idx=motifs.push({img,src,name})-1;if(placeNow)placeMotif(idx,img);renderTray();pushHist();redraw();};img.src=src;}
 function renderTray(){const tray=$('motifTray');tray.innerHTML='';$('motifEmpty').style.display=motifs.length?'none':'block';motifs.forEach((m,i)=>{const card=document.createElement('div');card.className='motif-card';card.innerHTML=`<img src="${m.src}" alt=""><button class="x">×</button><div class="small">${m.name}</div>`;card.querySelector('img').onclick=()=>placeMotif(i,m.img);card.querySelector('.x').onclick=()=>{motifs.splice(i,1);placed=placed.filter(p=>p.motifIndex!==i);renderTray();pushHist();redraw();};tray.appendChild(card);});}
-function selectAt(x,y){const p=screenToCanvas(x,y);selected=null;for(let i=placed.length-1;i>=0;i--){const m=placed[i];if(Math.abs(p.x-m.x)<m.w*m.s/2&&Math.abs(p.y-m.y)<m.h*m.s/2){selected=m.id;break}}updateSelectedControls();redraw();}
+function selectAt(x,y){
+  const p=screenToCanvas(x,y);
+  selected=null;selectedStrokeId=null;
+  for(let i=placed.length-1;i>=0;i--){const m=placed[i];if(Math.abs(p.x-m.x)<m.w*m.s/2&&Math.abs(p.y-m.y)<m.h*m.s/2){selected=m.id;break}}
+  if(!selected){
+    const HIT_PX=20;let best=null,bestDist=HIT_PX;
+    for(let i=strokes.length-1;i>=0;i--){const d=distanceToPolyline(p.x,p.y,strokes[i].points);if(d<bestDist){bestDist=d;best=strokes[i].id;}}
+    selectedStrokeId=best;
+  }
+  updateSelectedControls();syncStrokeSelectionUI();redraw();
+}
+function syncStrokeSelectionUI(){
+  const section=$('strokeSelectSection');
+  if(!section)return;
+  section.style.display=selectedStrokeId?'block':'none';
+  if(selectedStrokeId)renderStrokeReassignSwatches();
+}
+function renderStrokeReassignSwatches(){
+  const host=$('strokeReassignSwatches');host.innerHTML='';
+  const stroke=strokes.find(s=>s.id===selectedStrokeId);
+  if(!stroke)return;
+  BrushEngine.BRUSHES.forEach(b=>{
+    const btn=document.createElement('button');
+    btn.type='button';btn.className='brush-swatch'+(b.id===stroke.brushId?' active':'');
+    btn.dataset.brush=b.id;btn.textContent=b.name;
+    btn.onclick=()=>{stroke.brushId=b.id;rebuildVectorLayer();pushHist();redraw();renderStrokeReassignSwatches();};
+    host.appendChild(btn);
+  });
+}
 let dragMotif=null;canvas.addEventListener('pointerdown',e=>{if(mode!=='edit'||!isPen(e))return;selectAt(e.clientX,e.clientY);if(selected){const p=screenToCanvas(e.clientX,e.clientY),m=getSel();dragMotif={dx:p.x-m.x,dy:p.y-m.y};canvas.setPointerCapture(e.pointerId);}});
 canvas.addEventListener('pointermove',e=>{if(!dragMotif||mode!=='edit')return;const p=screenToCanvas(e.clientX,e.clientY),m=getSel();if(m){m.x=p.x-dragMotif.dx;m.y=p.y-dragMotif.dy;redraw();}});
 canvas.addEventListener('pointerup',()=>{if(dragMotif){dragMotif=null;pushHist();}});
@@ -268,15 +460,61 @@ function updateSymAxis(){const a=$('symAxis');if(!a)return;if(symMode==='off'){a
 function updateSelectionBox(){const box=$('selectionBox'),m=getSel();if(!m){box.style.display='none';return}const rect=canvas.getBoundingClientRect(),wrapRect=wrap.getBoundingClientRect();const cx=rect.left+rect.width/2-wrapRect.left,cy=rect.top+rect.height/2-wrapRect.top;const a=rot*Math.PI/180;const px=(m.x-W/2)*zoom,py=(m.y-H/2)*zoom;const sx=cx+px*Math.cos(a)-py*Math.sin(a),sy=cy+px*Math.sin(a)+py*Math.cos(a);box.style.display='block';box.style.width=(m.w*m.s*zoom)+'px';box.style.height=(m.h*m.s*zoom)+'px';box.style.left=(sx-m.w*m.s*zoom/2)+'px';box.style.top=(sy-m.h*m.s*zoom/2)+'px';box.style.transform=`rotate(${rot+m.r}deg)`;}
 function updateSelectedControls(){const m=getSel();if(m){$('motifScale').value=Math.round(m.s*100);$('motifScaleVal').textContent=Math.round(m.s*100)+'%';}}
 function syncMode(){$('drawModeBtn').classList.toggle('active',mode==='draw');$('editModeBtn').classList.toggle('active',mode==='edit');canvas.style.cursor=mode==='draw'?'crosshair':'grab';setStatus(mode==='draw'?'✏️ Draw Mode: Apple Pencil draws, two fingers move the canvas.':'↔️ Edit Mode: tap motif with Pencil/mouse, then move, scale, rotate or flip.');}
-$('drawModeBtn').onclick=()=>{mode='draw';selected=null;syncMode();redraw()};$('editModeBtn').onclick=()=>{mode='edit';syncMode()};$('captureBtn').onclick=captureMotif;$('undoBtn').onclick=undo;$('redoBtn').onclick=redo;$('resetRot').onclick=()=>{rot=0;applyTransform()};$('clearDrawing').onclick=()=>{dctx.clearRect(0,0,W,H);pushHist();redraw()};
-document.querySelectorAll('.brush-btn').forEach(b=>b.onclick=()=>{document.querySelectorAll('.brush-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');brush=b.dataset.brush;updateBrushPreview();});$('brushSize').oninput=e=>{brushSize=+e.target.value;$('brushSizeVal').textContent=brushSize.toFixed(1)};$('brushColor').oninput=e=>{brushColor=e.target.value;updateBrushPreview()};$('brushOpacity').oninput=e=>{brushOpacity=+e.target.value/100;$('brushOpacityVal').textContent=e.target.value+'%';updateBrushPreview()};$('brushSpacing').oninput=e=>{brushSpacing=+e.target.value;$('brushSpacingVal').textContent=e.target.value};$('brushSmooth').oninput=e=>{brushSmooth=+e.target.value/100;$('brushSmoothVal').textContent=e.target.value+'%'};function updateBrushPreview(){const d=$('brushDot');if(!d)return;d.style.width=Math.max(4,brushSize*5)+'px';d.style.height=Math.max(4,brushSize*5)+'px';d.style.background=brush==='eraser'?'#fff':brushColor;d.style.opacity=brushOpacity;d.style.border=brush==='eraser'?'2px solid #000':'0'}$('saveBrush').onclick=()=>{savedBrushes.push({name:brush+' '+(savedBrushes.length+1),brush,brushSize,brushColor,brushOpacity,brushSpacing,brushSmooth});renderSavedBrushes();setStatus('💾 Brush saved.')};$('resetBrush').onclick=()=>{brushSize=2.2;brushOpacity=1;brushSpacing=1;brushSmooth=.2;$('brushSize').value=2.2;$('brushSizeVal').textContent='2.2';$('brushOpacity').value=100;$('brushOpacityVal').textContent='100%';$('brushSpacing').value=1;$('brushSpacingVal').textContent='1';$('brushSmooth').value=20;$('brushSmoothVal').textContent='20%';updateBrushPreview()};function renderSavedBrushes(){const box=$('savedBrushes');box.innerHTML='';savedBrushes.forEach((b,i)=>{const btn=document.createElement('button');btn.className='btn mini';btn.textContent='🖌️ '+b.name;btn.onclick=()=>{brush=b.brush;brushSize=b.brushSize;brushColor=b.brushColor;brushOpacity=b.brushOpacity;brushSpacing=b.brushSpacing;brushSmooth=b.brushSmooth;$('brushSize').value=brushSize;$('brushSizeVal').textContent=brushSize.toFixed(1);$('brushColor').value=brushColor;$('brushOpacity').value=Math.round(brushOpacity*100);$('brushOpacityVal').textContent=Math.round(brushOpacity*100)+'%';$('brushSpacing').value=brushSpacing;$('brushSpacingVal').textContent=brushSpacing;$('brushSmooth').value=Math.round(brushSmooth*100);$('brushSmoothVal').textContent=Math.round(brushSmooth*100)+'%';document.querySelectorAll('.brush-btn').forEach(x=>x.classList.toggle('active',x.dataset.brush===brush));updateBrushPreview()};box.appendChild(btn);});}updateBrushPreview();
+$('drawModeBtn').onclick=()=>{mode='draw';selected=null;selectedStrokeId=null;syncStrokeSelectionUI();syncMode();redraw()};$('editModeBtn').onclick=()=>{mode='edit';syncMode()};$('captureBtn').onclick=captureMotif;$('undoBtn').onclick=undo;$('redoBtn').onclick=redo;$('resetRot').onclick=()=>{rot=0;applyTransform()};$('clearDrawing').onclick=()=>{strokes=[];rebuildVectorLayer();selectedStrokeId=null;syncStrokeSelectionUI();pushHist();redraw()};
+$('deleteStrokeBtn').onclick=()=>{if(!selectedStrokeId)return;strokes=strokes.filter(s=>s.id!==selectedStrokeId);selectedStrokeId=null;rebuildVectorLayer();syncStrokeSelectionUI();pushHist();redraw();};
+
+// ---- Brush panel: family list, recents, favourites, quick controls -----------------------
+function makeBrushSwatch(b){
+  const btn=document.createElement('button');
+  btn.type='button';btn.className='brush-swatch'+(b.id===activeBrushId&&!eraserActive?' active':'');
+  btn.dataset.brush=b.id;btn.textContent=b.name;
+  const star=document.createElement('span');
+  star.className='fav-star'+(BrushEngine.isFavorite(b.id)?' active':'');star.textContent='★';
+  star.onclick=ev=>{ev.stopPropagation();BrushEngine.toggleFavorite(b.id);syncFavorites();star.classList.toggle('active',BrushEngine.isFavorite(b.id));};
+  btn.appendChild(star);
+  btn.addEventListener('click',()=>selectBrush(b.id));
+  return btn;
+}
+function renderBrushFamilies(){
+  const host=$('brushFamilies');host.innerHTML='';
+  BrushEngine.FAMILY_ORDER.forEach(fam=>{
+    const title=document.createElement('div');title.className='brush-family-title';title.textContent=BrushEngine.FAMILY_LABEL[fam];host.appendChild(title);
+    const row=document.createElement('div');row.className='brush-family-row';
+    BrushEngine.BRUSHES.filter(b=>b.family===fam).forEach(b=>row.appendChild(makeBrushSwatch(b)));
+    host.appendChild(row);
+  });
+}
+function syncRecents(){const host=$('brushRecents');const ids=BrushEngine.getRecents();if(!ids.length){host.innerHTML='<div class="hint" style="margin:0;">Brushes you use appear here.</div>';return}host.innerHTML='';ids.forEach(id=>{const b=BrushEngine.getBrush(id);if(b)host.appendChild(makeBrushSwatch(b));});}
+function syncFavorites(){const host=$('brushFavorites');const ids=BrushEngine.getFavorites();if(!ids.length){host.innerHTML='<div class="hint" style="margin:0;">Tap ★ on a brush to favourite it.</div>';return}host.innerHTML='';ids.forEach(id=>{const b=BrushEngine.getBrush(id);if(b)host.appendChild(makeBrushSwatch(b));});}
+function syncActiveSwatches(){document.querySelectorAll('.brush-swatch').forEach(el=>el.classList.toggle('active',!eraserActive&&el.dataset.brush===activeBrushId));$('eraserToggle').classList.toggle('active',eraserActive);}
+function syncControlsFromSettings(){
+  const s=currentSettings();
+  $('brushSize').value=s.size;$('brushSizeVal').textContent=Math.round(s.size);
+  $('brushOpacity').value=s.opacity;$('brushOpacityVal').textContent=Math.round(s.opacity)+'%';
+  $('brushSmooth').value=s.smoothing;$('brushSmoothVal').textContent=Math.round(s.smoothing)+'%';
+  $('pressureWidth').value=s.pressureWidth;$('pressureWidthVal').textContent=Math.round(s.pressureWidth)+'%';
+  $('pressureOpacity').value=s.pressureOpacity;$('pressureOpacityVal').textContent=Math.round(s.pressureOpacity)+'%';
+  $('brushSpacingCtl').value=s.spacing;$('brushSpacingValCtl').textContent=Math.round(s.spacing)+'%';
+}
+function patchCurrentSettings(patch){BrushEngine.setSettings(currentBrushIdForSettings(),patch);}
+function selectBrush(id){eraserActive=false;activeBrushId=id;BrushEngine.touchRecent(id);syncRecents();syncControlsFromSettings();syncActiveSwatches();}
+$('eraserToggle').onclick=()=>{eraserActive=!eraserActive;syncControlsFromSettings();syncActiveSwatches();setStatus(eraserActive?'🧹 Eraser: drag across a stroke to remove it.':'✏️ Back to '+BrushEngine.getBrush(activeBrushId).name+'.');};
+$('brushSize').oninput=e=>{const v=+e.target.value;$('brushSizeVal').textContent=Math.round(v);patchCurrentSettings({size:v});};
+$('brushColor').oninput=e=>{currentColor=e.target.value;};
+$('brushOpacity').oninput=e=>{const v=+e.target.value;$('brushOpacityVal').textContent=Math.round(v)+'%';patchCurrentSettings({opacity:v});};
+$('brushSmooth').oninput=e=>{const v=+e.target.value;$('brushSmoothVal').textContent=Math.round(v)+'%';patchCurrentSettings({smoothing:v});};
+$('pressureWidth').oninput=e=>{const v=+e.target.value;$('pressureWidthVal').textContent=Math.round(v)+'%';patchCurrentSettings({pressureWidth:v});};
+$('pressureOpacity').oninput=e=>{const v=+e.target.value;$('pressureOpacityVal').textContent=Math.round(v)+'%';patchCurrentSettings({pressureOpacity:v});};
+$('brushSpacingCtl').oninput=e=>{const v=+e.target.value;$('brushSpacingValCtl').textContent=Math.round(v)+'%';patchCurrentSettings({spacing:v});};
+$('moreSettingsToggle').onclick=()=>{const box=$('moreSettings');const showing=box.style.display!=='none';box.style.display=showing?'none':'block';$('moreSettingsToggle').textContent=showing?'⚙️ More Settings':'⚙️ Hide Settings';};
+renderBrushFamilies();syncRecents();syncFavorites();syncControlsFromSettings();
 document.querySelectorAll('.layout-btn').forEach(b=>b.onclick=()=>{document.querySelectorAll('.layout-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');layout=b.dataset.layout;$('layoutPill').textContent='📍 '+b.textContent+' Mode';redraw();});$('tilingBtn').onclick=()=>{showTiling=!showTiling;$('tilingBtn').classList.toggle('active',showTiling);$('tilingBtn').textContent=showTiling?'Tiling On':'Tiling Off';redraw();};$('guidesBtn').onclick=()=>{showGuides=!showGuides;$('guidesBtn').classList.toggle('active',showGuides);redraw();};
 $('motifScale').oninput=e=>{const m=getSel();if(!m)return;m.s=+e.target.value/100;$('motifScaleVal').textContent=e.target.value+'%';redraw();};$('motifScale').onchange=pushHist;$('rotL').onclick=()=>{const m=getSel();if(m){m.r-=15;pushHist();redraw();}};$('rotR').onclick=()=>{const m=getSel();if(m){m.r+=15;pushHist();redraw();}};$('flipH').onclick=()=>{const m=getSel();if(m){m.fx*=-1;pushHist();redraw();}};$('flipV').onclick=()=>{const m=getSel();if(m){m.fy*=-1;pushHist();redraw();}};$('deleteSel').onclick=()=>{placed=placed.filter(p=>p.id!==selected);selected=null;pushHist();redraw();};
 $('motifInput').onchange=e=>Array.from(e.target.files).forEach(f=>{const r=new FileReader();r.onload=ev=>addMotif(ev.target.result,f.name,false);r.readAsDataURL(f);});
-$('bgInput').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{const img=new Image();img.onload=()=>{bgImg=img;bgShown=true;$('bgEmpty').style.display='none';$('bgControls').style.display='block';redraw();setStatus('🧱 Background pattern loaded.');};img.src=ev.target.result;};r.readAsDataURL(f);e.target.value='';};
-$('bgOpacitySlider').oninput=e=>{bgOpacity=+e.target.value/100;$('bgOpacityVal').textContent=e.target.value+'%';redraw();};
-$('bgToggle').onclick=()=>{bgShown=!bgShown;$('bgToggle').classList.toggle('active',bgShown);$('bgToggle').textContent=bgShown?'👁️ Shown':'🚫 Hidden';redraw();};
-$('bgClear').onclick=()=>{bgImg=null;$('bgEmpty').style.display='block';$('bgControls').style.display='none';redraw();};
+$('bgInput').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{const img=new Image();img.onload=()=>{bgImg=img;bgShown=true;$('bgEmpty').style.display='none';$('bgControls').style.display='block';redraw();setStatus('🧱 Background pattern loaded.');scheduleAutosave();};img.src=ev.target.result;};r.readAsDataURL(f);e.target.value='';};
+$('bgOpacitySlider').oninput=e=>{bgOpacity=+e.target.value/100;$('bgOpacityVal').textContent=e.target.value+'%';redraw();scheduleAutosave();};
+$('bgToggle').onclick=()=>{bgShown=!bgShown;$('bgToggle').classList.toggle('active',bgShown);$('bgToggle').textContent=bgShown?'👁️ Shown':'🚫 Hidden';redraw();scheduleAutosave();};
+$('bgClear').onclick=()=>{bgImg=null;$('bgEmpty').style.display='block';$('bgControls').style.display='none';redraw();scheduleAutosave();};
 $('traceInput').onchange=e=>Array.from(e.target.files).forEach(f=>{const r=new FileReader();r.onload=ev=>{const img=new Image();img.onload=()=>{traces.push({img,src:ev.target.result,name:f.name,x:W/2,y:H/2,scale:Math.min(TILE/img.width,TILE/img.height),opacity:.35});renderTraces();redraw();};img.src=ev.target.result;};r.readAsDataURL(f);});
 function renderTraces(){const list=$('traceList');list.innerHTML='';traces.forEach((t,i)=>{const c=document.createElement('div');c.className='trace-card';c.innerHTML=`<img src="${t.src}"><div><div>${t.name}</div><div class="small">Trace ref · ${Math.round(t.opacity*100)}%</div></div><button class="x" style="position:static">×</button>`;c.querySelector('button').onclick=()=>{traces.splice(i,1);renderTraces();redraw();};list.appendChild(c);});}
 $('traceOpacity').oninput=e=>{traces.forEach(t=>t.opacity=+e.target.value/100);$('traceOpacityVal').textContent=e.target.value+'%';renderTraces();redraw();};$('traceScale').oninput=e=>{traces.forEach(t=>t.scale=+e.target.value/100);$('traceScaleVal').textContent=e.target.value+'%';redraw();};$('traceFit').onclick=()=>{traces.forEach(t=>t.scale=Math.min(TILE/t.img.width,TILE/t.img.height));redraw();};$('traceCentre').onclick=()=>{traces.forEach(t=>{t.x=W/2;t.y=H/2});redraw();};$('traceLock').onclick=()=>{traceLocked=!traceLocked;$('traceLock').textContent=traceLocked?'🔒 Locked':'🔓 Move';$('traceLock').classList.toggle('active',traceLocked)};$('traceClear').onclick=()=>{traces=[];renderTraces();redraw();};
@@ -284,29 +522,95 @@ function syncSymToggle(){const btn=$('symToggle');btn.textContent=symMode==='off
 $('symToggle').onclick=()=>{$('symPopover').classList.toggle('open');};
 $('symClose').onclick=()=>{$('symPopover').classList.remove('open');};
 document.querySelectorAll('.sym-btn').forEach(b=>b.onclick=()=>{document.querySelectorAll('.sym-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');symMode=b.dataset.sym;syncSymToggle();updateSymAxis();redraw();setStatus(symMode==='off'?'🦋 Symmetry off.':'🦋 Symmetry '+b.textContent+' active — move the axis if you want it off-centre.');});$('symX').oninput=e=>{symX=+e.target.value;$('symXVal').textContent=Math.round(symX/W*100)+'%';updateSymAxis();redraw();};$('symY').oninput=e=>{symY=+e.target.value;$('symYVal').textContent=Math.round(symY/H*100)+'%';updateSymAxis();redraw();};$('symCentre').onclick=()=>{symX=W/2;symY=H/2;$('symX').value=symX;$('symY').value=symY;$('symXVal').textContent='50%';$('symYVal').textContent='50%';updateSymAxis();redraw();};
-$('exportBtn').onclick=()=>{const a=document.createElement('a');a.download='pattern-playground-tile.png';const out=document.createElement('canvas');out.width=TILE;out.height=TILE;const o=out.getContext('2d');o.fillStyle='#fff';o.fillRect(0,0,TILE,TILE);if(bgImg&&bgShown){o.save();o.globalAlpha=bgOpacity;o.drawImage(bgImg,0,0,TILE,TILE);o.restore();}o.drawImage(drawLayer,C,C,TILE,TILE,0,0,TILE,TILE);placed.forEach(p=>{if(!p.img)return;o.save();o.translate(p.x-C,p.y-C);o.rotate(p.r*Math.PI/180);o.scale(p.s*p.fx,p.s*p.fy);o.drawImage(p.img,-p.w/2,-p.h/2,p.w,p.h);o.restore();});a.href=out.toDataURL('image/png');a.click();};
+$('exportBtn').onclick=()=>{const a=document.createElement('a');a.download='pattern-playground-tile.png';const out=document.createElement('canvas');out.width=TILE;out.height=TILE;const o=out.getContext('2d');o.fillStyle='#fff';o.fillRect(0,0,TILE,TILE);if(bgImg&&bgShown){o.save();o.globalAlpha=bgOpacity;o.drawImage(bgImg,0,0,TILE,TILE);o.restore();}o.drawImage(vectorLayer,C,C,TILE,TILE,0,0,TILE,TILE);placed.forEach(p=>{if(!p.img)return;o.save();o.translate(p.x-C,p.y-C);o.rotate(p.r*Math.PI/180);o.scale(p.s*p.fx,p.s*p.fy);o.drawImage(p.img,-p.w/2,-p.h/2,p.w,p.h);o.restore();});a.href=out.toDataURL('image/png');a.click();};
 window.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='z'){e.shiftKey?redo():undo();}});
 function syncThemeToggleUI(){const light=document.body.classList.contains('theme-light');$('themeToggle').textContent=light?'🌙 Dark Mode':'☀️ Light Mode';}
 $('themeToggle').onclick=()=>{const light=document.body.classList.toggle('theme-light');try{localStorage.setItem('pkmTheme',light?'light':'dark');}catch(e){}syncThemeToggleUI();};
 syncThemeToggleUI();
-pushHist();applyTransform();updateBrushPreview();redraw();
 
-// ---- Seamlessly Creative suite hooks (additive only — nothing above this
-// point is touched, so this file stays a straight copy of the standalone
-// Sketch Pad app plus this one block). Both hooks reuse the exact same
-// closure state (bgImg, drawLayer, placed, TILE, C, etc.) the app's own
-// "Load as Background" file input and "Export" button already use, so
-// nothing here can drift from what those buttons do. ----
+// ---- Document autosave/restore (IndexedDB) -------------------------------------------------
+//
+// Sketch Pad previously had NO persistence of its own working document at all — every reload
+// started genuinely blank, motifs/drawing/template state and all. Now that strokes are real,
+// editable, re-brushable data (not flattened pixels), losing them on every reload would defeat
+// the point, so this saves the whole working document (strokes, motifs, placed motifs,
+// background, layout/template) shortly after every change and restores it on boot.
+//
+// A dedicated small DB, same pattern as Pattern Playground's own pkmDB and Mock-up Studio's
+// mockupStudioDB — origin-scoped, independent of the Seamlessly Creative suite's shared library.
+const DOC_DB_NAME='pkmSketchDocDB',DOC_STORE='doc',DOC_KEY='current';
+let docDBPromise=null;
+function openDocDB(){if(!docDBPromise)docDBPromise=new Promise((resolve,reject)=>{const req=indexedDB.open(DOC_DB_NAME,1);req.onupgradeneeded=()=>{req.result.createObjectStore(DOC_STORE);};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});return docDBPromise;}
+let autosaveTimer=null;
+function scheduleAutosave(){clearTimeout(autosaveTimer);autosaveTimer=setTimeout(saveDocNow,1200);}
+async function saveDocNow(){
+  try{
+    const db=await openDocDB();
+    const doc={
+      strokesJSON:JSON.stringify(strokes),
+      placedJSON:JSON.stringify(placed.map(p=>({...p,img:null}))),
+      motifs:motifs.map(m=>({src:m.src,name:m.name})),
+      bgSrc:bgImg?bgImg.src:null,bgOpacity,bgShown,
+      layout,activeTemplate,
+      savedAt:Date.now(),
+    };
+    await new Promise((res,rej)=>{const tx=db.transaction(DOC_STORE,'readwrite');tx.objectStore(DOC_STORE).put(doc,DOC_KEY);tx.oncomplete=res;tx.onerror=()=>rej(tx.error);});
+  }catch(e){console.warn('[sketchpad] autosave failed',e);}
+}
+async function restoreDocOnBoot(){
+  try{
+    const db=await openDocDB();
+    const doc=await new Promise((res,rej)=>{const tx=db.transaction(DOC_STORE,'readonly');const r=tx.objectStore(DOC_STORE).get(DOC_KEY);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});
+    if(!doc)return false;
+    motifs=[];
+    for(const m of (doc.motifs||[])){await new Promise(res=>{const img=new Image();img.onload=()=>{motifs.push({img,src:m.src,name:m.name});res();};img.onerror=res;img.src=m.src;});}
+    renderTray();
+    strokes=JSON.parse(doc.strokesJSON||'[]');
+    rebuildVectorLayer();
+    placed=JSON.parse(doc.placedJSON||'[]').map(p=>({...p,img:motifs[p.motifIndex]?.img||null}));
+    layout=doc.layout||'grid';activeTemplate=doc.activeTemplate||null;
+    document.querySelectorAll('.layout-btn').forEach(x=>x.classList.toggle('active',x.dataset.layout===layout));
+    $('layoutPill').textContent='📍 '+layout+' Mode';
+    syncTemplateUI();
+    bgOpacity=(doc.bgOpacity!=null)?doc.bgOpacity:1;bgShown=doc.bgShown!==false;
+    if(doc.bgSrc){
+      await new Promise(res=>{const img=new Image();img.onload=()=>{bgImg=img;res();};img.onerror=res;img.src=doc.bgSrc;});
+      $('bgEmpty').style.display='none';$('bgControls').style.display='block';
+      $('bgOpacitySlider').value=Math.round(bgOpacity*100);$('bgOpacityVal').textContent=Math.round(bgOpacity*100)+'%';
+      $('bgToggle').classList.toggle('active',bgShown);$('bgToggle').textContent=bgShown?'👁️ Shown':'🚫 Hidden';
+    }
+    return true;
+  }catch(e){console.warn('[sketchpad] restore failed',e);return false;}
+}
+async function boot(){
+  applyTransform();
+  const restored=await restoreDocOnBoot();
+  pushHist();redraw();
+  if(restored)setStatus('📂 Restored your last session — '+strokes.length+' stroke'+(strokes.length===1?'':'s')+', '+motifs.length+' motif'+(motifs.length===1?'':'s')+'.');
+}
+boot();
+
+// Read-only introspection for debugging/testing — mirrors the small hooks already used for
+// Seamlessly Creative suite integration (see the bottom of this file once frozen into the
+// suite), just exposed unconditionally here since it's harmless and useful standalone too.
+window.__sketchpadGetState=()=>({strokeCount:strokes.length,strokes,placed,motifs,activeBrushId,eraserActive,selectedStrokeId,layout});
+
+// ---- Seamlessly Creative suite hooks (additive only — nothing above this point is touched, so
+// this file stays a straight copy of the standalone Sketch Pad app plus this one block). Both
+// hooks reuse the exact same closure state (bgImg, vectorLayer, placed, TILE, C, etc.) the app's
+// own "Load as Background" file input and "Export" button already use, so nothing here can drift
+// from what those buttons do. The export hook reads vectorLayer (not drawLayer) since the brush
+// engine's retained strokes, not a flattened paint canvas, are now where drawn content lives.
 window.__scLoadBackgroundFromDataUrl=function(dataUrl){
   const img=new Image();
-  img.onload=()=>{bgImg=img;bgShown=true;$('bgEmpty').style.display='none';$('bgControls').style.display='block';redraw();setStatus('🧱 Background pattern loaded from project.');};
+  img.onload=()=>{bgImg=img;bgShown=true;$('bgEmpty').style.display='none';$('bgControls').style.display='block';redraw();setStatus('🧱 Background pattern loaded from project.');scheduleAutosave();};
   img.src=dataUrl;
 };
 window.__scGetSketchpadExportCanvas=function(){
   const out=document.createElement('canvas');out.width=TILE;out.height=TILE;
   const o=out.getContext('2d');o.fillStyle='#fff';o.fillRect(0,0,TILE,TILE);
   if(bgImg&&bgShown){o.save();o.globalAlpha=bgOpacity;o.drawImage(bgImg,0,0,TILE,TILE);o.restore();}
-  o.drawImage(drawLayer,C,C,TILE,TILE,0,0,TILE,TILE);
+  o.drawImage(vectorLayer,C,C,TILE,TILE,0,0,TILE,TILE);
   placed.forEach(p=>{if(!p.img)return;o.save();o.translate(p.x-C,p.y-C);o.rotate(p.r*Math.PI/180);o.scale(p.s*p.fx,p.s*p.fy);o.drawImage(p.img,-p.w/2,-p.h/2,p.w,p.h);o.restore();});
   return {canvas:out,name:'Sketch Pad pattern'};
 };
