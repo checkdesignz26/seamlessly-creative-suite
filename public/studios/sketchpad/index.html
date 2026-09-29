@@ -247,14 +247,24 @@ function rebuildLayer(layerId){
     BrushEngine.renderStroke(layer.ctx,s,brush,settings);
   });
 }
-// Same as rebuildLayer but skips one stroke — used while Edit Path is live so the
-// being-edited stroke's OLD geometry doesn't show underneath its live preview.
-function rebuildLayerExcluding(layerId,excludeStrokeId){
+// Same as rebuildLayer but renders one stroke faintly — used while Edit Path is live, as a
+// "before" reference under the live edit preview. Deliberately dims rather than hides that
+// stroke entirely (an earlier version excluded it completely): if the edit session ever ends
+// badly — a stuck gesture, an unexpected error in commit — a dimmed-but-present stroke is a
+// visible glitch; a silently REMOVED one looks exactly like lost work, which is what actually
+// happened when Done failed to register on a real device and the excluded stroke never came back.
+function rebuildLayerDimmed(layerId,dimStrokeId,alpha){
   const layer=layers.find(l=>l.id===layerId);if(!layer)return;
   layer.ctx.clearRect(0,0,W,H);
-  strokes.filter(s=>s.layerId===layerId&&s.id!==excludeStrokeId).forEach(s=>{
+  strokes.filter(s=>s.layerId===layerId).forEach(s=>{
     const brush=BrushEngine.getBrush(s.brushId),settings=s.settings||BrushEngine.getSettings(s.brushId);
-    BrushEngine.renderStroke(layer.ctx,s,brush,settings);
+    if(s.id===dimStrokeId){
+      layer.ctx.save();layer.ctx.globalAlpha=alpha;
+      BrushEngine.renderStroke(layer.ctx,s,brush,settings);
+      layer.ctx.restore();
+    }else{
+      BrushEngine.renderStroke(layer.ctx,s,brush,settings);
+    }
   });
 }
 function rebuildAllLayers(){layers.forEach(l=>rebuildLayer(l.id));}
@@ -817,7 +827,11 @@ function rdpSimplify(points,epsilon){
   return [first,last];
 }
 function pointsToNodes(points){
-  const simplified=rdpSimplify(points,10);
+  // A gentler epsilon than the original 10 — that could visibly flatten fine detail (feathers,
+  // small loops) on a complex hand-drawn stroke the instant Edit Path was entered, before the
+  // user had touched anything. 5 keeps noticeably more of the original shape while still cutting
+  // a dense resampled polyline down to a manageable, actually-draggable handful of nodes.
+  const simplified=rdpSimplify(points,5);
   return simplified.map(p=>({x:p.x,y:p.y,pressure:p.pressure,type:'smooth'}));
 }
 function catmullRom(p0,p1,p2,p3,t){const t2=t*t,t3=t2*t;return 0.5*((2*p1)+(-p0+p2)*t+(2*p0-5*p1+4*p2-p3)*t2+(-p0+3*p1-3*p2+p3)*t3);}
@@ -846,7 +860,7 @@ function enterEditPath(strokeId){
   pathEditStrokeId=stroke.id;
   pathEditNodes=stroke.nodes?stroke.nodes.map(n=>({...n})):pointsToNodes(stroke.points);
   selectedNodeIndex=null;
-  rebuildLayerExcluding(stroke.layerId,stroke.id);
+  rebuildLayerDimmed(stroke.layerId,stroke.id,0.3);
   renderPathLivePreview();
   $('pathEditBar').style.display='block';$('pathEditBar').classList.add('open');
   renderPathNodeOverlay();
@@ -861,14 +875,29 @@ function renderPathLivePreview(){
 }
 function commitEditPath(){
   const stroke=strokes.find(s=>s.id===pathEditStrokeId);
-  if(stroke&&pathEditNodes&&pathEditNodes.length){
-    stroke.nodes=pathEditNodes.map(n=>({...n}));
-    stroke.points=nodesToPoints(stroke.nodes);
-    rebuildLayer(stroke.layerId);
+  // Wrapped defensively: this must NEVER leave a stroke in the dimmed/half-applied state
+  // enterEditPath put it in. Whatever happens above, the finally block always restores the
+  // layer to a normal, fully-correct render — editing failing safely is far better than a
+  // stroke staying invisible/dimmed with no way back, which is what a silent early return or
+  // uncaught exception here used to risk.
+  try{
+    if(stroke&&pathEditNodes&&pathEditNodes.length){
+      const allFinite=pathEditNodes.every(n=>Number.isFinite(n.x)&&Number.isFinite(n.y)&&Number.isFinite(n.pressure));
+      if(allFinite){
+        stroke.nodes=pathEditNodes.map(n=>({...n}));
+        stroke.points=nodesToPoints(stroke.nodes);
+      }else{
+        console.warn('[sketchpad] path edit had a non-finite node position — kept the stroke as it was before editing');
+      }
+    }
+  }catch(err){
+    console.warn('[sketchpad] path edit commit failed — kept the stroke as it was before editing',err);
+  }finally{
+    if(stroke)rebuildLayer(stroke.layerId);
     pushHist();
+    exitEditPath();
+    redraw();
   }
-  exitEditPath();
-  redraw();
 }
 function exitEditPath(silent){
   pathEditStrokeId=null;pathEditNodes=null;selectedNodeIndex=null;
@@ -903,6 +932,7 @@ function renderPathNodeOverlay(){
       try{el.setPointerCapture(e.pointerId);}catch(err){}
       const onMove=ev=>{
         const p=screenToCanvas(ev.clientX,ev.clientY);
+        if(!Number.isFinite(p.x)||!Number.isFinite(p.y))return; // never let a bad reading corrupt the node
         pathEditNodes[i].x=p.x;pathEditNodes[i].y=p.y;
         const np=canvasToScreen(p.x,p.y);
         el.style.left=np.x+'px';el.style.top=np.y+'px';
@@ -929,10 +959,19 @@ function renderPathNodeOverlay(){
     host.appendChild(el);
   }
 }
-$('nodeSmoothBtn').onclick=()=>{if(selectedNodeIndex==null||!pathEditNodes)return;pathEditNodes[selectedNodeIndex].type='smooth';renderPathNodeOverlay();renderPathLivePreview();redraw();};
-$('nodeCornerBtn').onclick=()=>{if(selectedNodeIndex==null||!pathEditNodes)return;pathEditNodes[selectedNodeIndex].type='corner';renderPathNodeOverlay();renderPathLivePreview();redraw();};
-$('nodeDeleteBtn').onclick=()=>{if(selectedNodeIndex==null||!pathEditNodes||pathEditNodes.length<=2)return;pathEditNodes.splice(selectedNodeIndex,1);selectedNodeIndex=null;renderPathNodeOverlay();renderPathLivePreview();redraw();};
-$('pathEditDoneBtn').onclick=commitEditPath;
+// These 4 buttons use pointerup rather than onclick=. The node handles just above them do their
+// own custom drag handling via setPointerCapture/pointermove — on real Apple Pencil hardware
+// (confirmed via user testing, not just the simulator) that custom pointer-capture sequence can
+// suppress the browser's normal synthetic 'click' event for taps on OTHER elements immediately
+// afterward, which is exactly why Done/Smooth/Corner/Delete Node stopped responding after a drag
+// even though the drag itself worked. Binding directly to pointerup sidesteps that click-
+// synthesis pipeline entirely, matching how every other custom-drag interaction in this file
+// (motif resize/rotate handles, node dragging itself) already works.
+function bindTapButton(el,handler){el.addEventListener('pointerup',e=>{e.preventDefault();handler();});}
+bindTapButton($('nodeSmoothBtn'),()=>{if(selectedNodeIndex==null||!pathEditNodes)return;pathEditNodes[selectedNodeIndex].type='smooth';renderPathNodeOverlay();renderPathLivePreview();redraw();});
+bindTapButton($('nodeCornerBtn'),()=>{if(selectedNodeIndex==null||!pathEditNodes)return;pathEditNodes[selectedNodeIndex].type='corner';renderPathNodeOverlay();renderPathLivePreview();redraw();});
+bindTapButton($('nodeDeleteBtn'),()=>{if(selectedNodeIndex==null||!pathEditNodes||pathEditNodes.length<=2)return;pathEditNodes.splice(selectedNodeIndex,1);selectedNodeIndex=null;renderPathNodeOverlay();renderPathLivePreview();redraw();});
+bindTapButton($('pathEditDoneBtn'),commitEditPath);
 $('moreSettingsToggle').onclick=()=>{const box=$('moreSettings');const showing=box.style.display!=='none';box.style.display=showing?'none':'block';$('moreSettingsToggle').textContent=showing?'⚙️ More Settings':'⚙️ Hide Settings';};
 renderBrushFamilies();syncRecents();syncFavorites();syncControlsFromSettings();
 document.querySelectorAll('.layout-btn').forEach(b=>b.onclick=()=>{document.querySelectorAll('.layout-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');layout=b.dataset.layout;$('layoutPill').textContent='📍 '+b.textContent+' Mode';redraw();});$('tilingBtn').onclick=()=>{showTiling=!showTiling;$('tilingBtn').classList.toggle('active',showTiling);$('tilingBtn').textContent=showTiling?'Tiling On':'Tiling Off';redraw();};$('guidesBtn').onclick=()=>{showGuides=!showGuides;$('guidesBtn').classList.toggle('active',showGuides);redraw();};
