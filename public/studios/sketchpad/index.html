@@ -46,6 +46,7 @@ button,input,select{font:inherit}
 .section-title{font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:var(--pink);font-weight:800;margin-bottom:10px}
 .btn,.tool-btn,.brush-btn,.layout-btn{border:1px solid var(--btnBorder);border-radius:12px;background:var(--btnBg);color:var(--text);padding:10px 14px;font-size:14px;font-weight:850;cursor:pointer;box-shadow:none}
 .btn:active,.tool-btn:active,.brush-btn:active,.layout-btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.35;pointer-events:none}
 .active{background:var(--accentPurple)!important;outline:2px solid rgba(255,142,214,.9)}
 .primary{border:0!important;background:linear-gradient(90deg,var(--purple),var(--pink))!important}
 .danger{background:var(--dangerBg)!important;border:1px solid var(--dangerBorder)!important}
@@ -111,12 +112,19 @@ canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-a
 .layer-name{flex:1;font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .layer-opacity{width:46px;flex-shrink:0}
 .recipe-text{font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:0;white-space:pre-line;background:var(--btnBg);border-radius:10px;padding:8px 10px}
-#pathEditBar{position:absolute;left:12px;top:12px;z-index:16;width:260px;max-width:calc(100% - 24px)}
+#pathEditBar{position:absolute;left:12px;top:12px;z-index:16;width:270px;max-width:calc(100% - 24px);max-height:calc(100% - 24px);overflow:auto}
 #pathNodeOverlay{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:15}
-.path-node{position:absolute;width:22px;height:22px;margin-left:-11px;margin-top:-11px;border-radius:50%;background:#fff;border:3px solid var(--pink);pointer-events:auto;touch-action:none;cursor:grab;box-shadow:0 2px 6px rgba(0,0,0,.35)}
-.path-node.corner{border-radius:5px}
-.path-node.selected{background:var(--pink)}
-.path-node.mid{opacity:.4;width:16px;height:16px;margin-left:-8px;margin-top:-8px;background:var(--accentPurple)}
+/* Real nodes: generous 30px solid handles — an actual Pencil target, not a vector-app-tiny dot.
+   Endpoint nodes (first/last of an open path) get a ring so Continue/Join targets are obvious. */
+.path-node{position:absolute;width:30px;height:30px;margin-left:-15px;margin-top:-15px;border-radius:50%;background:#fff;border:3px solid var(--pink);pointer-events:auto;touch-action:none;cursor:grab;box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center}
+.path-node.corner{border-radius:7px}
+.path-node.selected{background:var(--pink);box-shadow:0 0 0 5px rgba(255,142,214,.3),0 2px 8px rgba(0,0,0,.4)}
+.path-node.endpoint{border-color:var(--blue);box-shadow:0 0 0 4px rgba(107,183,255,.25),0 2px 8px rgba(0,0,0,.4)}
+.path-node.endpoint.selected{border-color:var(--pink)}
+/* "Add node here" targets: small, hollow, dashed — deliberately reads as "not a real node yet"
+   rather than just a smaller/fainter copy of a real one. */
+.path-node.mid{width:20px;height:20px;margin-left:-10px;margin-top:-10px;background:transparent;border:2px dashed var(--muted);opacity:.7;box-shadow:none}
+.path-node.mid:active{opacity:1;border-color:var(--pink)}
 @media(max-width:900px){.app{padding:8px;gap:8px}.sidebar{width:270px}.btn,.tool-btn{font-size:12px;padding:9px 11px}.toolbar{padding:10px}}
 </style>
 </head>
@@ -190,7 +198,22 @@ canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-a
   </aside>
   <main class="workspace">
     <div class="toolbar"><button id="undoBtn" class="tool-btn">↩️ Undo</button><button id="redoBtn" class="tool-btn">↪️ Redo</button><button id="symToggle" class="tool-btn">🦋 Symmetry Off</button><button id="tilingBtn" class="tool-btn active">Tiling On</button><button id="guidesBtn" class="tool-btn active">📐 Guides</button><button id="resetRot" class="tool-btn">0° Rotation</button><button id="clearDrawing" class="tool-btn danger">Clear Drawing</button><button id="exportBtn" class="tool-btn primary">📸 Export</button><div class="toolbar-spacer"></div><button id="themeToggle" class="tool-btn">☀️ Light Mode</button><div id="zoomPill" class="pill">100%</div><div id="layoutPill" class="pill">📍 Grid Mode</div></div>
-    <div id="canvasWrap" class="canvas-wrap"><div id="symPopover" class="sym-pop"><div class="section-title">🦋 Symmetry</div><div class="grid"><button class="sym-btn btn active" data-sym="off">Off</button><button class="sym-btn btn" data-sym="vertical">Vertical</button><button class="sym-btn btn" data-sym="horizontal">Horizontal</button><button class="sym-btn btn" data-sym="quad">Quad</button><button class="sym-btn btn" data-sym="diamond">Diamond</button></div><div class="slider-row"><label>Axis X</label><input id="symX" type="range" min="0" max="1800" value="900"><span id="symXVal">50%</span></div><div class="slider-row"><label>Axis Y</label><input id="symY" type="range" min="0" max="1800" value="900"><span id="symYVal">50%</span></div><div class="row"><button id="symCentre" class="btn mini">Centre Axis</button><button id="symClose" class="btn mini">Done</button></div><div class="hint">Move the mirror point to make flowers, leaves and playful asymmetric symmetry.</div></div><canvas id="canvas" width="1800" height="1800"></canvas><div id="selectionBox" class="selection-box"><div id="resizeHandle" class="handle"></div><div id="rotateHandle" class="rotHandle"></div></div><div id="symAxis" class="sym-axis"></div><div id="rotateChip" class="rotate-chip">Canvas 0°</div><div id="pathNodeOverlay"></div><div id="pathEditBar" class="sym-pop" style="display:none;"><div class="section-title">✎ Edit Path</div><div class="row"><button id="nodeSmoothBtn" class="btn mini">⌒ Smooth</button><button id="nodeCornerBtn" class="btn mini">⌐ Corner</button></div><button id="nodeDeleteBtn" class="btn mini danger" style="width:100%;margin-top:8px;">✕ Delete Node</button><div class="hint">Drag a node to move it. Tap a small dot between two nodes to add one there. Tap a node to select it, then use the buttons above.</div><button id="pathEditDoneBtn" class="btn primary" style="width:100%;margin-top:10px;">✓ Done</button></div></div>
+    <div id="canvasWrap" class="canvas-wrap"><div id="symPopover" class="sym-pop"><div class="section-title">🦋 Symmetry</div><div class="grid"><button class="sym-btn btn active" data-sym="off">Off</button><button class="sym-btn btn" data-sym="vertical">Vertical</button><button class="sym-btn btn" data-sym="horizontal">Horizontal</button><button class="sym-btn btn" data-sym="quad">Quad</button><button class="sym-btn btn" data-sym="diamond">Diamond</button></div><div class="slider-row"><label>Axis X</label><input id="symX" type="range" min="0" max="1800" value="900"><span id="symXVal">50%</span></div><div class="slider-row"><label>Axis Y</label><input id="symY" type="range" min="0" max="1800" value="900"><span id="symYVal">50%</span></div><div class="row"><button id="symCentre" class="btn mini">Centre Axis</button><button id="symClose" class="btn mini">Done</button></div><div class="hint">Move the mirror point to make flowers, leaves and playful asymmetric symmetry.</div></div><canvas id="canvas" width="1800" height="1800"></canvas><div id="selectionBox" class="selection-box"><div id="resizeHandle" class="handle"></div><div id="rotateHandle" class="rotHandle"></div></div><div id="symAxis" class="sym-axis"></div><div id="rotateChip" class="rotate-chip">Canvas 0°</div><div id="pathNodeOverlay"></div><div id="pathEditBar" class="sym-pop" style="display:none;">
+  <div class="section-title">✎ Edit Path</div>
+  <div class="row"><button id="nodeSmoothBtn" class="btn mini">⌒ Smooth</button><button id="nodeCornerBtn" class="btn mini">⌐ Corner</button></div>
+  <div class="row" style="margin-top:6px;">
+    <button id="continuePathBtn" class="btn mini" style="flex:1 1 45%;">↳ Continue</button>
+    <button id="joinPathBtn" class="btn mini" style="flex:1 1 45%;">⋈ Join</button>
+    <button id="closePathBtn" class="btn mini" style="flex:1 1 45%;">◯ Close Shape</button>
+    <button id="breakPathBtn" class="btn mini" style="flex:1 1 45%;">✂ Break</button>
+  </div>
+  <button id="nodeDeleteBtn" class="btn mini danger" style="width:100%;margin-top:8px;">✕ Delete Node</button>
+  <div class="row" style="margin-top:8px;">
+    <button id="simplifyPathBtn" class="btn mini" style="flex:1">〜 Simplify</button>
+  </div>
+  <div id="pathEditHint" class="hint">Drag a node to move it. Tap a small dashed dot between two nodes to add one there. Tap a node to select it, then use the buttons above.</div>
+  <button id="pathEditDoneBtn" class="btn primary" style="width:100%;margin-top:10px;">✓ Done</button>
+</div></div>
     <div id="status" class="status">✨ Apple Pencil draws | one finger protected | two fingers pan/pinch/rotate | two-finger tap Undo | three-finger tap Redo | Capture Motif saves drawing ✨</div>
   </main>
 </div>
@@ -223,7 +246,9 @@ let currentPoints=[],currentStrokeId=null,smoothLast=null,lastRenderedIndex=0;
 let eraseCandidates=new Set();
 let selectedStrokeId=null;
 let copiedBrushStyle=null; // {brushId,settings} — session-only clipboard for Copy/Apply Brush Style
-let pathEditStrokeId=null,pathEditNodes=null,selectedNodeIndex=null; // Edit Path mode state
+let pathEditStrokeId=null,pathEditNodes=null,pathEditClosed=false,selectedNodeIndex=null; // Edit Path mode state
+let continueStrokeId=null,continueBasePoints=null; // Continue Path: next drawn stroke extends this one instead of starting a new one
+let joinPendingStrokeId=null,joinPendingFromEnd=false; // Join Path: waiting for a tap on another stroke's endpoint
 let symMode='off',symX=W/2,symY=H/2,drawing=false;let motifs=[],placed=[],selected=null,traces=[],traceLocked=true;let bgImg=null,bgOpacity=1,bgShown=true;
 let history=[],hIndex=-1;let touchState=null;let lastTouchEnd=0;
 const $=id=>document.getElementById(id);
@@ -258,13 +283,10 @@ function rebuildLayerDimmed(layerId,dimStrokeId,alpha){
   layer.ctx.clearRect(0,0,W,H);
   strokes.filter(s=>s.layerId===layerId).forEach(s=>{
     const brush=BrushEngine.getBrush(s.brushId),settings=s.settings||BrushEngine.getSettings(s.brushId);
-    if(s.id===dimStrokeId){
-      layer.ctx.save();layer.ctx.globalAlpha=alpha;
-      BrushEngine.renderStroke(layer.ctx,s,brush,settings);
-      layer.ctx.restore();
-    }else{
-      BrushEngine.renderStroke(layer.ctx,s,brush,settings);
-    }
+    // alpha is passed straight into renderStroke's per-dab opacity now — stampDab sets its own
+    // ctx.globalAlpha for every dab it stamps, so an outer ctx.globalAlpha set here would have
+    // been silently overwritten and never actually dimmed (or hidden) anything.
+    BrushEngine.renderStroke(layer.ctx,s,brush,settings,s.id===dimStrokeId?alpha:1);
   });
 }
 function rebuildAllLayers(){layers.forEach(l=>rebuildLayer(l.id));}
@@ -491,9 +513,22 @@ canvas.addEventListener('pointerdown',e=>{
     renderEraserCursor(p.x,p.y,currentSettings().size/2);
     liveActive=true;redraw();return;
   }
-  currentStrokeId=crypto.randomUUID();currentPoints=[];smoothLast=null;lastRenderedIndex=0;
+  currentStrokeId=crypto.randomUUID();smoothLast=null;
+  lctx.clearRect(0,0,W,H);
+  if(continueStrokeId){
+    // Continue Path: seed the live preview with the existing stroke's own points (baked once,
+    // not replayed dab-by-dab every frame) so what's on screen already looks like the original
+    // stroke, then pushRawPoint below adds the first NEW point on top of that same array —
+    // incremental rendering from here on treats it as one continuous gesture, not two strokes.
+    currentPoints=continueBasePoints.map(p=>({...p}));
+    const brush=BrushEngine.getBrush(activeBrushId),settings=currentSettings();
+    if(currentPoints.length)BrushEngine.renderStroke(lctx,{id:'continue-base',brushId:activeBrushId,color:currentColor,points:currentPoints},brush,settings);
+    lastRenderedIndex=currentPoints.length;
+  }else{
+    currentPoints=[];lastRenderedIndex=0;
+  }
   pushRawPoint(p.x,p.y,pressure);
-  lctx.clearRect(0,0,W,H);liveActive=true;
+  liveActive=true;
   renderLivePreviewIncremental();redraw();
 });
 canvas.addEventListener('pointermove',e=>{
@@ -517,11 +552,23 @@ canvas.addEventListener('pointerup',e=>{
     eraseCandidates.clear();liveActive=false;lctx.clearRect(0,0,W,H);
     pushHist();redraw();return;
   }
+  if(continueStrokeId){
+    const stroke=strokes.find(s=>s.id===continueStrokeId);
+    if(stroke&&currentPoints.length){
+      stroke.points=currentPoints.map(p=>({...p}));
+      stroke.nodes=null; // the continuation invalidated any prior sparse node representation
+      rebuildLayer(stroke.layerId);
+      selectedStrokeId=stroke.id;syncStrokeSelectionUI();
+    }
+    continueStrokeId=null;continueBasePoints=null;
+    currentPoints=[];currentStrokeId=null;liveActive=false;lctx.clearRect(0,0,W,H);
+    pushHist();redraw();return;
+  }
   if(currentPoints.length>=1){
     const settingsSnapshot=Object.assign({},currentSettings());
     symmetryTransforms().forEach(tf=>{
       const pts=currentPoints.map(pt=>{const t=tf(pt);return{x:t.x,y:t.y,pressure:pt.pressure};});
-      const stroke={id:crypto.randomUUID(),brushId:activeBrushId,layerId:activeLayerId,color:currentColor,settings:Object.assign({},settingsSnapshot),points:pts,nodes:null};
+      const stroke={id:crypto.randomUUID(),brushId:activeBrushId,layerId:activeLayerId,color:currentColor,settings:Object.assign({},settingsSnapshot),points:pts,nodes:null,closed:false};
       strokes.push(stroke);appendStrokeToLayer(stroke);
     });
     BrushEngine.touchRecent(activeBrushId);syncRecents();
@@ -529,7 +576,11 @@ canvas.addEventListener('pointerup',e=>{
   currentPoints=[];currentStrokeId=null;liveActive=false;lctx.clearRect(0,0,W,H);
   pushHist();redraw();
 });
-canvas.addEventListener('pointercancel',()=>{drawing=false;currentPoints=[];eraseCandidates.clear();liveActive=false;lctx.clearRect(0,0,W,H);redraw();});
+canvas.addEventListener('pointercancel',()=>{
+  drawing=false;currentPoints=[];eraseCandidates.clear();liveActive=false;lctx.clearRect(0,0,W,H);
+  if(continueStrokeId){const s=strokes.find(x=>x.id===continueStrokeId);if(s)rebuildLayer(s.layerId);continueStrokeId=null;continueBasePoints=null;}
+  redraw();
+});
 wrap.addEventListener('touchstart',e=>{e.preventDefault();const now=Date.now();touchState={n:e.touches.length,start:copyTouches(e.touches),last:copyTouches(e.touches),moved:false,time:now,zoom,panX,panY,rot};}, {passive:false});
 wrap.addEventListener('touchmove',e=>{e.preventDefault();if(!touchState)return;const cur=copyTouches(e.touches);touchState.moved=true;if(cur.length===1&&touchState.n===1){return}if(cur.length>=2&&touchState.start.length>=2){const s=touchState.start,c=cur;const sd=dist(s[0],s[1]),cd=dist(c[0],c[1]);const sa=ang(s[0],s[1]),ca=ang(c[0],c[1]);const sm=mid(s[0],s[1]),cm=mid(c[0],c[1]);zoom=Math.min(4,Math.max(.2,touchState.zoom*(cd/sd)));rot=touchState.rot+(ca-sa)*180/Math.PI;panX=touchState.panX+(cm.x-sm.x);panY=touchState.panY+(cm.y-sm.y);applyTransform();}}, {passive:false});
 wrap.addEventListener('touchend',e=>{e.preventDefault();if(!touchState)return;const dt=Date.now()-touchState.time;const tap=!touchState.moved&&dt<260;if(tap&&touchState.n===2){undo();lastTouchEnd=Date.now()}else if(tap&&touchState.n===3){redo();lastTouchEnd=Date.now()}touchState=null;}, {passive:false});
@@ -542,6 +593,7 @@ function renderTray(){const tray=$('motifTray');tray.innerHTML='';$('motifEmpty'
 // "no unexpected destruction of unrelated content" needs in practice.
 function selectAt(x,y){
   if(pathEditStrokeId)commitEditPath();
+  if(joinPendingStrokeId){handleJoinTap(x,y);return;}
   const p=screenToCanvas(x,y);
   selected=null;selectedStrokeId=null;
   for(let i=placed.length-1;i>=0;i--){const m=placed[i];if(Math.abs(p.x-m.x)<m.w*m.s/2&&Math.abs(p.y-m.y)<m.h*m.s/2){selected=m.id;break}}
@@ -835,12 +887,20 @@ function pointsToNodes(points){
   return simplified.map(p=>({x:p.x,y:p.y,pressure:p.pressure,type:'smooth'}));
 }
 function catmullRom(p0,p1,p2,p3,t){const t2=t*t,t3=t2*t;return 0.5*((2*p1)+(-p0+p2)*t+(2*p0-5*p1+4*p2-p3)*t2+(-p0+3*p1-3*p2+p3)*t3);}
-function nodesToPoints(nodes,samplesPerSeg=14){
+// `closed` wraps the segment index around the node array (using modulo neighbours for the
+// Catmull-Rom tangents at the seam too) and adds one final segment from the last node back to
+// the first, so a closed shape's curve is continuous all the way round rather than having a
+// visible straight "cut" where it should loop — Close Shape needs this to look like a real
+// closed outline, not a polygon with one flat edge.
+function nodesToPoints(nodes,closed=false,samplesPerSeg=14){
   if(!nodes||nodes.length===0)return [];
   if(nodes.length===1)return [{x:nodes[0].x,y:nodes[0].y,pressure:nodes[0].pressure}];
   const out=[];
-  for(let i=0;i<nodes.length-1;i++){
-    const n0=nodes[Math.max(0,i-1)],n1=nodes[i],n2=nodes[i+1],n3=nodes[Math.min(nodes.length-1,i+2)];
+  const n=nodes.length;
+  const at=idx=>closed?nodes[((idx%n)+n)%n]:nodes[Math.max(0,Math.min(n-1,idx))];
+  const segCount=closed?n:n-1;
+  for(let i=0;i<segCount;i++){
+    const n0=at(i-1),n1=at(i),n2=at(i+1),n3=at(i+2);
     const smoothSeg=n1.type==='smooth'&&n2.type==='smooth';
     const steps=smoothSeg?samplesPerSeg:2;
     for(let s=0;s<steps;s++){
@@ -849,8 +909,8 @@ function nodesToPoints(nodes,samplesPerSeg=14){
       else{out.push({x:n1.x+(n2.x-n1.x)*t,y:n1.y+(n2.y-n1.y)*t,pressure:n1.pressure+(n2.pressure-n1.pressure)*t});}
     }
   }
-  const last=nodes[nodes.length-1];
-  out.push({x:last.x,y:last.y,pressure:last.pressure});
+  if(closed){out.push({...out[0]});}
+  else{const last=nodes[n-1];out.push({x:last.x,y:last.y,pressure:last.pressure});}
   return out;
 }
 function enterEditPath(strokeId){
@@ -859,8 +919,12 @@ function enterEditPath(strokeId){
   if(layer&&layer.locked){setStatus('🔒 "'+layer.name+'" is locked.');return;}
   pathEditStrokeId=stroke.id;
   pathEditNodes=stroke.nodes?stroke.nodes.map(n=>({...n})):pointsToNodes(stroke.points);
+  pathEditClosed=!!stroke.closed;
   selectedNodeIndex=null;
-  rebuildLayerDimmed(stroke.layerId,stroke.id,0.3);
+  // Fully hidden (alpha 0), not dimmed — the live preview IS the stroke while editing, so
+  // there's only ever one visible outline, never a "ghost" of the original underneath it. Safe
+  // to do now that commitEditPath is wrapped in try/finally and always restores this layer.
+  rebuildLayerDimmed(stroke.layerId,stroke.id,0);
   renderPathLivePreview();
   $('pathEditBar').style.display='block';$('pathEditBar').classList.add('open');
   renderPathNodeOverlay();
@@ -870,22 +934,23 @@ function renderPathLivePreview(){
   const stroke=strokes.find(s=>s.id===pathEditStrokeId);if(!stroke||!pathEditNodes)return;
   lctx.clearRect(0,0,W,H);
   const brush=BrushEngine.getBrush(stroke.brushId),settings=strokeSettings(stroke);
-  BrushEngine.renderStroke(lctx,{...stroke,points:nodesToPoints(pathEditNodes)},brush,settings);
+  BrushEngine.renderStroke(lctx,{...stroke,points:nodesToPoints(pathEditNodes,pathEditClosed)},brush,settings);
   liveActive=true;
 }
 function commitEditPath(){
   const stroke=strokes.find(s=>s.id===pathEditStrokeId);
-  // Wrapped defensively: this must NEVER leave a stroke in the dimmed/half-applied state
+  // Wrapped defensively: this must NEVER leave a stroke in the hidden/half-applied state
   // enterEditPath put it in. Whatever happens above, the finally block always restores the
   // layer to a normal, fully-correct render — editing failing safely is far better than a
-  // stroke staying invisible/dimmed with no way back, which is what a silent early return or
+  // stroke staying invisible with no way back, which is what a silent early return or
   // uncaught exception here used to risk.
   try{
     if(stroke&&pathEditNodes&&pathEditNodes.length){
       const allFinite=pathEditNodes.every(n=>Number.isFinite(n.x)&&Number.isFinite(n.y)&&Number.isFinite(n.pressure));
       if(allFinite){
         stroke.nodes=pathEditNodes.map(n=>({...n}));
-        stroke.points=nodesToPoints(stroke.nodes);
+        stroke.closed=pathEditClosed;
+        stroke.points=nodesToPoints(stroke.nodes,stroke.closed);
       }else{
         console.warn('[sketchpad] path edit had a non-finite node position — kept the stroke as it was before editing');
       }
@@ -900,7 +965,7 @@ function commitEditPath(){
   }
 }
 function exitEditPath(silent){
-  pathEditStrokeId=null;pathEditNodes=null;selectedNodeIndex=null;
+  pathEditStrokeId=null;pathEditNodes=null;pathEditClosed=false;selectedNodeIndex=null;
   $('pathEditBar').style.display='none';$('pathEditBar').classList.remove('open');
   $('pathNodeOverlay').innerHTML='';
   liveActive=false;lctx.clearRect(0,0,W,H);
@@ -911,11 +976,13 @@ function renderPathNodeOverlay(){
   host.innerHTML='';
   if(!pathEditNodes)return;
   pathEditNodes.forEach((node,i)=>{
+    const isEndpoint=!pathEditClosed&&(i===0||i===pathEditNodes.length-1);
     const pos=canvasToScreen(node.x,node.y);
     const el=document.createElement('div');
-    el.className='path-node'+(node.type==='corner'?' corner':'')+(i===selectedNodeIndex?' selected':'');
+    el.className='path-node'+(node.type==='corner'?' corner':'')+(isEndpoint?' endpoint':'')+(i===selectedNodeIndex?' selected':'');
     el.style.left=pos.x+'px';el.style.top=pos.y+'px';
     el.addEventListener('pointerdown',e=>{
+      if(!isPen(e))return; // fingers pan/zoom the canvas; only Pencil (or mouse) manipulates nodes
       e.stopPropagation();e.preventDefault();
       // IMPORTANT: never call renderPathNodeOverlay() (a full innerHTML rebuild) while a drag
       // is in progress — it would destroy this very element mid-drag, silently breaking pointer
@@ -928,6 +995,7 @@ function renderPathNodeOverlay(){
         selectedNodeIndex=i;
         host.querySelectorAll('.path-node').forEach(n=>n.classList.remove('selected'));
         el.classList.add('selected');
+        syncPathEditBarButtons();
       }
       try{el.setPointerCapture(e.pointerId);}catch(err){}
       const onMove=ev=>{
@@ -944,20 +1012,168 @@ function renderPathNodeOverlay(){
     });
     host.appendChild(el);
   });
-  for(let i=0;i<pathEditNodes.length-1;i++){
-    const a=pathEditNodes[i],b=pathEditNodes[i+1];
+  const segCount=pathEditClosed?pathEditNodes.length:pathEditNodes.length-1;
+  for(let i=0;i<segCount;i++){
+    const a=pathEditNodes[i],b=pathEditNodes[(i+1)%pathEditNodes.length];
     const mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
     const pos=canvasToScreen(mid.x,mid.y);
     const el=document.createElement('div');
     el.className='path-node mid';el.title='Add node here';
     el.style.left=pos.x+'px';el.style.top=pos.y+'px';
-    el.addEventListener('click',e=>{
-      e.stopPropagation();
-      pathEditNodes.splice(i+1,0,{x:mid.x,y:mid.y,pressure:(a.pressure+b.pressure)/2,type:'smooth'});
+    const insertAt=i+1;
+    el.addEventListener('pointerup',e=>{
+      if(!isPen(e))return;
+      e.stopPropagation();e.preventDefault();
+      pathEditNodes.splice(insertAt,0,{x:mid.x,y:mid.y,pressure:(a.pressure+b.pressure)/2,type:'smooth'});
+      if(selectedNodeIndex!=null&&selectedNodeIndex>=insertAt)selectedNodeIndex++;
       renderPathNodeOverlay();renderPathLivePreview();redraw();
     });
     host.appendChild(el);
   }
+  syncPathEditBarButtons();
+}
+// Greys out (rather than hides) whichever path operations don't make sense for the current
+// selection — Close only for an open path with enough nodes, Continue/Join only from an
+// endpoint of an open path, Break only for an interior node (or anywhere on a closed shape,
+// where it just reopens the loop) — per the brief's "only show actions that make sense".
+function syncPathEditBarButtons(){
+  if(!pathEditNodes)return;
+  const hasSel=selectedNodeIndex!=null;
+  const isEnd=hasSel&&!pathEditClosed&&(selectedNodeIndex===0||selectedNodeIndex===pathEditNodes.length-1);
+  const isInterior=hasSel&&!isEnd;
+  $('nodeSmoothBtn').disabled=!hasSel;
+  $('nodeCornerBtn').disabled=!hasSel;
+  $('nodeDeleteBtn').disabled=!hasSel||pathEditNodes.length<=2;
+  $('continuePathBtn').disabled=pathEditClosed||!isEnd;
+  $('joinPathBtn').disabled=pathEditClosed||!isEnd;
+  $('closePathBtn').disabled=pathEditClosed||pathEditNodes.length<3;
+  $('breakPathBtn').disabled=!hasSel||(!pathEditClosed&&!isInterior);
+  $('simplifyPathBtn').disabled=pathEditNodes.length<3;
+}
+function closeSelectedPath(){
+  if(!pathEditStrokeId||!pathEditNodes||pathEditNodes.length<3||pathEditClosed)return;
+  pathEditClosed=true;selectedNodeIndex=null;
+  renderPathNodeOverlay();renderPathLivePreview();redraw();
+  setStatus('◯ Shape closed — tap Done to keep it (Break Path on any node re-opens it later).');
+}
+// Select a node → Break Path: on an open path, an INTERIOR node splits it into two independent
+// strokes there (each keeping the original brush recipe and layer); on a closed shape, ANY node
+// just re-opens the loop at that point instead (a closed shape has no separate "two halves" to
+// produce), matching what the brief calls the reverse of Close Shape.
+function breakPathAtSelectedNode(){
+  if(!pathEditStrokeId||!pathEditNodes||selectedNodeIndex==null)return;
+  const stroke=strokes.find(s=>s.id===pathEditStrokeId);if(!stroke)return;
+  if(pathEditClosed){
+    const rotated=pathEditNodes.slice(selectedNodeIndex).concat(pathEditNodes.slice(0,selectedNodeIndex+1));
+    pathEditNodes=rotated;pathEditClosed=false;selectedNodeIndex=0;
+    renderPathNodeOverlay();renderPathLivePreview();redraw();
+    setStatus('🔓 Shape opened at that node.');
+    return;
+  }
+  if(selectedNodeIndex<=0||selectedNodeIndex>=pathEditNodes.length-1){
+    setStatus('✂ Break Path needs an interior node — endpoints have nothing to split.');
+    return;
+  }
+  const nodesA=pathEditNodes.slice(0,selectedNodeIndex+1).map(n=>({...n}));
+  const nodesB=pathEditNodes.slice(selectedNodeIndex).map(n=>({...n}));
+  const settingsCopy={...strokeSettings(stroke)};
+  stroke.nodes=nodesA;stroke.points=nodesToPoints(nodesA,false);stroke.closed=false;
+  const strokeB={id:crypto.randomUUID(),brushId:stroke.brushId,layerId:stroke.layerId,color:stroke.color,settings:settingsCopy,nodes:nodesB,points:nodesToPoints(nodesB,false),closed:false};
+  strokes.push(strokeB);
+  rebuildLayer(stroke.layerId);
+  exitEditPath(true);
+  selectedStrokeId=stroke.id;
+  syncStrokeSelectionUI();
+  pushHist();redraw();
+  setStatus('✂ Path broken into two separate strokes — same brush and layer.');
+}
+// Re-runs simplification on the CURRENT node set (not the original dense points) — a deliberate,
+// user-invoked, undoable reduction, distinct from the automatic gentle simplification already
+// applied once when Edit Path was first entered. Tolerance is fixed rather than exposed as a
+// slider for this pass (kept the panel compact); each tap simplifies a bit further.
+function simplifyCurrentPath(){
+  if(!pathEditNodes||pathEditNodes.length<3)return;
+  const before=pathEditNodes.length;
+  pathEditNodes=rdpSimplify(pathEditNodes,6);
+  selectedNodeIndex=null;
+  renderPathNodeOverlay();renderPathLivePreview();redraw();
+  setStatus('〜 Simplified: '+before+' → '+pathEditNodes.length+' nodes.');
+}
+// Continue Path: commits any pending node edits, then arms the NEXT pencil stroke to extend
+// this same stroke's geometry (from whichever end was selected) instead of starting a new one —
+// brush/settings/layer all come from the stroke being continued, per the brief.
+function startContinuePath(){
+  if(!pathEditStrokeId||!pathEditNodes||selectedNodeIndex==null||pathEditClosed)return;
+  const isEnd=selectedNodeIndex===0||selectedNodeIndex===pathEditNodes.length-1;
+  if(!isEnd){setStatus('↳ Continue Path needs an endpoint selected.');return;}
+  const fromStart=selectedNodeIndex===0;
+  const stroke=strokes.find(s=>s.id===pathEditStrokeId);if(!stroke)return;
+  const settingsSnapshot={...strokeSettings(stroke)};
+  const brushIdSnapshot=stroke.brushId,layerIdSnapshot=stroke.layerId,strokeIdToContinue=stroke.id;
+  commitEditPath();
+  const committed=strokes.find(s=>s.id===strokeIdToContinue);if(!committed)return;
+  let basePoints=(committed.nodes?nodesToPoints(committed.nodes,!!committed.closed):committed.points).map(p=>({...p}));
+  if(fromStart)basePoints.reverse();
+  continueStrokeId=committed.id;
+  continueBasePoints=basePoints;
+  eraserActive=false;
+  activeBrushId=brushIdSnapshot;
+  BrushEngine.setSettings(activeBrushId,settingsSnapshot);
+  activeLayerId=layerIdSnapshot;
+  syncControlsFromSettings();syncActiveSwatches();syncActiveBrushRecipeLine();renderLayersList();
+  mode='draw';selected=null;selectedStrokeId=null;syncStrokeSelectionUI();syncMode();
+  rebuildLayerDimmed(layerIdSnapshot,committed.id,0);
+  setStatus('↳ Continue Path: draw from the highlighted end with Apple Pencil to extend this stroke.');
+  redraw();
+}
+// Join Path: commits pending edits, then arms canvas taps (in Edit mode) to look for the
+// nearest endpoint of a DIFFERENT open stroke on the same layer — see handleJoinTap/performJoin.
+function startJoinPath(){
+  if(!pathEditStrokeId||!pathEditNodes||selectedNodeIndex==null||pathEditClosed)return;
+  const isEnd=selectedNodeIndex===0||selectedNodeIndex===pathEditNodes.length-1;
+  if(!isEnd){setStatus('⋈ Join Path needs an endpoint selected.');return;}
+  const fromEnd=selectedNodeIndex===pathEditNodes.length-1;
+  const strokeId=pathEditStrokeId;
+  commitEditPath();
+  joinPendingStrokeId=strokeId;joinPendingFromEnd=fromEnd;
+  mode='edit';syncMode();
+  setStatus('⋈ Join Path: tap the endpoint of another open path on the same layer to join with it.');
+}
+function handleJoinTap(screenX,screenY){
+  const p=screenToCanvas(screenX,screenY);
+  const strokeA=strokes.find(s=>s.id===joinPendingStrokeId);
+  joinPendingStrokeId=null;
+  if(!strokeA)return;
+  const TOL=44;
+  let best=null,bestDist=TOL,bestFromEnd=false;
+  strokes.forEach(s=>{
+    if(s.id===strokeA.id||s.closed||s.layerId!==strokeA.layerId)return;
+    const pts=s.nodes?nodesToPoints(s.nodes,false):s.points;
+    if(!pts||!pts.length)return;
+    const dStart=Math.hypot(p.x-pts[0].x,p.y-pts[0].y);
+    const dEnd=Math.hypot(p.x-pts[pts.length-1].x,p.y-pts[pts.length-1].y);
+    if(dStart<bestDist){bestDist=dStart;best=s;bestFromEnd=false;}
+    if(dEnd<bestDist){bestDist=dEnd;best=s;bestFromEnd=true;}
+  });
+  if(!best){setStatus('⋈ No compatible endpoint nearby — tap closer to another open path\'s end on the same layer.');return;}
+  performJoin(strokeA,joinPendingFromEnd,best,bestFromEnd);
+}
+// The joined stroke keeps strokeA's brush/settings (the path that was selected/pending when
+// Join was invoked) rather than silently picking one — status message says so explicitly, per
+// the brief's "use the currently selected path's style and make that behaviour clear".
+function performJoin(strokeA,aFromEnd,strokeB,bFromEnd){
+  const ptsA=(strokeA.nodes?nodesToPoints(strokeA.nodes,false):strokeA.points).map(p=>({...p}));
+  const ptsB=(strokeB.nodes?nodesToPoints(strokeB.nodes,false):strokeB.points).map(p=>({...p}));
+  const orientedA=aFromEnd?ptsA:ptsA.slice().reverse();
+  const orientedB=bFromEnd?ptsB.slice().reverse():ptsB;
+  strokeA.points=orientedA.concat(orientedB);
+  strokeA.nodes=null;
+  strokes=strokes.filter(s=>s.id!==strokeB.id);
+  rebuildLayer(strokeA.layerId);
+  selectedStrokeId=strokeA.id;selected=null;
+  syncStrokeSelectionUI();
+  pushHist();redraw();
+  setStatus('⋈ Paths joined using "'+BrushEngine.getBrush(strokeA.brushId).name+'" — the originally selected path\'s brush.');
 }
 // These 4 buttons use pointerup rather than onclick=. The node handles just above them do their
 // own custom drag handling via setPointerCapture/pointermove — on real Apple Pencil hardware
@@ -967,11 +1183,16 @@ function renderPathNodeOverlay(){
 // even though the drag itself worked. Binding directly to pointerup sidesteps that click-
 // synthesis pipeline entirely, matching how every other custom-drag interaction in this file
 // (motif resize/rotate handles, node dragging itself) already works.
-function bindTapButton(el,handler){el.addEventListener('pointerup',e=>{e.preventDefault();handler();});}
+function bindTapButton(el,handler){el.addEventListener('pointerup',e=>{if(el.disabled)return;e.preventDefault();handler();});}
 bindTapButton($('nodeSmoothBtn'),()=>{if(selectedNodeIndex==null||!pathEditNodes)return;pathEditNodes[selectedNodeIndex].type='smooth';renderPathNodeOverlay();renderPathLivePreview();redraw();});
 bindTapButton($('nodeCornerBtn'),()=>{if(selectedNodeIndex==null||!pathEditNodes)return;pathEditNodes[selectedNodeIndex].type='corner';renderPathNodeOverlay();renderPathLivePreview();redraw();});
 bindTapButton($('nodeDeleteBtn'),()=>{if(selectedNodeIndex==null||!pathEditNodes||pathEditNodes.length<=2)return;pathEditNodes.splice(selectedNodeIndex,1);selectedNodeIndex=null;renderPathNodeOverlay();renderPathLivePreview();redraw();});
 bindTapButton($('pathEditDoneBtn'),commitEditPath);
+bindTapButton($('continuePathBtn'),startContinuePath);
+bindTapButton($('joinPathBtn'),startJoinPath);
+bindTapButton($('closePathBtn'),closeSelectedPath);
+bindTapButton($('breakPathBtn'),breakPathAtSelectedNode);
+bindTapButton($('simplifyPathBtn'),simplifyCurrentPath);
 $('moreSettingsToggle').onclick=()=>{const box=$('moreSettings');const showing=box.style.display!=='none';box.style.display=showing?'none':'block';$('moreSettingsToggle').textContent=showing?'⚙️ More Settings':'⚙️ Hide Settings';};
 renderBrushFamilies();syncRecents();syncFavorites();syncControlsFromSettings();
 document.querySelectorAll('.layout-btn').forEach(b=>b.onclick=()=>{document.querySelectorAll('.layout-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');layout=b.dataset.layout;$('layoutPill').textContent='📍 '+b.textContent+' Mode';redraw();});$('tilingBtn').onclick=()=>{showTiling=!showTiling;$('tilingBtn').classList.toggle('active',showTiling);$('tilingBtn').textContent=showTiling?'Tiling On':'Tiling Off';redraw();};$('guidesBtn').onclick=()=>{showGuides=!showGuides;$('guidesBtn').classList.toggle('active',showGuides);redraw();};
@@ -1067,8 +1288,21 @@ boot();
 // Read-only introspection for debugging/testing — mirrors the small hooks already used for
 // Seamlessly Creative suite integration (see the bottom of this file once frozen into the
 // suite), just exposed unconditionally here since it's harmless and useful standalone too.
-window.__sketchpadGetState=()=>({strokeCount:strokes.length,strokes,placed,motifs,activeBrushId,eraserActive,selectedStrokeId,layout,layers:layers.map(l=>({id:l.id,name:l.name,visible:l.visible,locked:l.locked,opacity:l.opacity})),activeLayerId,pathEditStrokeId,pathEditNodes,copiedBrushStyle});
-
+window.__sketchpadGetState=()=>({strokeCount:strokes.length,strokes,placed,motifs,activeBrushId,eraserActive,selectedStrokeId,layout,layers:layers.map(l=>({id:l.id,name:l.name,visible:l.visible,locked:l.locked,opacity:l.opacity})),activeLayerId,pathEditStrokeId,pathEditNodes,pathEditClosed,copiedBrushStyle,continueStrokeId,joinPendingStrokeId});
+// Debug-only: max alpha found in a small box around (x,y) on a given layer's OWN canvas (not
+// the live preview) — lets a test confirm "is anything actually rendered on the layer itself
+// here", independent of what the live preview is showing on top of it.
+window.__sketchpadLayerAlphaNear=(layerId,x,y,radius)=>{
+  const layer=layers.find(l=>l.id===layerId);if(!layer)return -1;
+  radius=radius||30;
+  const x0=Math.max(0,Math.round(x-radius)),y0=Math.max(0,Math.round(y-radius));
+  const w=Math.min(W-x0,radius*2),h=Math.min(H-y0,radius*2);
+  if(w<=0||h<=0)return 0;
+  const data=layer.ctx.getImageData(x0,y0,w,h).data;
+  let max=0;
+  for(let i=3;i<data.length;i+=4)if(data[i]>max)max=data[i];
+  return max;
+};
 // ---- Seamlessly Creative suite hooks (additive only — nothing above this point is touched, so
 // this file stays a straight copy of the standalone Sketch Pad app plus this one block). Both
 // hooks reuse the exact same closure state (bgImg, compositeCanvas, updateComposite, placed,
@@ -1090,8 +1324,10 @@ window.__scGetSketchpadExportCanvas=function(){
   placed.forEach(p=>{if(!p.img)return;o.save();o.translate(p.x-C,p.y-C);o.rotate(p.r*Math.PI/180);o.scale(p.s*p.fx,p.s*p.fy);o.drawImage(p.img,-p.w/2,-p.h/2,p.w,p.h);o.restore();});
   return {canvas:out,name:'Sketch Pad pattern'};
 };
+
 })();
 </script>
+
 
 <!-- Seamlessly Creative suite integration — inert unless loaded inside
      the suite shell with ?project=<id>; standalone use is unaffected. -->

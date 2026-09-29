@@ -262,8 +262,10 @@
   // one in-progress raster segment) onto `ctx` using `brush`'s current
   // settings. This is the single function both the vector replay path
   // and the live raster-paint path call — see file header.
-  function renderStroke(ctx, stroke, brush, settings) {
+  function renderStroke(ctx, stroke, brush, settings, alphaMul) {
     if (!stroke.points || stroke.points.length === 0) return;
+    if (alphaMul === undefined) alphaMul = 1;
+    if (alphaMul <= 0) return; // fully hidden — skip dabs entirely rather than stamp at opacity 0
     const spacingPx = Math.max(1, (settings.spacing / 100) * Math.max(4, settings.size));
     const pts = resample(stroke.points, spacingPx);
     const rand = seededRandom(stroke.id || 'live');
@@ -278,7 +280,7 @@
         if (edge < taperLen) taperMul = Math.max(0.12, edge / taperLen);
       }
       let radius = (settings.size / 2) * widthMul * taperMul;
-      let opacity = (settings.opacity / 100) * opMul;
+      let opacity = (settings.opacity / 100) * opMul * alphaMul;
       if (brush.jitter > 0) {
         radius *= (1 - brush.jitter * 0.3) + rand() * brush.jitter * 0.6;
         opacity *= (1 - brush.jitter * 0.2) + rand() * brush.jitter * 0.4;
