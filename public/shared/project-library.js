@@ -357,6 +357,37 @@
     if (asset) await touchProject(asset.projectId, {});
   }
 
+  // Writes a repeatTile + repeatLayout back onto an EXISTING asset, without touching its file/
+  // thumb/name/kind/anything else. For Mock-up Studio (or any other consumer) that just prepared a
+  // repeatTile for a Project asset that didn't have one yet (an older asset, or one uploaded before
+  // this feature existed) - once stored, every future load of this asset already knows how it
+  // repeats, so nothing has to ask the user to pick a repeat style again for it. Never overwrites an
+  // asset that already has a repeatTile unless the caller explicitly means to replace it (Mock-up
+  // Studio only calls this for an asset it found with repeatTile/repeatLayout both empty).
+  async function setAssetRepeatTile(assetId, repeatTileBlob, repeatLayout) {
+    // blob.arrayBuffer() is NOT an IndexedDB operation - awaiting it while an IDB transaction is
+    // open lets the transaction auto-commit before the later put() runs (a real bug this fix
+    // caught: "TransactionInactiveError: the transaction has finished"). Doing it BEFORE opening
+    // any transaction, then using two short-lived transactions (get, then put) back-to-back with no
+    // other awaited non-IDB work in between, avoids that - see addAssetFromBlob above, which
+    // sidesteps the same trap by resolving every arrayBuffer() first too.
+    const repeatTileBuffer = repeatTileBlob ? await repeatTileBlob.arrayBuffer() : null;
+    const repeatTileType = repeatTileBlob ? (repeatTileBlob.type || 'image/png') : null;
+    const readStore = await tx(STORE_ASSETS, 'readonly');
+    const existing = await withTimeout(reqToPromise(readStore.get(assetId)), 'setAssetRepeatTile:get');
+    if (!existing) throw new Error('asset not found');
+    const updated = Object.assign({}, existing, {
+      repeatTileBuffer,
+      repeatTileType,
+      repeatLayout: repeatLayout || null,
+      updated: Date.now(),
+    });
+    const writeStore = await tx(STORE_ASSETS, 'readwrite');
+    await withTimeout(reqToPromise(writeStore.put(updated)), 'setAssetRepeatTile:put');
+    await touchProject(existing.projectId, {});
+    return hydrateAsset(updated);
+  }
+
   function blobToDataUrl(blob) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -539,6 +570,7 @@
     addAssetFromDataUrl,
     addAssetFromBlob,
     deleteAsset,
+    setAssetRepeatTile,
     blobToDataUrl,
     prepareProjectBackup,
     importProjectBackup,

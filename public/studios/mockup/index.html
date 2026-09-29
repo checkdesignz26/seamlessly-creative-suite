@@ -250,6 +250,14 @@ button:active { transform: scale(0.98); }
 
 .hidden { display: none !important; }
 
+/* Seamlessly Creative: repeat-style segmented control (quickRepeatStylePanel). */
+.quickRepeatStyleSeg { display: flex; gap: 4px; }
+.quickRepeatStyleBtn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
 .app-wrap {
   width: min(1400px, 100%);
   margin: 0 auto;
@@ -1655,6 +1663,23 @@ input[type=text] {
             <button class="secondary" id="quickReplaceBtn" type="button">replace</button>
           </section>
 
+          <!-- Seamlessly Creative: repeat style for a directly-uploaded (or not-yet-prepared
+               Project) pattern. Hidden entirely whenever the current pattern already came in with
+               a prepared repeatTile (a Project asset Pattern Playground already tagged) - the user
+               is never asked to pick a style the suite already knows. -->
+          <section class="upload-strip hidden" id="quickRepeatStylePanel" style="margin-top:8px;flex-direction:column;align-items:stretch;gap:8px;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <strong style="font-size:12px;opacity:.8;white-space:nowrap;">repeat style</strong>
+              <div class="quickRepeatStyleSeg">
+                <button type="button" class="secondary quickRepeatStyleBtn active" data-repeat-style="grid">Grid</button>
+                <button type="button" class="secondary quickRepeatStyleBtn" data-repeat-style="halfbrick">Half Brick</button>
+                <button type="button" class="secondary quickRepeatStyleBtn" data-repeat-style="halfdrop">Half Drop</button>
+              </div>
+              <button type="button" class="secondary" id="quickGenerateBtn" style="margin-left:auto;">Generate Mock-up</button>
+            </div>
+            <span id="quickRepeatStatus" style="font-size:12px;opacity:.75;"></span>
+          </section>
+
           <section class="upload-strip" id="quickCollectionStrip" style="margin-top:10px;">
             <input id="quickAddPatternInput" type="file" accept="image/png,image/jpeg,image/jpg,image/webp" multiple style="display:none;">
             <div id="quickCollectionThumbs" style="display:flex; gap:8px; flex-wrap:wrap; flex:1;"></div>
@@ -3026,6 +3051,17 @@ function debouncedSyncBranding(delay = 220) {
 let quickPatternImage = null;
 let quickPatternSrc = "";
 let lastMugRenderCanvas = null;
+
+// --- Seamlessly Creative: repeat style for the main quick pattern -----------------------------
+// quickPatternSrc (above) is whatever's actually APPLIED right now - unchanged concept, still the
+// single choke point setMainQuickPattern feeds every mock-up card from. These three track the
+// separate, un-generated ORIGINAL a user just brought in (local upload, or a Project asset with no
+// repeatTile yet) so "Generate Mock-up" has something to build FROM without needing to re-upload -
+// see handleNewQuickPatternSource/generateQuickPatternRepeat below.
+let quickPatternOriginalSrc = "";
+let quickPatternOriginalName = "";
+let quickPatternRepeatLayout = "grid";
+let quickPatternProjectAssetId = null;
 
 function showToastMessage(message) {
   alert(message);
@@ -5089,6 +5125,91 @@ function setMainQuickPattern(src, name) {
   });
 }
 
+// --- Seamlessly Creative: repeat style for the main quick pattern -----------------------------
+//
+// The point of this block: NOT changing what happens today for anyone who never touches it. A
+// fresh upload (or a Project asset with no prepared repeatTile) still becomes the default pattern
+// immediately, applied as Grid, exactly as before this existed - zero extra clicks. The repeat-
+// style panel that appears afterward is purely additive: pick Half Brick/Half Drop and click
+// Generate Mock-up ONLY if that's actually what this pattern is.
+//
+// A Project asset that already arrived with a prepared repeatTile (Pattern Playground tagged it,
+// or a previous Generate here already wrote one back - see generateQuickPatternRepeat) never shows
+// this panel at all; mockup-adapter.js keeps using it directly, unchanged from before this feature
+// existed - the suite already knows how that one repeats.
+function handleNewQuickPatternSource(src, name, projectAssetId) {
+  quickPatternOriginalSrc = src;
+  quickPatternOriginalName = name || 'pattern uploaded';
+  quickPatternProjectAssetId = projectAssetId || null;
+  quickPatternRepeatLayout = 'grid';
+  syncRepeatStyleUI();
+  const panel = document.getElementById('quickRepeatStylePanel');
+  if (panel) panel.classList.remove('hidden');
+  return setMainQuickPattern(src, name);
+}
+
+function syncRepeatStyleUI() {
+  document.querySelectorAll('.quickRepeatStyleBtn').forEach((btn) => {
+    btn.classList.toggle('active', btn.dataset.repeatStyle === quickPatternRepeatLayout);
+  });
+}
+
+function canvasToPngBlob(canvas) {
+  return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), 'image/png'));
+}
+
+// The one place a repeat style actually gets APPLIED - selecting Grid/Half Brick/Half Drop above
+// only changes which button is highlighted. Reuses the exact same suite-wide repeat-tile builder
+// Half Brick/Half Drop already use elsewhere (see repeat-tile-builder.js's own header for how this
+// relates to Pattern Playground's procedural version) - not a second repeat engine.
+async function generateQuickPatternRepeat() {
+  if (!quickPatternOriginalSrc) return;
+  const btn = document.getElementById('quickGenerateBtn');
+  const statusEl = document.getElementById('quickRepeatStatus');
+  if (btn) btn.disabled = true;
+  if (statusEl) statusEl.textContent = 'generating…';
+  try {
+    const canvas = await window.SCRepeatTileBuilder.buildRepeatTile(quickPatternOriginalSrc, quickPatternRepeatLayout);
+    const dataUrl = canvas.toDataURL('image/png');
+    await setMainQuickPattern(dataUrl, quickPatternOriginalName);
+    if (quickPatternProjectAssetId && window.SCLibrary && window.SCLibrary.setAssetRepeatTile) {
+      // Write the prepared tile back onto the Project asset so the NEXT time it enters Mock-up
+      // Studio (this session or a future one), it already knows how it repeats - nobody has to
+      // pick a repeat style for it again. 'grid' is stored as null (nothing separate to reuse;
+      // the asset's own file already tiles correctly on its own for Grid).
+      const blob = await canvasToPngBlob(canvas);
+      try {
+        await window.SCLibrary.setAssetRepeatTile(
+          quickPatternProjectAssetId,
+          quickPatternRepeatLayout === 'grid' ? null : blob,
+          quickPatternRepeatLayout === 'grid' ? null : quickPatternRepeatLayout
+        );
+      } catch (err) {
+        // Non-fatal: the pattern is already applied to this mock-up session either way (the
+        // await setMainQuickPattern above already succeeded) - only the "remember this for next
+        // time" write-back failed, so surface it without pretending Generate itself failed.
+        console.error('[mockup] failed to save repeatTile back to project asset', err);
+      }
+    }
+    if (statusEl) statusEl.textContent = '✓ mock-up updated';
+  } catch (err) {
+    console.error('[mockup] repeat generation failed', err);
+    if (statusEl) statusEl.textContent = 'could not generate — try a different file';
+  } finally {
+    if (btn) btn.disabled = false;
+    setTimeout(() => { if (statusEl && statusEl.textContent !== 'generating…') statusEl.textContent = ''; }, 3000);
+  }
+}
+
+document.querySelectorAll('.quickRepeatStyleBtn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    quickPatternRepeatLayout = btn.dataset.repeatStyle;
+    syncRepeatStyleUI();
+  });
+});
+const quickGenerateBtnEl = document.getElementById('quickGenerateBtn');
+if (quickGenerateBtnEl) quickGenerateBtnEl.addEventListener('click', generateQuickPatternRepeat);
+
 function setupUpload(inputId, cardId, stripId, thumbId, fileNameId) {
   const input = document.getElementById(inputId);
   const card = document.getElementById(cardId);
@@ -5110,7 +5231,7 @@ function setupUpload(inputId, cardId, stripId, thumbId, fileNameId) {
       if (card && strip) card.classList.add('hidden');
 
       if (inputId === 'quickUploadInput') {
-        setMainQuickPattern(ev.target.result, file.name);
+        handleNewQuickPatternSource(ev.target.result, file.name, null);
       }
 
       if (inputId === 'creativeUploadInput' || inputId === 'addPatternInput') {
@@ -5129,7 +5250,12 @@ document.getElementById('quickReplaceBtn').addEventListener('click', () => {
   document.getElementById('quickUploadInput').value = '';
   quickPatternImage = null;
   quickPatternSrc = '';
+  quickPatternOriginalSrc = '';
+  quickPatternOriginalName = '';
+  quickPatternRepeatLayout = 'grid';
+  quickPatternProjectAssetId = null;
   document.getElementById('quickUploadStrip').classList.add('hidden');
+  document.getElementById('quickRepeatStylePanel')?.classList.add('hidden');
   document.getElementById('quickUploadCard').classList.remove('hidden');
   renderAllPatternSwatchRows();
   renderQuickCardsSequentially(ALL_QUICK_PRODUCTS);
@@ -7851,6 +7977,7 @@ console.log('Mock-up Studio asset path fix loaded');
      the suite shell with ?project=<id>; standalone use is unaffected. -->
 <script src="/shared/project-library.js"></script>
 <script src="/shared/suite-status.js"></script>
+<script src="/shared/repeat-tile-builder.js"></script>
 <script src="/shared/adapters/mockup-adapter.js"></script>
 </body>
 </html>
