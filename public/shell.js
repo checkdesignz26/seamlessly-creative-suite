@@ -37,6 +37,7 @@
 
   const STUDIOS = [
     { id: 'playground', name: 'Pattern Playground', path: '/studios/playground/index.html', available: true },
+    { id: 'sketchpad', name: 'Sketch Pad', path: '/studios/sketchpad/index.html', available: true },
     { id: 'resizer', name: 'Creative Resizer', path: '/studios/resizer/index.html', available: true },
     { id: 'mockup', name: 'Mock-up Studio', path: '/studios/mockup/index.html', available: true },
     { id: 'pages', name: 'Pattern Pages', path: '/studios/pages/index.html', available: true },
