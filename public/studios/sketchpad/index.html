@@ -1036,25 +1036,37 @@ function renderPathNodeOverlay(){
 // selection — Close only for an open path with enough nodes, Continue/Join only from an
 // endpoint of an open path, Break only for an interior node (or anywhere on a closed shape,
 // where it just reopens the loop) — per the brief's "only show actions that make sense".
+// Close Shape only ever flips open->closed; it must never make ordinary node editing (select,
+// drag, add, delete, smooth/corner, simplify, restyle) act as if the geometry were locked. The
+// only things Close legitimately takes away are the concepts that stop making sense on a loop
+// with no endpoints (Continue/Join, and Close itself). Everything else here is gated purely on
+// "is a node selected" / "does this many nodes stay a valid shape", never on pathEditClosed.
 function syncPathEditBarButtons(){
   if(!pathEditNodes)return;
   const hasSel=selectedNodeIndex!=null;
   const isEnd=hasSel&&!pathEditClosed&&(selectedNodeIndex===0||selectedNodeIndex===pathEditNodes.length-1);
   const isInterior=hasSel&&!isEnd;
+  // A closed loop degenerates below 3 nodes (2 nodes closed on themselves isn't a shape); an
+  // open path just needs 2 to exist at all.
+  const minNodes=pathEditClosed?3:2;
   $('nodeSmoothBtn').disabled=!hasSel;
   $('nodeCornerBtn').disabled=!hasSel;
-  $('nodeDeleteBtn').disabled=!hasSel||pathEditNodes.length<=2;
+  $('nodeDeleteBtn').disabled=!hasSel||pathEditNodes.length<=minNodes;
   $('continuePathBtn').disabled=pathEditClosed||!isEnd;
   $('joinPathBtn').disabled=pathEditClosed||!isEnd;
   $('closePathBtn').disabled=pathEditClosed||pathEditNodes.length<3;
+  // Same operation either way (breakPathAtSelectedNode) — on a closed path it reopens the loop
+  // at the selected node rather than splitting into two strokes, so the button reads "Open Shape"
+  // there instead of "Break" to match what it actually does.
   $('breakPathBtn').disabled=!hasSel||(!pathEditClosed&&!isInterior);
-  $('simplifyPathBtn').disabled=pathEditNodes.length<3;
+  $('breakPathBtn').textContent=pathEditClosed?'⭘ Open Shape':'✂ Break';
+  $('simplifyPathBtn').disabled=pathEditNodes.length<=minNodes;
 }
 function closeSelectedPath(){
   if(!pathEditStrokeId||!pathEditNodes||pathEditNodes.length<3||pathEditClosed)return;
   pathEditClosed=true;selectedNodeIndex=null;
   renderPathNodeOverlay();renderPathLivePreview();redraw();
-  setStatus('◯ Shape closed — tap Done to keep it (Break Path on any node re-opens it later).');
+  setStatus('◯ Shape closed — still fully editable (drag, add, delete, restyle). Tap Done to keep it, or select a node and use Open Shape to re-open it.');
 }
 // Select a node → Break Path: on an open path, an INTERIOR node splits it into two independent
 // strokes there (each keeping the original brush recipe and layer); on a closed shape, ANY node
@@ -1067,7 +1079,7 @@ function breakPathAtSelectedNode(){
     const rotated=pathEditNodes.slice(selectedNodeIndex).concat(pathEditNodes.slice(0,selectedNodeIndex+1));
     pathEditNodes=rotated;pathEditClosed=false;selectedNodeIndex=0;
     renderPathNodeOverlay();renderPathLivePreview();redraw();
-    setStatus('🔓 Shape opened at that node.');
+    setStatus('🔓 Shape opened at that node — Continue, Join and Close Shape are available again.');
     return;
   }
   if(selectedNodeIndex<=0||selectedNodeIndex>=pathEditNodes.length-1){
@@ -1092,9 +1104,19 @@ function breakPathAtSelectedNode(){
 // applied once when Edit Path was first entered. Tolerance is fixed rather than exposed as a
 // slider for this pass (kept the panel compact); each tap simplifies a bit further.
 function simplifyCurrentPath(){
-  if(!pathEditNodes||pathEditNodes.length<3)return;
+  const minNodes=pathEditClosed?3:2;
+  if(!pathEditNodes||pathEditNodes.length<=minNodes)return;
   const before=pathEditNodes.length;
-  pathEditNodes=rdpSimplify(pathEditNodes,6);
+  const simplified=rdpSimplify(pathEditNodes,6);
+  // rdpSimplify treats the node list as an open chain (it always keeps node 0 and the last node),
+  // so on a closed shape it can never break the loop itself — but it CAN still collapse a nearly-
+  // straight closed shape down to just those 2 endpoints, which isn't a valid closed loop. Keep
+  // the un-simplified nodes rather than hand back a degenerate 2-node "shape".
+  if(pathEditClosed&&simplified.length<minNodes){
+    setStatus('〜 Already as simple as a closed shape can get.');
+    return;
+  }
+  pathEditNodes=simplified;
   selectedNodeIndex=null;
   renderPathNodeOverlay();renderPathLivePreview();redraw();
   setStatus('〜 Simplified: '+before+' → '+pathEditNodes.length+' nodes.');
@@ -1186,7 +1208,7 @@ function performJoin(strokeA,aFromEnd,strokeB,bFromEnd){
 function bindTapButton(el,handler){el.addEventListener('pointerup',e=>{if(el.disabled)return;e.preventDefault();handler();});}
 bindTapButton($('nodeSmoothBtn'),()=>{if(selectedNodeIndex==null||!pathEditNodes)return;pathEditNodes[selectedNodeIndex].type='smooth';renderPathNodeOverlay();renderPathLivePreview();redraw();});
 bindTapButton($('nodeCornerBtn'),()=>{if(selectedNodeIndex==null||!pathEditNodes)return;pathEditNodes[selectedNodeIndex].type='corner';renderPathNodeOverlay();renderPathLivePreview();redraw();});
-bindTapButton($('nodeDeleteBtn'),()=>{if(selectedNodeIndex==null||!pathEditNodes||pathEditNodes.length<=2)return;pathEditNodes.splice(selectedNodeIndex,1);selectedNodeIndex=null;renderPathNodeOverlay();renderPathLivePreview();redraw();});
+bindTapButton($('nodeDeleteBtn'),()=>{if(selectedNodeIndex==null||!pathEditNodes||pathEditNodes.length<=(pathEditClosed?3:2))return;pathEditNodes.splice(selectedNodeIndex,1);selectedNodeIndex=null;renderPathNodeOverlay();renderPathLivePreview();redraw();});
 bindTapButton($('pathEditDoneBtn'),commitEditPath);
 bindTapButton($('continuePathBtn'),startContinuePath);
 bindTapButton($('joinPathBtn'),startJoinPath);
