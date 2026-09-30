@@ -1964,6 +1964,16 @@ window.addEventListener("load", () => {
     let tiledImg = null;
     let patternWidth = 0;
     let patternHeight = 0;
+    // patternWidth/patternHeight are the DECODED WORKING canvas size (originalImg's actual
+    // pixel dimensions) — they can be smaller than the source file on devices with a decode
+    // cap (e.g. iPad Safari, see isAppleMobileSafari()). patternNativeWidth/Height are the
+    // pattern's true, undownscaled pixel size and must be used for anything computing a
+    // physical/DPI-relative repeat count or scale (targetPx / patternPx), since that math
+    // assumes patternWidth reflects the pattern's real size, not an in-memory optimisation.
+    // Pixel-level drawing (source rects, drawImage destination sizing) keeps using
+    // patternWidth/patternHeight as before. Ported from Seamless Studio (308d4cb).
+    let patternNativeWidth = 0;
+    let patternNativeHeight = 0;
     let tiledPatternWidth = 0;
     let tiledPatternHeight = 0;
     let currentTileMultiplier = 2;
@@ -2322,7 +2332,7 @@ window.addEventListener("load", () => {
     }
 
     function getAutoSeamlessScaleForCustom(productW, productH) {
-        if (!patternWidth || !patternHeight) return 1;
+        if (!patternNativeWidth || !patternNativeHeight) return 1;
         const safeW = Math.max(1, Number(productW) || 1);
         const safeH = Math.max(1, Number(productH) || 1);
 
@@ -2330,8 +2340,8 @@ window.addEventListener("load", () => {
         // Horizontal products use width as the seam axis, vertical/slim products can still use width here
         // because custom products should start with a visually repeated pattern.
         const targetRepeats = 2;
-        const scaleFromWidth = safeW / (patternWidth * targetRepeats);
-        const scaleFromHeight = safeH / (patternHeight * targetRepeats);
+        const scaleFromWidth = safeW / (patternNativeWidth * targetRepeats);
+        const scaleFromHeight = safeH / (patternNativeHeight * targetRepeats);
 
         // Use the smaller scale so both dimensions stay comfortably repeatable.
         const autoScale = Math.min(scaleFromWidth, scaleFromHeight, 1);
@@ -2602,6 +2612,45 @@ ctx.lineWidth = 1;
         return { drawX, drawY, drawW, drawH, scale };
     }
 
+    // Renders a grid thumbnail straight from the source pattern at thumbnail resolution,
+    // without ever allocating a full print-resolution (product.w x product.h) canvas —
+    // drawPattern/drawSingleArtwork already take the target size as a parameter, so this
+    // looks identical to downsampling a full-res render. Used by renderProductGrid() so
+    // uploading a pattern no longer has to build all N full-resolution product canvases
+    // just to show small previews (see ensureProductCanvas for the lazy, on-demand
+    // full-resolution path used by zoom/mock-up/export instead). Ported from Seamless
+    // Studio's drawProductPreviewThumbDirect (61ea607).
+    function drawProductPreviewThumbDirect(ctx, product, index, thumbW, thumbH, padding = 20) {
+        ctx.clearRect(0, 0, thumbW, thumbH);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.fillStyle = getStageBg();
+        ctx.fillRect(0, 0, thumbW, thumbH);
+
+        const scale = Math.min((thumbW - (padding * 2)) / product.w, (thumbH - (padding * 2)) / product.h);
+        const drawW = Math.max(1, Math.round(product.w * scale));
+        const drawH = Math.max(1, Math.round(product.h * scale));
+        const drawX = (thumbW - drawW) / 2;
+        const drawY = (thumbH - drawH) / 2;
+
+        const forceRepeatOnly = isRepeatOnlyWrapProduct(product);
+        const useTiled = shouldUseRepeatRenderer(product) && (product.type === "wrap" || product.type === "fixed");
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(drawX, drawY, drawW, drawH);
+        ctx.clip();
+        ctx.translate(drawX, drawY);
+        if (designMode === 'artwork' && !forceRepeatOnly) {
+            drawSingleArtwork(ctx, drawW, drawH, getRenderScale(product, index), product, getPositionState(index));
+        } else {
+            drawPattern(ctx, drawW, drawH, getRenderScale(product, index), useTiled, product, getPositionState(index));
+        }
+        ctx.restore();
+
+        return { drawX, drawY, drawW, drawH, scale };
+    }
+
     function renderFlowPreview(canvas, zoomMode = false, zoomPercent = 100) {
         if (!originalImg || !patternWidth || !patternHeight) return;
 
@@ -2821,13 +2870,13 @@ ctx.lineWidth = 1;
     }
 
     function calculatePerfectSeamlessScale(product) {
-        if (!patternWidth || !patternHeight) return 1;
+        if (!patternNativeWidth || !patternNativeHeight) return 1;
 
         const axis = getSeamAxis(product);
         let bestScale = 1;
 
         for (let repeats = 1; repeats <= 24; repeats++) {
-            const basis = axis === "horizontal" ? patternHeight : patternWidth;
+            const basis = axis === "horizontal" ? patternNativeHeight : patternNativeWidth;
             const target = axis === "horizontal" ? product.h : product.w;
             const candidateScale = target / (basis * repeats);
             if (candidateScale >= 0.005 && candidateScale <= 4.0) {
@@ -2885,9 +2934,9 @@ ctx.lineWidth = 1;
     }
 
     function getScaleForWrapRepeats(product, repeatCount) {
-        if (!patternWidth || !patternHeight) return 1;
+        if (!patternNativeWidth || !patternNativeHeight) return 1;
         const axis = getSeamAxis(product);
-        const basis = axis === "horizontal" ? patternHeight : patternWidth;
+        const basis = axis === "horizontal" ? patternNativeHeight : patternNativeWidth;
         const target = axis === "horizontal" ? product.h : product.w;
         const count = Math.max(0.5, Math.min(12, Number(repeatCount) || 1));
         return Math.max(0.005, Math.min(4.0, target / Math.max(1, basis * count)));
@@ -2920,9 +2969,9 @@ ctx.lineWidth = 1;
     }
 
     function getCurrentWrapRepeatCount(product, index) {
-        if (!product || !patternWidth || !patternHeight) return 1;
+        if (!product || !patternNativeWidth || !patternNativeHeight) return 1;
         const axis = getSeamAxis(product);
-        const basis = axis === "horizontal" ? patternHeight : patternWidth;
+        const basis = axis === "horizontal" ? patternNativeHeight : patternNativeWidth;
         const target = axis === "horizontal" ? product.h : product.w;
         const renderScale = Math.max(0.005, getRenderScale(product, index) || 1);
         return Math.max(0.5, target / Math.max(1, basis * renderScale));
@@ -2939,7 +2988,7 @@ function getWrapRepeatMetrics(product, requestedScale) {
         const targetH = product.h;
         const seamAxis = getSeamAxis(product);
 
-        if (!patternWidth || !patternHeight) {
+        if (!patternNativeWidth || !patternNativeHeight) {
             return {
                 repeatsX: 1,
                 repeatsY: 1,
@@ -2953,12 +3002,17 @@ function getWrapRepeatMetrics(product, requestedScale) {
 
         const safeScale = Math.max(0.005, Math.min(4.0, requestedScale || 1));
 
+        // Repeat counts and effectiveScale must be derived from the pattern's true native
+        // size, not the (possibly decode-capped) working resolution — see patternNativeWidth
+        // comment above. tileW/tileH stay valid as drawImage() destination sizes regardless
+        // of originalImg's actual pixel size, since drawImage auto-scales from the source.
+        // Ported from Seamless Studio (308d4cb).
         if (seamAxis === "horizontal") {
-            const idealRepeatsY = targetH / Math.max(1, patternHeight * safeScale);
+            const idealRepeatsY = targetH / Math.max(1, patternNativeHeight * safeScale);
             const repeatsY = Math.max(1, Math.min(24, Math.round(idealRepeatsY)));
             const tileH = targetH / repeatsY;
-            const effectiveScale = tileH / patternHeight;
-            const tileW = patternWidth * effectiveScale;
+            const effectiveScale = tileH / patternNativeHeight;
+            const tileW = patternNativeWidth * effectiveScale;
             const repeatsX = Math.max(1, Math.ceil(targetW / Math.max(1, tileW)));
 
             return {
@@ -2972,11 +3026,11 @@ function getWrapRepeatMetrics(product, requestedScale) {
             };
         }
 
-        const idealRepeatsX = targetW / Math.max(1, patternWidth * safeScale);
+        const idealRepeatsX = targetW / Math.max(1, patternNativeWidth * safeScale);
         const repeatsX = Math.max(1, Math.min(24, Math.round(idealRepeatsX)));
         const tileW = targetW / repeatsX;
-        const effectiveScale = tileW / patternWidth;
-        const tileH = patternHeight * effectiveScale;
+        const effectiveScale = tileW / patternNativeWidth;
+        const tileH = patternNativeHeight * effectiveScale;
         const repeatsY = Math.max(1, Math.ceil(targetH / Math.max(1, tileH)));
 
         return {
@@ -3100,6 +3154,12 @@ function drawPattern(ctx, targetW, targetH, scale, useTiled, product = null, pos
         const isApplePencilRender = !!(product && product.name === "Apple Pencil");
         let cachedSharpTile = null;
         let cachedSharpTileKey = "";
+        // Apple Pencil rendering builds a scratch canvas (cachedSharpTile) via
+        // createSharpScaledTileForRender(). drawPattern() is called very often (every
+        // product thumbnail, zoom, and export), so that scratch canvas must be released
+        // on every exit path here rather than left for GC, which iOS Safari can be slow to
+        // actually reclaim. Ported from Seamless Studio (c174409).
+        try {
         const getDrawSource = (tileW, tileH) => {
             if (!isApplePencilRender) return originalImg;
             const key = `${Math.ceil(tileW)}x${Math.ceil(tileH)}`;
@@ -3207,6 +3267,11 @@ function drawPattern(ctx, targetW, targetH, scale, useTiled, product = null, pos
                 );
             }
         }
+        } finally {
+            if (cachedSharpTile && cachedSharpTile !== originalImg) {
+                releaseCanvasMemory(cachedSharpTile);
+            }
+        }
     }
 
 function regenerateAllCanvases() {
@@ -3276,6 +3341,17 @@ function regenerateAllCanvases() {
         productCanvases[index] = canvas;
     }
 
+    // Memory guard: a full-print-resolution canvas (some products up to several thousand
+    // px per side at 300 DPI) is only needed by something that actually uses full
+    // resolution — the zoom view, a mock-up preview, or an export/download. Grid
+    // thumbnails do NOT go through this (see drawProductPreviewThumbDirect) so uploading
+    // a pattern no longer has to eagerly build and hold all N of these canvases alive just
+    // to show small previews. Ported from Seamless Studio's lazy productCanvases[] (61ea607).
+    function ensureProductCanvas(index) {
+        if (!productCanvases[index]) updateProductCanvas(index);
+        return productCanvases[index];
+    }
+
     function showTileZoom() {
         if (!originalImg) return;
         currentZoomProductIndex = -1;
@@ -3308,7 +3384,6 @@ function regenerateAllCanvases() {
 
         for (let i = 0; i < products.length; i++) {
             const p = products[i];
-            const canvas = productCanvases[i];
 
             let thumbDataUrl = '';
             let thumbFailed = false;
@@ -3323,8 +3398,9 @@ function regenerateAllCanvases() {
             tCtx.fillRect(0, 0, thumb.width, thumb.height);
 
             try {
-                if (!canvas) throw new Error('No preview canvas');
-                drawProductPreviewThumb(tCtx, canvas, p, thumb.width, thumb.height, 20);
+                // Rendered straight from source at thumbnail resolution — no full
+                // print-resolution product canvas required (see drawProductPreviewThumbDirect).
+                drawProductPreviewThumbDirect(tCtx, p, i, thumb.width, thumb.height, 20);
                 thumbDataUrl = thumb.toDataURL('image/png');
             } catch (thumbErr) {
                 console.error('Thumbnail failed:', p && p.name, thumbErr);
@@ -3582,10 +3658,9 @@ function regenerateAllCanvases() {
     function showProductZoom(idx) {
         if (typeof productPreviewMode !== 'undefined') productPreviewMode = 'pattern';
         if (typeof notebookMockupTarget !== 'undefined') notebookMockupTarget = 'both';
-        if (!productCanvases[idx]) return;
+        const canvas = ensureProductCanvas(idx);
+        if (!canvas) return;
         if (zoomModalContent) zoomModalContent.classList.remove('preview-only');
-
-        const canvas = productCanvases[idx];
         const prod = products[idx];
         if (isLockedSeamlessProduct(prod) && prod.type !== 'wrap') {
             prod.type = 'wrap';
@@ -3869,6 +3944,31 @@ function regenerateAllCanvases() {
         return isIOS && isSafari;
     }
 
+    // Read-only introspection for automated QA (compatibility-consolidation regression
+    // suite) — no behaviour depends on this; it only reads existing closure state.
+    window.__crGetState = () => ({
+        hasOriginalImg: !!originalImg,
+        patternWidth,
+        patternHeight,
+        patternNativeWidth,
+        patternNativeHeight,
+        uploadedSourceCanvasWidth: uploadedSourceCanvas ? uploadedSourceCanvas.width : 0,
+        uploadedSourceCanvasHeight: uploadedSourceCanvas ? uploadedSourceCanvas.height : 0,
+        productCanvasCount: productCanvases.length,
+        productCanvasesBuilt: productCanvases.filter(Boolean).length,
+        repeatMode: typeof repeatMode !== 'undefined' ? repeatMode : null,
+        designMode: typeof designMode !== 'undefined' ? designMode : null,
+        isAppleMobileSafari: isAppleMobileSafari(),
+    });
+    // Read-only: reports the repeat count a wrap product would currently show/render,
+    // exactly what getWrapRepeatMetrics/getCurrentWrapRepeatCount compute — for automated
+    // QA verification that repeat counts stay correct regardless of decode-time downscale.
+    window.__crGetWrapRepeatCount = (productIndex) => {
+        const p = products[productIndex];
+        if (!p) return null;
+        return getCurrentWrapRepeatCount(p, productIndex);
+    };
+
     function updateDownloadUi() {
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         if (isIOS) {
@@ -4067,7 +4167,15 @@ function regenerateAllCanvases() {
             const outCanvas = document.createElement('canvas');
             outCanvas.width = outW;
             outCanvas.height = outH;
-            const outCtx = outCanvas.getContext('2d', { alpha: true, willReadFrequently: true });
+            // No willReadFrequently: this canvas becomes the long-lived decoded source
+            // (uploadedSourceCanvas/originalImg) and is drawImage()'d from for the whole
+            // session across every product preview, zoom, and export tile — it is written
+            // once and essentially never read back. That hint forces a CPU-backed (not GPU)
+            // canvas, a standing memory tax worth avoiding for a canvas that can be several
+            // megapixels and lives for the entire session. Ported from Seamless Studio
+            // (d2be5c4), which removed this same hint from the same kind of canvas after it
+            // was found to contribute to iPad Safari memory-pressure crashes.
+            const outCtx = outCanvas.getContext('2d', { alpha: true });
             if (!outCtx) throw new Error('Your browser could not create a canvas preview.');
             outCtx.imageSmoothingEnabled = true;
             outCtx.imageSmoothingQuality = 'high';
@@ -4300,7 +4408,17 @@ function regenerateAllCanvases() {
                 uploadedOriginalPreviewWidth = 0;
                 uploadedOriginalPreviewHeight = 0;
             }
-            const prep = await decodeImageToCanvas(file, { maxDimension: 7200, maxPixels: 24000000 });
+            // iPad/iPhone Safari has a much smaller effective per-tab memory budget than
+            // desktop browsers, and decoding a large pattern at full resolution — even
+            // briefly, before any downscale kicks in — can exceed it and get the tab
+            // killed/reloaded by the OS. Cap harder on that browser only; everywhere else
+            // keeps the existing working resolution. Ported from Seamless Studio (a626e85),
+            // which fixed an identical iPad OOM crash there with these exact cap values,
+            // verified against a real 3600x3600 pattern under a spoofed iPad Safari UA.
+            const decodeLimits = isAppleMobileSafari()
+                ? { maxDimension: 2200, maxPixels: 4200000 }
+                : { maxDimension: 7200, maxPixels: 24000000 };
+            const prep = await decodeImageToCanvas(file, decodeLimits);
             addDebugStep(`Image decoded: ${prep.originalWidth} × ${prep.originalHeight}px`, {
                 sourceWidth: prep.originalWidth,
                 sourceHeight: prep.originalHeight,
@@ -4351,6 +4469,8 @@ function regenerateAllCanvases() {
             originalImg = makeSquareWorkingTileFromSource(applyBackgroundToCanvas(uploadedSourceCanvas), tileSourceMode);
             patternWidth = Math.round(originalImg.width || 0);
             patternHeight = Math.round(originalImg.height || 0);
+            patternNativeWidth = Math.round(prep.originalWidth || patternWidth || 0);
+            patternNativeHeight = Math.round(prep.originalHeight || patternHeight || 0);
             preparedImageInfo = prep;
 
             if (!patternWidth || !patternHeight) {
@@ -4405,7 +4525,12 @@ function regenerateAllCanvases() {
             updatePreviews();
             await waitForUiFrame();
             addDebugStep('Drawing product thumbnails…');
-            await regenerateAllCanvasesSafely();
+            // Thumbnails render straight from source (drawProductPreviewThumbDirect) and no
+            // longer need full print-resolution product canvases built up front — those are
+            // now built lazily, one at a time, only when something actually needs full
+            // resolution (ensureProductCanvas: zoom view, mock-up, export). Clear any stale
+            // canvases from a previous upload rather than rebuilding all of them eagerly here.
+            clearStoredProductCanvases();
             renderProductGrid();
 
             selectAllBtn.disabled = false;
@@ -4440,6 +4565,8 @@ function regenerateAllCanvases() {
         tiledImg = null;
         patternWidth = 0;
         patternHeight = 0;
+        patternNativeWidth = 0;
+        patternNativeHeight = 0;
         tiledPatternWidth = 0;
         tiledPatternHeight = 0;
         sourceFileMime = '';
@@ -4506,7 +4633,7 @@ function regenerateAllCanvases() {
         if (!originalImg) return;
         const items = [];
         for (let i = 0; i < products.length; i++) {
-            if (selected[i] && isVisibleProductIndex(i)) items.push({ index: i, name: products[i].name, canvas: productCanvases[i] });
+            if (selected[i] && isVisibleProductIndex(i)) items.push({ index: i, name: products[i].name, canvas: ensureProductCanvas(i) });
         }
         if (items.length === 0) { alert('select at least one product'); return; }
 
@@ -4551,11 +4678,13 @@ function regenerateAllCanvases() {
     // selected/productCanvases are plain top-level `let` bindings, not
     // window properties, so they're only reachable from code that shares
     // this same script's scope - not from a separately-loaded <script src>.
+    // Uses ensureProductCanvas() (not productCanvases[i] directly) since product
+    // canvases are now built lazily on demand rather than eagerly on upload.
     window.__scGetSelectedResizerExports = async function () {
         if (!originalImg) return [];
         const items = [];
         for (let i = 0; i < products.length; i++) {
-            if (selected[i] && isVisibleProductIndex(i)) items.push({ index: i, name: products[i].name, canvas: productCanvases[i] });
+            if (selected[i] && isVisibleProductIndex(i)) items.push({ index: i, name: products[i].name, canvas: ensureProductCanvas(i) });
         }
         const out = [];
         for (const item of items) {
@@ -4818,7 +4947,7 @@ function regenerateAllCanvases() {
         }
 
         const idx = currentZoomProductIndex;
-        const canvas = productCanvases[idx];
+        const canvas = ensureProductCanvas(idx);
         const prod = products[idx];
         if (!canvas || !prod) return;
 
@@ -5240,6 +5369,7 @@ window.addEventListener('load', () => {
         ctx.globalAlpha = alpha;
         ctx.drawImage(layer, 0, 0);
         ctx.restore();
+        releaseCanvasMemory(layer);
     }
 
 
@@ -5297,7 +5427,7 @@ window.addEventListener('load', () => {
     }
 
     async function renderMugMockupInPreview(idx) {
-        const designCanvas = productCanvases[idx];
+        const designCanvas = ensureProductCanvas(idx);
         const A = mockupAssets;
         if (!designCanvas || !imageReady(A.mugBg) || !imageReady(A.mugMask)) return false;
 
@@ -5336,7 +5466,7 @@ window.addEventListener('load', () => {
     }
 
     function renderTumblerMockupInPreview(idx) {
-        const designCanvas = productCanvases[idx];
+        const designCanvas = ensureProductCanvas(idx);
         const A = mockupAssets;
         const prod = products[idx];
 
@@ -5394,6 +5524,7 @@ window.addEventListener('load', () => {
                 lctx.drawImage(A.tumbler30Mask, 0, 0, 2048, 2048);
 
                 ctx.drawImage(layer, 0, 0);
+                releaseCanvasMemory(layer);
             }
 
             // 3. Bring back blank tumbler body shading so pattern feels printed, not stickered.
@@ -5412,6 +5543,7 @@ window.addEventListener('load', () => {
             ctx.globalAlpha = 0.24;
             ctx.drawImage(bodyShade, 0, 0);
             ctx.restore();
+            releaseCanvasMemory(bodyShade);
 
             // 4. Overlay realism layer from Procreate.
             if (imageReady(A.tumbler30Overlay)) {
@@ -5463,7 +5595,7 @@ window.addEventListener('load', () => {
     }
 
     function renderNotebookMockupInPreview(idx) {
-        const designCanvas = productCanvases[idx];
+        const designCanvas = ensureProductCanvas(idx);
         const A = mockupAssets;
         if (!designCanvas || !imageReady(A.notebookMockup) || !imageReady(A.notebookFrontMask) || !imageReady(A.notebookBackMask)) return false;
 
@@ -5519,12 +5651,15 @@ window.addEventListener('load', () => {
             const b = getMaskBounds(maskImg, canvas.width, canvas.height);
             lctx.drawImage(designCanvas, b.x, b.y, b.w, b.h);
             lctx.globalCompositeOperation = 'destination-in';
-            lctx.drawImage(makeNotebookLumMask(maskImg), 0, 0);
+            const lumMask = makeNotebookLumMask(maskImg);
+            lctx.drawImage(lumMask, 0, 0);
+            releaseCanvasMemory(lumMask);
             ctx.save();
             ctx.globalCompositeOperation = 'multiply';
             ctx.globalAlpha = 0.96;
             ctx.drawImage(layer, 0, 0);
             ctx.restore();
+            releaseCanvasMemory(layer);
         }
 
         if (drawLeftVisibleCover) drawProductCanvasIntoMask(A.notebookFrontMask);
@@ -5566,6 +5701,7 @@ window.addEventListener('load', () => {
 
         const bounds = { x:minX, y:minY, w:Math.max(1, maxX-minX), h:Math.max(1, maxY-minY) };
         window.__mockupMaskBoundsCache[key] = bounds;
+        releaseCanvasMemory(tmp);
         return bounds;
     }
 
@@ -5663,6 +5799,7 @@ window.addEventListener('load', () => {
         ctx.globalAlpha = alpha;
         ctx.drawImage(layer, 0, 0);
         ctx.restore();
+        releaseCanvasMemory(layer);
         return true;
     }
 
@@ -5697,6 +5834,7 @@ window.addEventListener('load', () => {
         }
       }
     }catch(e){}
+    releaseCanvasMemory(c);
     if(!found) return {x:w*.3,y:h*.3,w:w*.36,h:h*.55};
     return {x:minX,y:minY,w:Math.max(1,maxX-minX),h:Math.max(1,maxY-minY)};
   }
@@ -5809,7 +5947,7 @@ window.addEventListener('load', () => {
 
   function renderGreetingCardMockupInPreview(idx){
     const p = products[idx];
-    const designCanvas = productCanvases[idx];
+    const designCanvas = ensureProductCanvas(idx);
     if(!designCanvas || typeof mockupAssets === 'undefined') return false;
     const bg = mockupAssets.greetingCardBg;
     const mask = mockupAssets.greetingCardMask;
@@ -5831,13 +5969,16 @@ window.addEventListener('load', () => {
     const cardQuad = insetQuadTowardCenter(rawQuad, 0.026);
     drawImageToQuadPerspective(lctx, designCanvas, cardQuad, 40);
     lctx.globalCompositeOperation = 'destination-in';
-    lctx.drawImage(makeLumMask(mask,2048,2048),0,0);
+    const lumMask = makeLumMask(mask,2048,2048);
+    lctx.drawImage(lumMask,0,0);
+    releaseCanvasMemory(lumMask);
 
     ctx.save();
     ctx.globalCompositeOperation = 'multiply';
     ctx.globalAlpha = 0.98;
     ctx.drawImage(layer,0,0);
     ctx.restore();
+    releaseCanvasMemory(layer);
     // bring back the paper/photo texture softly
     ctx.save();
     ctx.globalCompositeOperation = 'screen';
@@ -6210,7 +6351,7 @@ window.addEventListener('load', () => {
                         const safeBase = baseName.replace(/[^a-z0-9_-]/gi, '_').toLowerCase() || `image_${i + 1}`;
                         const singleProduct = currentItems.length === 1;
                         for (const item of currentItems) {
-                            const blob = await exportProductBlob(products[item.index], productCanvases[item.index], getRenderScale(products[item.index], item.index));
+                            const blob = await exportProductBlob(products[item.index], ensureProductCanvas(item.index), getRenderScale(products[item.index], item.index));
                             const cleanProduct = item.name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
                             const path = singleProduct
                                 ? `${safeBase}.${ext}`

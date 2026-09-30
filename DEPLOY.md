@@ -73,8 +73,8 @@ update to that same test URL.
   named in that folder's own notes below — pulling a new commit into
   either studio's real repo does nothing to this suite until someone
   deliberately re-freezes a copy here.
-- Pattern Pages and Creative Resizer aren't in this suite at all yet —
-  their tabs show as "(soon)" and are disabled. That's Phase 2.
+- Pattern Pages isn't in this suite at all yet — its tab shows as
+  "(soon)" and is disabled. That's Phase 2.
 
 ## Frozen copies in this repo
 
@@ -89,6 +89,19 @@ update to that same test URL.
   `SeamlessStudioMockup` repo, `main`, commit `c7d5242`, byte-for-byte
   unchanged (its pattern-add function was already a plain global, so
   no hook needed).
+- `public/studios/resizer/index.html` — Creative Resizer,
+  `Creativeresizer-pro-` repo, branch
+  `claude/mock-up-functions-index137-12gpqi`, commit `fd9b75d`
+  (the Seamless Studio compatibility consolidation — iPad Safari decode
+  cap, lazy product canvases, scratch-canvas release, native-size
+  repeat-count fix — see that repo's history for the full rationale),
+  plus the same additive suite-adapter pattern as the other studios:
+  `window.__scGetSelectedResizerExports` (a read-only hook reusing the
+  existing download-selection logic) and an `opts.repeatModeHint`
+  parameter on `loadImage`/`handlePickedPatternFile` so Pattern
+  Playground's Half Brick/Half Drop repeat-safe tile can be loaded
+  directly instead of re-detected from the file's aspect ratio. No
+  other line was changed from the standalone app.
 
 ## Later: pointing `suite.checkdesignz.com` at this
 

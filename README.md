@@ -1,6 +1,6 @@
 # Seamlessly Creative — suite
 
-Phase 1 proof of concept for tying Pattern Playground, Creative
+Phase 1/3 proof of concept for tying Pattern Playground, Creative
 Resizer, Pattern Pages and Mock-up Studio together behind one project,
 instead of four separate apps.
 
@@ -26,11 +26,16 @@ proof-of-concept flow.
   - `mockup-adapter.js` — **receive**: lists the project's patterns
     and adds a chosen one through Mock-up Studio's own
     `addQuickCollectionPattern`.
-- `public/studios/playground/`, `public/studios/mockup/` — **frozen
-  copies** of the two studios, pinned to a specific commit each (see
-  DEPLOY.md for exactly which). Each has one small, clearly-commented
-  addition — never a rewrite — so its adapter can talk to it. Creative
-  Resizer and Pattern Pages aren't wired in yet; that's Phase 2.
+  - `resizer-adapter.js` — **send + receive**: sends the products a
+    user has selected for download to Pattern Pages (tagged
+    `resized-export`, kept out of Mock-up Studio's/Playground's own
+    trays), and lists the project's patterns for import.
+- `public/studios/playground/`, `public/studios/mockup/`,
+  `public/studios/resizer/` — **frozen copies** of the three studios,
+  pinned to a specific commit each (see DEPLOY.md for exactly which).
+  Each has one small, clearly-commented addition — never a rewrite —
+  so its adapter can talk to it. Pattern Pages isn't wired in yet;
+  that's Phase 2.
 
 ## What this does NOT touch
 
