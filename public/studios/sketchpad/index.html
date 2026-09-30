@@ -143,13 +143,24 @@ canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-a
 @keyframes joinTargetPulse{0%,100%{box-shadow:0 0 0 0 rgba(115,212,140,.55),0 2px 8px rgba(0,0,0,.4)}50%{box-shadow:0 0 0 9px rgba(115,212,140,0),0 2px 8px rgba(0,0,0,.4)}}
 #joinPickBar{position:absolute;left:12px;top:12px;z-index:17;width:270px;max-width:calc(100% - 24px);background:var(--sideBg);border:1px solid var(--line);border-radius:22px;padding:14px;box-shadow:0 18px 50px rgba(0,0,0,.35)}
 #paintModePill{background:var(--accentTeal);border:1px solid rgba(92,184,171,.5);font:inherit}
+/* Collapsible left panel: a slim always-visible tab sits between the sidebar and the workspace
+   in the same flex row, so it's reachable whether the panel is open or collapsed — collapsing
+   just sets the sidebar to display:none, letting the workspace (flex:1) claim the freed width
+   with no extra layout logic needed. Nothing about the sidebar's own contents/ids changes, so
+   every existing brush/motif/layer control keeps working exactly as before once reopened. */
+.sidebar-toggle{width:26px;flex-shrink:0;border:1px solid var(--line);border-radius:13px;background:var(--sideBg);color:var(--text);cursor:pointer;font-size:15px;font-weight:900;display:flex;align-items:center;justify-content:center;padding:0}
+.sidebar-toggle:active{transform:scale(.96)}
+/* View popover reuses .sym-pop's look, just anchored under its own (right-side) trigger instead
+   of Symmetry's left-side one. */
+#viewPopover{left:auto;right:12px}
+#viewPopover:before{left:auto;right:44px}
 @media(max-width:900px){.app{padding:8px;gap:8px}.sidebar{width:270px}.btn,.tool-btn{font-size:12px;padding:9px 11px}.toolbar{padding:10px}}
 </style>
 </head>
 <body>
 <script>(function(){try{if((localStorage.getItem('pkmTheme')||'light')==='light')document.body.classList.add('theme-light');}catch(e){document.body.classList.add('theme-light');}})();</script>
 <div class="app">
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
     <label class="upload accentPurple">📸 Add Motifs<input id="motifInput" type="file" accept="image/*" multiple style="display:none"></label>
     <section class="section"><div class="section-title">🧱 Background Pattern</div><label class="upload accentBg">🖼️ Load as Background<input id="bgInput" type="file" accept="image/*" style="display:none"></label><div id="bgEmpty" class="hint">Load a tile from Magic Builder (or any square pattern) as the base — it tiles with the same repeat layout, sits under your drawing and motifs, and is included in export.</div><div id="bgControls" style="display:none"><div class="slider-row"><label>Opacity</label><input id="bgOpacitySlider" type="range" min="0" max="100" value="100"><span id="bgOpacityVal">100%</span></div><div class="row"><button id="bgToggle" class="btn mini active">👁️ Shown</button><button id="bgClear" class="btn mini danger">Clear</button></div></div></section>
     <section class="section"><div class="section-title">📐 Templates</div><div class="grid">
@@ -262,9 +273,10 @@ canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-a
       <button id="deleteStrokeBtn" class="btn mini danger" style="width:100%;margin-top:8px;">Delete Stroke</button>
     </section>
   </aside>
+  <button id="sidebarToggleBtn" class="sidebar-toggle" title="Hide tools panel">‹</button>
   <main class="workspace">
-    <div class="toolbar"><button id="undoBtn" class="tool-btn">↩️ Undo</button><button id="redoBtn" class="tool-btn">↪️ Redo</button><button id="symToggle" class="tool-btn">🦋 Symmetry Off</button><button id="tilingBtn" class="tool-btn active">Tiling On</button><button id="guidesBtn" class="tool-btn active">📐 Guides</button><button id="resetRot" class="tool-btn">0° Rotation</button><button id="paintModePill" class="pill" style="display:none;cursor:pointer;">🎨 Paint Inside — tap for Free Paint</button><button id="editMotifBar" class="pill" style="display:none;cursor:pointer;background:var(--accentTeal);border:1px solid rgba(92,184,171,.5);font:inherit;">✏️ Editing: <span id="editMotifBarName"></span> — tap Done</button><button id="clearDrawing" class="tool-btn danger">Clear Drawing</button><button id="exportBtn" class="tool-btn primary">📸 Export</button><div class="toolbar-spacer"></div><button id="themeToggle" class="tool-btn">☀️ Light Mode</button><div id="zoomPill" class="pill">100%</div><div id="layoutPill" class="pill">📍 Grid Mode</div></div>
-    <div id="canvasWrap" class="canvas-wrap"><div id="symPopover" class="sym-pop"><div class="section-title">🦋 Symmetry</div><div class="grid"><button class="sym-btn btn active" data-sym="off">Off</button><button class="sym-btn btn" data-sym="vertical">Vertical</button><button class="sym-btn btn" data-sym="horizontal">Horizontal</button><button class="sym-btn btn" data-sym="quad">Quad</button><button class="sym-btn btn" data-sym="diamond">Diamond</button></div><div class="slider-row"><label>Axis X</label><input id="symX" type="range" min="0" max="1800" value="900"><span id="symXVal">50%</span></div><div class="slider-row"><label>Axis Y</label><input id="symY" type="range" min="0" max="1800" value="900"><span id="symYVal">50%</span></div><div class="row"><button id="symCentre" class="btn mini">Centre Axis</button><button id="symClose" class="btn mini">Done</button></div><div class="hint">Move the mirror point to make flowers, leaves and playful asymmetric symmetry.</div></div><canvas id="canvas" width="1800" height="1800"></canvas><div id="selectionBox" class="selection-box"><div id="resizeHandle" class="handle"></div><div id="rotateHandle" class="rotHandle"></div></div><div id="symAxis" class="sym-axis"></div><div id="rotateChip" class="rotate-chip">Canvas 0°</div><div id="pathNodeOverlay"></div><div id="pathEditBar" class="sym-pop" style="display:none;">
+    <div class="toolbar"><button id="undoBtn" class="tool-btn">↩️ Undo</button><button id="redoBtn" class="tool-btn">↪️ Redo</button><div id="zoomPill" class="pill">100%</div><button id="resetRot" class="tool-btn">0° Rotation</button><button id="guidesBtn" class="tool-btn active">📐 Guides</button><button id="paintModePill" class="pill" style="display:none;cursor:pointer;">🎨 Paint Inside — tap for Free Paint</button><button id="editMotifBar" class="pill" style="display:none;cursor:pointer;background:var(--accentTeal);border:1px solid rgba(92,184,171,.5);font:inherit;">✏️ Editing: <span id="editMotifBarName"></span> — tap Done</button><div class="toolbar-spacer"></div><button id="viewToggleBtn" class="tool-btn">⋯ View</button><button id="exportBtn" class="tool-btn primary">📸 Export</button></div>
+    <div id="canvasWrap" class="canvas-wrap"><div id="viewPopover" class="sym-pop"><div class="section-title">🧭 Canvas / View</div><button id="symToggle" class="tool-btn" style="width:100%;margin-bottom:10px;">🦋 Symmetry Off</button><div class="row" style="margin-bottom:10px;"><button id="tilingBtn" class="tool-btn active" style="flex:1">Tiling On</button><div id="layoutPill" class="pill">📍 Grid Mode</div></div><button id="themeToggle" class="tool-btn" style="width:100%;margin-bottom:10px;">☀️ Light Mode</button><button id="clearDrawing" class="btn mini danger" style="width:100%;margin-bottom:10px;">Clear Drawing</button><button id="viewCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="symPopover" class="sym-pop"><div class="section-title">🦋 Symmetry</div><div class="grid"><button class="sym-btn btn active" data-sym="off">Off</button><button class="sym-btn btn" data-sym="vertical">Vertical</button><button class="sym-btn btn" data-sym="horizontal">Horizontal</button><button class="sym-btn btn" data-sym="quad">Quad</button><button class="sym-btn btn" data-sym="diamond">Diamond</button></div><div class="slider-row"><label>Axis X</label><input id="symX" type="range" min="0" max="1800" value="900"><span id="symXVal">50%</span></div><div class="slider-row"><label>Axis Y</label><input id="symY" type="range" min="0" max="1800" value="900"><span id="symYVal">50%</span></div><div class="row"><button id="symCentre" class="btn mini">Centre Axis</button><button id="symClose" class="btn mini">Done</button></div><div class="hint">Move the mirror point to make flowers, leaves and playful asymmetric symmetry.</div></div><canvas id="canvas" width="1800" height="1800"></canvas><div id="selectionBox" class="selection-box"><div id="resizeHandle" class="handle"></div><div id="rotateHandle" class="rotHandle"></div></div><div id="symAxis" class="sym-axis"></div><div id="rotateChip" class="rotate-chip">Canvas 0°</div><div id="pathNodeOverlay"></div><div id="pathEditBar" class="sym-pop" style="display:none;">
   <div class="section-title">✎ Edit Path</div>
   <div class="row"><button id="nodeSmoothBtn" class="btn mini">⌒ Smooth</button><button id="nodeCornerBtn" class="btn mini">⌐ Corner</button></div>
   <div class="row" style="margin-top:6px;">
@@ -886,7 +898,7 @@ canvas.addEventListener('pointercancel',()=>{
   redraw();
 });
 wrap.addEventListener('touchstart',e=>{e.preventDefault();const now=Date.now();touchState={n:e.touches.length,start:copyTouches(e.touches),last:copyTouches(e.touches),moved:false,time:now,zoom,panX,panY,rot};}, {passive:false});
-wrap.addEventListener('touchmove',e=>{e.preventDefault();if(!touchState)return;const cur=copyTouches(e.touches);touchState.moved=true;if(cur.length===1&&touchState.n===1){return}if(cur.length>=2&&touchState.start.length>=2){const s=touchState.start,c=cur;const sd=dist(s[0],s[1]),cd=dist(c[0],c[1]);const sa=ang(s[0],s[1]),ca=ang(c[0],c[1]);const sm=mid(s[0],s[1]),cm=mid(c[0],c[1]);zoom=Math.min(4,Math.max(.2,touchState.zoom*(cd/sd)));rot=touchState.rot+(ca-sa)*180/Math.PI;panX=touchState.panX+(cm.x-sm.x);panY=touchState.panY+(cm.y-sm.y);applyTransform();}}, {passive:false});
+wrap.addEventListener('touchmove',e=>{e.preventDefault();if(!touchState)return;const cur=copyTouches(e.touches);touchState.moved=true;if(cur.length===1&&touchState.n===1){return}if(cur.length>=2&&touchState.start.length>=2){const s=touchState.start,c=cur;const sd=dist(s[0],s[1]),cd=dist(c[0],c[1]);const sa=ang(s[0],s[1]),ca=ang(c[0],c[1]);const sm=mid(s[0],s[1]),cm=mid(c[0],c[1]);userAdjustedZoom=true;zoom=Math.min(4,Math.max(.2,touchState.zoom*(cd/sd)));rot=touchState.rot+(ca-sa)*180/Math.PI;panX=touchState.panX+(cm.x-sm.x);panY=touchState.panY+(cm.y-sm.y);applyTransform();}}, {passive:false});
 wrap.addEventListener('touchend',e=>{e.preventDefault();if(!touchState)return;const dt=Date.now()-touchState.time;const tap=!touchState.moved&&dt<260;if(tap&&touchState.n===2){undo();lastTouchEnd=Date.now()}else if(tap&&touchState.n===3){redo();lastTouchEnd=Date.now()}touchState=null;}, {passive:false});
 function copyTouches(t){return Array.from(t).map(v=>({x:v.clientX,y:v.clientY}))}function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y)||1}function ang(a,b){return Math.atan2(b.y-a.y,b.x-a.x)}function mid(a,b){return{x:(a.x+b.x)/2,y:(a.y+b.y)/2}}
 // Renders the CURRENT strokes (all visible layers, flattened) to a cropped PNG data URL — shared
@@ -2449,6 +2461,43 @@ window.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='z'){e.
 function syncThemeToggleUI(){const light=document.body.classList.contains('theme-light');$('themeToggle').textContent=light?'🌙 Dark Mode':'☀️ Light Mode';}
 $('themeToggle').onclick=()=>{const light=document.body.classList.toggle('theme-light');try{localStorage.setItem('pkmTheme',light?'light':'dark');}catch(e){}syncThemeToggleUI();};
 syncThemeToggleUI();
+// View popover: Symmetry/Tiling/Grid readout/Theme/Clear Drawing moved out of the primary
+// toolbar (only Undo/Redo/Zoom/Rotation/Guides/Export stay always-visible there) — same
+// open/close pattern as the pre-existing Symmetry popover, just its own trigger and panel.
+$('viewToggleBtn').onclick=()=>{$('viewPopover').classList.toggle('open');};
+$('viewCloseBtn').onclick=()=>{$('viewPopover').classList.remove('open');};
+// ---- Collapsible left panel --------------------------------------------------------------------
+// Purely a display:none toggle — nothing about the sidebar's contents, ids or bound handlers
+// changes, so every brush/motif/layer control works exactly the same the moment it's reopened.
+// The canvas isn't resized directly here; fitZoomToContainer() (below) re-fits it into whatever
+// space canvasWrap now actually has, same as it does on first load and on window resize.
+let sidebarCollapsed=false;
+function setSidebarCollapsed(collapsed){
+  sidebarCollapsed=collapsed;
+  $('sidebar').style.display=collapsed?'none':'flex';
+  $('sidebarToggleBtn').textContent=collapsed?'›':'‹';
+  $('sidebarToggleBtn').title=collapsed?'Show tools panel':'Hide tools panel';
+  fitZoomToContainer();
+}
+$('sidebarToggleBtn').onclick=()=>setSidebarCollapsed(!sidebarCollapsed);
+// ---- Responsive canvas fit ----------------------------------------------------------------------
+// The document itself stays exactly W x H (1800x1800) canvas units always — this only ever picks
+// a better DISPLAY zoom, through the exact same `zoom` variable and applyTransform() the pinch
+// gesture already uses, so it can never drift from how zoom actually renders. userAdjustedZoom
+// flips true the moment the user pinches for themselves (see the touchmove handler below); after
+// that we stop overriding their choice on resize/panel-toggle — reopening the panel then never
+// touches zoom, per the brief. Until they've pinched, the canvas keeps automatically filling
+// whatever space is actually available, including space a collapsed panel just freed up.
+let userAdjustedZoom=false;
+function fitZoomToContainer(){
+  if(userAdjustedZoom)return;
+  const availW=wrap.clientWidth-32,availH=wrap.clientHeight-32;
+  if(availW<=0||availH<=0)return;
+  const fit=Math.min(availW/W,availH/H);
+  zoom=Math.min(4,Math.max(.2,fit));
+  applyTransform();
+}
+window.addEventListener('resize',fitZoomToContainer);
 
 // ---- Document autosave/restore (IndexedDB) -------------------------------------------------
 //
@@ -2549,6 +2598,10 @@ async function boot(){
   if(!layers.length){layers=defaultLayers();activeLayerId=layers[layers.length-1].id;}
   renderLayersList();
   pushHist();redraw();
+  // Now that the real DOM layout is settled, pick an initial zoom that actually fills the
+  // available workspace instead of the old fixed default — same fit used any time the workspace
+  // changes size afterward (panel collapse, window resize) while the user hasn't pinch-zoomed.
+  fitZoomToContainer();
   if(restored)setStatus('📂 Restored your last session — '+strokes.length+' stroke'+(strokes.length===1?'':'s')+', '+motifs.length+' motif'+(motifs.length===1?'':'s')+'.');
 }
 boot();
