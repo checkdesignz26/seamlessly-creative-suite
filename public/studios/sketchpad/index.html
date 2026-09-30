@@ -293,6 +293,26 @@ canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-a
 'use strict';
 const canvas=document.getElementById('canvas'),ctx=canvas.getContext('2d'),wrap=document.getElementById('canvasWrap');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let zoom=.82,panX=0,panY=0,rot=0,showTiling=true,showGuides=true,layout='grid',mode='draw';
+// ---- Display resolution (crisp vector strokes at any zoom) ----------------------------------
+// Every stroke is stored as vector point data and rasterised by stamping dabs with plain canvas
+// primitives (BrushEngine.renderStroke -> ctx.arc/gradient fills) — genuinely resolution-
+// independent. The bug this fixes: every raster buffer in the app (each layer's canvas, the
+// on-screen canvas) was a FIXED 1800x1800 physical bitmap no matter the zoom level, with zoom
+// applied purely as a CSS transform on top — so anything above 100% zoom was the browser
+// stretching an already-rasterised bitmap, not a fresh render, which is what produced the blur.
+// renderScale is how many physical pixels back every canvas-unit at the CURRENT zoom (quantised
+// into a few buckets, recomputed by applyTransform() whenever zoom crosses one, so a smooth pinch
+// gesture doesn't re-rasterise on every frame — only when it crosses a bucket boundary). Raising
+// it re-renders the same stroke geometry at a higher physical resolution — never scales an
+// existing bitmap — while staying capped so a big multi-layer document can't demand runaway
+// memory (capped to the app's own 400% zoom ceiling x a typical device pixel ratio).
+let renderScale=1;
+function computeRenderScale(){
+  const raw=zoom*(window.devicePixelRatio||1);
+  const buckets=[1,1.5,2,3,4];
+  for(const b of buckets){if(raw<=b)return b;}
+  return buckets[buckets.length-1];
+}
 // ---- Layers ---------------------------------------------------------------------------------
 // Each layer owns its own permanent canvas, rebuilt by replaying that layer's strokes (see
 // rebuildLayer/appendStrokeToLayer) — this is what lets paint sit cleanly under/over outlines
@@ -304,6 +324,12 @@ const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let zoom=.82,panX=0,panY=0,rot=0,showT
 // exactly where the old single vectorLayer used to be read from.
 let layers=[],activeLayerId=null;
 const compositeCanvas=document.createElement('canvas');compositeCanvas.width=W;compositeCanvas.height=H;const compositeCtx=compositeCanvas.getContext('2d');
+// displayCanvas is a SEPARATE flattened composite, used only for on-screen painting, kept at the
+// current renderScale's physical resolution (see updateDisplayComposite/resizeRenderTargets).
+// compositeCanvas above is deliberately left untouched at a fixed logical W x H — export, motif
+// capture and hit-testing all read exact W x H pixel coordinates from it and must never see it
+// resized out from under them just because the user zoomed the view.
+const displayCanvas=document.createElement('canvas');displayCanvas.width=W;displayCanvas.height=H;const displayCtx=displayCanvas.getContext('2d');
 // liveLayer holds only the IN-PROGRESS stroke or eraser cursor, cleared at the start of each
 // gesture and composited on top while drawing/erasing so tiling/symmetry preview stays live
 // without touching any layer's own canvas — the "lower-cost live preview while the pencil is
@@ -365,7 +391,13 @@ function currentSettings(){return BrushEngine.getSettings(currentBrushIdForSetti
 function getActiveLayer(){return layers.find(l=>l.id===activeLayerId)||null;}
 function makeLayer(name){
   const canvasEl=document.createElement('canvas');canvasEl.width=W;canvasEl.height=H;
-  return {id:crypto.randomUUID(),name,kind:'vector',visible:true,locked:false,opacity:100,canvas:canvasEl,ctx:canvasEl.getContext('2d')};
+  // dcanvas/dctx: a SECOND raster of this same layer, kept at the current display resolution
+  // (renderScale) purely for on-screen painting — see rebuildLayer/updateDisplayComposite. The
+  // low-res canvas/ctx above stays exactly as it always was (hit-testing, export, motif capture,
+  // Paint Inside masks all keep reading it, untouched by any of this).
+  const dcanvasEl=document.createElement('canvas');dcanvasEl.width=Math.round(W*renderScale);dcanvasEl.height=Math.round(H*renderScale);
+  const dctx=dcanvasEl.getContext('2d');dctx.setTransform(renderScale,0,0,renderScale,0,0);
+  return {id:crypto.randomUUID(),name,kind:'vector',visible:true,locked:false,opacity:100,canvas:canvasEl,ctx:canvasEl.getContext('2d'),dcanvas:dcanvasEl,dctx};
 }
 // The default document: Sketch at the bottom, then Colour, then Outline on top — matches the
 // brief's suggested starting point (Outline above Colour) so paint never has to fight z-order.
@@ -410,9 +442,11 @@ function renderStrokeClipped(ctx,stroke,brush,settings,alphaMul){
 function rebuildLayer(layerId){
   const layer=layers.find(l=>l.id===layerId);if(!layer)return;
   layer.ctx.clearRect(0,0,W,H);
+  layer.dctx.clearRect(0,0,W,H);
   strokes.filter(s=>s.layerId===layerId).forEach(s=>{
     const brush=BrushEngine.getBrush(s.brushId),settings=s.settings||BrushEngine.getSettings(s.brushId);
     renderStrokeClipped(layer.ctx,s,brush,settings);
+    renderStrokeClipped(layer.dctx,s,brush,settings);
   });
 }
 // Same as rebuildLayer but renders one stroke faintly — used while Edit Path is live, as a
@@ -424,12 +458,15 @@ function rebuildLayer(layerId){
 function rebuildLayerDimmed(layerId,dimStrokeId,alpha){
   const layer=layers.find(l=>l.id===layerId);if(!layer)return;
   layer.ctx.clearRect(0,0,W,H);
+  layer.dctx.clearRect(0,0,W,H);
   strokes.filter(s=>s.layerId===layerId).forEach(s=>{
     const brush=BrushEngine.getBrush(s.brushId),settings=s.settings||BrushEngine.getSettings(s.brushId);
     // alpha is passed straight into renderStroke's per-dab opacity now — stampDab sets its own
     // ctx.globalAlpha for every dab it stamps, so an outer ctx.globalAlpha set here would have
     // been silently overwritten and never actually dimmed (or hidden) anything.
-    renderStrokeClipped(layer.ctx,s,brush,settings,s.id===dimStrokeId?alpha:1);
+    const a=s.id===dimStrokeId?alpha:1;
+    renderStrokeClipped(layer.ctx,s,brush,settings,a);
+    renderStrokeClipped(layer.dctx,s,brush,settings,a);
   });
 }
 function rebuildAllLayers(){layers.forEach(l=>rebuildLayer(l.id));}
@@ -437,8 +474,17 @@ function appendStrokeToLayer(stroke){
   const layer=layers.find(l=>l.id===stroke.layerId);if(!layer)return;
   const brush=BrushEngine.getBrush(stroke.brushId),settings=stroke.settings||BrushEngine.getSettings(stroke.brushId);
   renderStrokeClipped(layer.ctx,stroke,brush,settings);
+  renderStrokeClipped(layer.dctx,stroke,brush,settings);
 }
 function updateComposite(){compositeCtx.clearRect(0,0,W,H);layers.forEach(l=>{if(!l.visible)return;compositeCtx.save();compositeCtx.globalAlpha=l.opacity/100;compositeCtx.drawImage(l.canvas,0,0);compositeCtx.restore();});}
+// Same flattening as updateComposite() above, but from each layer's HI-RES dcanvas into
+// displayCanvas — this is what the on-screen canvas actually paints from (see redraw/drawTiles),
+// so what's on screen is a fresh render at the current display resolution, never a stretched
+// bitmap. displayCtx already carries a persistent renderScale transform (see
+// resizeRenderTargets), so drawImage's dest size must be given explicitly as W,H (the LOGICAL
+// size) rather than left to the image's own (already renderScale-sized) natural pixel size —
+// otherwise the transform would scale an already-scaled bitmap up a second time.
+function updateDisplayComposite(){displayCtx.clearRect(0,0,W,H);layers.forEach(l=>{if(!l.visible)return;displayCtx.save();displayCtx.globalAlpha=l.opacity/100;displayCtx.drawImage(l.dcanvas,0,0,W,H);displayCtx.restore();});}
 function snapshot(){
   return {
     strokesJSON:JSON.stringify(strokes),
@@ -480,10 +526,51 @@ function applyLayerMeta(layerMeta,wantActiveId){
 }
 function undo(){if(hIndex>0){hIndex--;restore(history[hIndex]);setStatus('↩️ Undo');}}
 function redo(){if(hIndex<history.length-1){hIndex++;restore(history[hIndex]);setStatus('↪️ Redo');}}
-function applyTransform(){canvas.style.transform=`translate(calc(-50% + ${panX}px), calc(-50% + ${panY}px)) scale(${zoom}) rotate(${rot}deg)`;$('zoomPill').textContent=Math.round(zoom*100)+'%';$('rotateChip').textContent='Canvas '+Math.round(rot)+'°';updateSelectionBox();updateSymAxis();if(pathEditNodes)renderPathNodeOverlay();}
+// Resizes every render target's BACKING STORE (physical pixels) to the current renderScale,
+// without touching its on-screen CSS size — canvas.style.width/height keep it at logical W x H
+// so nothing about layout, pan or the existing zoom/rotate CSS transform math changes; only the
+// pixel density of what gets drawn into it does. Changing a canvas's width/height attribute
+// always resets its content AND its transform, so every context gets its renderScale transform
+// re-applied here, and callers are responsible for re-rendering (rebuildAllLayers + redraw)
+// afterward — this function only reallocates, it never draws.
+function resizeRenderTargets(){
+  const pw=Math.round(W*renderScale),ph=Math.round(H*renderScale);
+  canvas.width=pw;canvas.height=ph;canvas.style.width=W+'px';canvas.style.height=H+'px';
+  ctx.setTransform(renderScale,0,0,renderScale,0,0);
+  displayCanvas.width=pw;displayCanvas.height=ph;
+  displayCtx.setTransform(renderScale,0,0,renderScale,0,0);
+  layers.forEach(l=>{l.dcanvas.width=pw;l.dcanvas.height=ph;l.dctx.setTransform(renderScale,0,0,renderScale,0,0);});
+}
+let renderScaleTimer=null;
+function commitRenderScale(newScale){
+  renderScale=newScale;
+  resizeRenderTargets();
+  // Reallocating a canvas always wipes it, so every dcanvas (and displayCanvas, built from them)
+  // needs its content replayed from the strokes that are the actual source of truth — exactly
+  // what rebuildAllLayers already does; skipped only at the very first boot() call, before any
+  // layer exists yet, when there's nothing to replay and nothing on screen anyway.
+  if(layers.length){rebuildAllLayers();redraw();}
+}
+function applyTransform(){
+  const newScale=computeRenderScale();
+  if(newScale!==renderScale){
+    if(!layers.length){
+      commitRenderScale(newScale); // boot-time: nothing to rebuild yet, no reason to debounce
+    }else{
+      // A live pinch gesture can sweep across several buckets in quick succession — debounce so
+      // a fast pinch collapses into ONE rebuild at wherever the gesture actually settles, rather
+      // than re-stamping every stroke's dabs several times in under a second. The view keeps
+      // showing the previous (still perfectly valid, just not-yet-as-sharp) resolution during the
+      // gesture itself and snaps crisp once it pauses.
+      clearTimeout(renderScaleTimer);
+      renderScaleTimer=setTimeout(()=>commitRenderScale(newScale),120);
+    }
+  }
+  canvas.style.transform=`translate(calc(-50% + ${panX}px), calc(-50% + ${panY}px)) scale(${zoom}) rotate(${rot}deg)`;$('zoomPill').textContent=Math.round(zoom*100)+'%';$('rotateChip').textContent='Canvas '+Math.round(rot)+'°';updateSelectionBox();updateSymAxis();if(pathEditNodes)renderPathNodeOverlay();
+}
 function screenToCanvas(x,y){const r=canvas.getBoundingClientRect();const cx=x-(r.left+r.width/2),cy=y-(r.top+r.height/2);const a=-rot*Math.PI/180;const ux=(cx*Math.cos(a)-cy*Math.sin(a))/zoom+W/2;const uy=(cx*Math.sin(a)+cy*Math.cos(a))/zoom+H/2;return {x:ux,y:uy};}
 function canvasToScreen(x,y){const rect=canvas.getBoundingClientRect(),wrapRect=wrap.getBoundingClientRect();const cx=rect.left+rect.width/2-wrapRect.left,cy=rect.top+rect.height/2-wrapRect.top;const a=rot*Math.PI/180;const px=(x-W/2)*zoom,py=(y-H/2)*zoom;return {x:cx+px*Math.cos(a)-py*Math.sin(a),y:cy+px*Math.sin(a)+py*Math.cos(a)};}
-function redraw(){if(redraw._q)return;redraw._q=requestAnimationFrame(()=>{redraw._q=0;updateComposite();ctx.clearRect(0,0,W,H);ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);drawBackground();drawTraces();if(showTiling)drawTiles();else{ctx.drawImage(compositeCanvas,0,0);if(liveActive)ctx.drawImage(liveLayer,0,0);}drawPlaced();drawStrokeSelection();if(showGuides)drawGuides();updateSelectionBox();});}
+function redraw(){if(redraw._q)return;redraw._q=requestAnimationFrame(()=>{redraw._q=0;updateComposite();updateDisplayComposite();ctx.clearRect(0,0,W,H);ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);drawBackground();drawTraces();if(showTiling)drawTiles();else{ctx.drawImage(displayCanvas,0,0,W,H);if(liveActive)ctx.drawImage(liveLayer,0,0);}drawPlaced();drawStrokeSelection();if(showGuides)drawGuides();updateSelectionBox();});}
 // A pattern (e.g. exported from Magic Builder) loaded as the base of the design - unlike Trace
 // Reference (a non-exported, freely-scaled/positioned tracing guide), this is sized to exactly
 // fill the guide-square tile, tiles using the same repeat offsets as the hand-drawn layer/motifs
@@ -492,7 +579,7 @@ function drawBackground(){if(!bgImg||!bgShown)return;ctx.save();ctx.globalAlpha=
 function drawGuides(){ctx.save();ctx.strokeStyle='rgba(54,60,110,.18)';ctx.lineWidth=3;for(let x=C;x<=C+TILE;x+=TILE/4){ctx.beginPath();ctx.moveTo(x,C);ctx.lineTo(x,C+TILE);ctx.stroke()}for(let y=C;y<=C+TILE;y+=TILE/4){ctx.beginPath();ctx.moveTo(C,y);ctx.lineTo(C+TILE,y);ctx.stroke()}ctx.strokeStyle='rgba(65,70,130,.62)';ctx.lineWidth=5;ctx.strokeRect(C,C,TILE,TILE);if(symMode!=='off'){ctx.strokeStyle='rgba(223,111,165,.75)';ctx.lineWidth=3;ctx.setLineDash([14,10]);if(symMode==='vertical'||symMode==='quad'||symMode==='diamond'){ctx.beginPath();ctx.moveTo(symX,C);ctx.lineTo(symX,C+TILE);ctx.stroke()}if(symMode==='horizontal'||symMode==='quad'||symMode==='diamond'){ctx.beginPath();ctx.moveTo(C,symY);ctx.lineTo(C+TILE,symY);ctx.stroke()}if(symMode==='diamond'){ctx.beginPath();ctx.moveTo(C,symY-(symX-C));ctx.lineTo(C+TILE,symY+(C+TILE-symX));ctx.stroke();ctx.beginPath();ctx.moveTo(C,symY+(symX-C));ctx.lineTo(C+TILE,symY-(C+TILE-symX));ctx.stroke();}}ctx.restore();}
 function drawTraces(){traces.forEach(t=>{ctx.save();ctx.globalAlpha=t.opacity;t.w=t.img.width*t.scale;t.h=t.img.height*t.scale;ctx.drawImage(t.img,t.x-t.w/2,t.y-t.h/2,t.w,t.h);ctx.restore();});}
 function offsets(){let arr=[[0,0]];if(!showTiling)return arr;for(let ix=-1;ix<=1;ix++)for(let iy=-1;iy<=1;iy++){let ox=ix*TILE,oy=iy*TILE;if(layout==='halfDrop'&&ix%2)oy+=TILE/2;if(layout==='halfBrick'&&iy%2)ox+=TILE/2;if(layout==='diamond'){ox+=iy*TILE/2}if(!(ix===0&&iy===0))arr.push([ox,oy]);}return arr;}
-function drawTiles(){offsets().forEach(([ox,oy])=>{ctx.drawImage(compositeCanvas,ox,oy);if(liveActive)ctx.drawImage(liveLayer,ox,oy);});}
+function drawTiles(){offsets().forEach(([ox,oy])=>{ctx.drawImage(displayCanvas,ox,oy,W,H);if(liveActive)ctx.drawImage(liveLayer,ox,oy);});}
 // Point-to-polyline distance, used for both stroke picking (selectAt) and eraser hit-testing
 // (eraseAt) — a stroke is "hit" when the tapped/erased point comes within a small threshold of
 // ANY of its segments, not just its endpoints.
@@ -2459,7 +2546,17 @@ boot();
 // Read-only introspection for debugging/testing — mirrors the small hooks already used for
 // Seamlessly Creative suite integration (see the bottom of this file once frozen into the
 // suite), just exposed unconditionally here since it's harmless and useful standalone too.
-window.__sketchpadGetState=()=>({strokeCount:strokes.length,strokes,placed,motifs,activeBrushId,eraserActive,selectedStrokeId,layout,layers:layers.map(l=>({id:l.id,name:l.name,visible:l.visible,locked:l.locked,opacity:l.opacity})),activeLayerId,pathEditStrokeId,pathEditNodes,pathEditClosed,copiedBrushStyle,continueStrokeId,joinPendingStrokeId,paintMode,paintInsideTargetId,armedShapeType,constrainShape,holdTriggered,holdCorrectedShape,currentPointsLength:currentPoints.length});
+window.__sketchpadGetState=()=>({strokeCount:strokes.length,strokes,placed,motifs,activeBrushId,eraserActive,selectedStrokeId,layout,layers:layers.map(l=>({id:l.id,name:l.name,visible:l.visible,locked:l.locked,opacity:l.opacity})),activeLayerId,pathEditStrokeId,pathEditNodes,pathEditClosed,copiedBrushStyle,continueStrokeId,joinPendingStrokeId,paintMode,paintInsideTargetId,armedShapeType,constrainShape,holdTriggered,holdCorrectedShape,currentPointsLength:currentPoints.length,zoom,renderScale,canvasBackingWidth:canvas.width,displayBackingWidth:displayCanvas.width});
+// Test-only: drives the exact same zoom -> renderScale -> applyTransform path real two-finger
+// pinch-zoom uses, without needing to simulate a real multitouch gesture. skipDebounce bypasses
+// the (production, intentional) 120ms pinch-settle debounce so a test can assert on the
+// re-rendered result immediately instead of waiting out the debounce window.
+window.__sketchpadSetZoom=(z,skipDebounce)=>{
+  zoom=Math.min(4,Math.max(.2,z));
+  if(skipDebounce)clearTimeout(renderScaleTimer);
+  applyTransform();
+  if(skipDebounce){const ns=computeRenderScale();if(ns!==renderScale)commitRenderScale(ns);}
+};
 // Test-only hook exposing recognizeShape() directly for unit-style checks of the recognizer's
 // confidence thresholds on a raw point set, without needing to drive a real 420ms Pencil hold —
 // the real interaction (debounce timer, rAF snap animation, adjust-while-holding, commit) is
