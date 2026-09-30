@@ -40,7 +40,7 @@ body.theme-light{
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overflow:hidden;background:var(--pageBg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;touch-action:none;transition:background .2s ease,color .2s ease}
 button,input,select{font:inherit}
-.app{height:100vh;display:flex;gap:12px;padding:12px}
+.app{height:100vh;display:flex;gap:8px;padding:8px}
 .sidebar{width:300px;max-width:32vw;background:var(--sideBg);border:1px solid var(--line);border-radius:24px;padding:14px;overflow:auto;display:flex;flex-direction:column;gap:12px}
 .section{background:var(--cardBg);border:1px solid var(--cardBorder);border-radius:16px;padding:12px}
 .section-title{font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:var(--pink);font-weight:800;margin-bottom:10px}
@@ -59,22 +59,23 @@ input[type=range]{accent-color:var(--pink)}
 .upload.accentBg{background:var(--accentCoral);border-style:solid}
 .upload.accentPurple{background:var(--accentPurple);border-style:solid}
 .upload.accentTeal{background:var(--accentTeal);border-style:solid}
-.workspace{flex:1;display:flex;flex-direction:column;background:var(--sideBg);border:1px solid var(--line);border-radius:24px;overflow:hidden}
-.toolbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap;padding:14px;background:var(--toolbarBg);border-bottom:1px solid var(--line)}
+/* No card/frame here on purpose — the drawing workspace should read as open space, not a document
+   sitting inside a panel. Only the toolbar strip above it and the tile boundary drawn on the
+   canvas itself should read as "edges"; everything else is neutral background. */
+.workspace{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;padding:6px 10px;background:var(--toolbarBg);border-bottom:1px solid var(--line)}
 .toolbar-spacer{flex:1}
 .pill{background:rgba(255,142,214,.10);border:1px solid rgba(255,142,214,.25);border-radius:999px;padding:8px 12px;color:var(--text);font-size:13px;font-weight:900}
-/* canvasViewportOuter: the real available drawing area (fills whatever space the toolbar/panel
-   leave) — this is what actually responds when the sidebar collapses or the window resizes.
-   canvas-wrap sits centered inside it at a JS-computed FIXED size (see updateBaseScale) — that
-   fixed size is the "camera window", deliberately smaller than the outer area so it never just
-   grows to show more of the padded document as the workspace grows; it only grows to make the
-   SAME tile-sized view bigger. Letterboxing (plain background) either side of a square window in
-   a wide viewport is expected, not wasted space — a square tile in a square window is what keeps
-   "how much repeat shows" consistent regardless of the workspace's own aspect ratio. */
+/* canvasViewportOuter: the neutral workspace — it fills whatever space the toolbar/panel leave
+   (this is what actually responds when the sidebar collapses or the window resizes) and its
+   plain background IS the "outside the tile" area edge clones sit against. canvasWrap now fills
+   this entire rectangle (see updateBaseScale) — there's no letterboxed card floating inside it;
+   the only boundary that should read as a real edge is the tile outline drawn on the canvas
+   itself (drawTileBoundary), not any DOM frame around it. */
 .canvas-viewport-outer{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;background-color:var(--bg);background-image:var(--workBg);background-size:var(--workBgSize)}
 .canvas-wrap{position:relative;background:transparent;overflow:hidden;touch-action:none}
-.status{padding:9px 12px;text-align:center;color:var(--muted);font-size:13px;background:var(--sideBg);border-top:1px solid var(--line)}
-canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-action:none;image-rendering:auto;box-shadow:0 14px 35px rgba(0,0,0,.35)}
+.status{padding:5px 12px;text-align:center;color:var(--muted);font-size:12px;background:var(--toolbarBg);border-top:1px solid var(--line)}
+canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-action:none;image-rendering:auto}
 .motif-tray{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 .motif-card{position:relative;background:var(--cardBg);border-radius:15px;padding:8px;border:2px solid transparent}
 .motif-card.active{border-color:var(--pink)}
@@ -170,7 +171,7 @@ canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-a
 /* Narrow viewports get tighter spacing only — text, buttons, sliders and controls stay at their
    normal readable size regardless of screen width; the collapsible panel (not a smaller font) is
    how this app makes room on a small screen. */
-@media(max-width:900px){.app{padding:8px;gap:8px}.sidebar{width:270px}.toolbar{padding:10px}}
+@media(max-width:900px){.sidebar{width:270px}}
 </style>
 </head>
 <body>
@@ -2532,7 +2533,7 @@ $('sidebarToggleBtn').onclick=()=>setSidebarCollapsed(!sidebarCollapsed);
 const EDGE_CLONE_MARGIN=TILE*0.06; // ~6% of the tile on each side — a real neighbour peeking in, not a full extra repeat
 const VIEW_WINDOW_UNITS=TILE+EDGE_CLONE_MARGIN*2;
 function updateBaseScale(){
-  const availW=viewportOuter.clientWidth-32,availH=viewportOuter.clientHeight-32;
+  const availW=viewportOuter.clientWidth-12,availH=viewportOuter.clientHeight-12;
   if(availW<=0||availH<=0)return;
   wrap.style.width=availW+'px';
   wrap.style.height=availH+'px';
