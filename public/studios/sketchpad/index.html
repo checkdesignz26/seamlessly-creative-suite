@@ -63,7 +63,16 @@ input[type=range]{accent-color:var(--pink)}
 .toolbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap;padding:14px;background:var(--toolbarBg);border-bottom:1px solid var(--line)}
 .toolbar-spacer{flex:1}
 .pill{background:rgba(255,142,214,.10);border:1px solid rgba(255,142,214,.25);border-radius:999px;padding:8px 12px;color:var(--text);font-size:13px;font-weight:900}
-.canvas-wrap{position:relative;flex:1;background-color:var(--bg);background-image:var(--workBg);background-size:var(--workBgSize);overflow:hidden;touch-action:none}
+/* canvasViewportOuter: the real available drawing area (fills whatever space the toolbar/panel
+   leave) — this is what actually responds when the sidebar collapses or the window resizes.
+   canvas-wrap sits centered inside it at a JS-computed FIXED size (see updateBaseScale) — that
+   fixed size is the "camera window", deliberately smaller than the outer area so it never just
+   grows to show more of the padded document as the workspace grows; it only grows to make the
+   SAME tile-sized view bigger. Letterboxing (plain background) either side of a square window in
+   a wide viewport is expected, not wasted space — a square tile in a square window is what keeps
+   "how much repeat shows" consistent regardless of the workspace's own aspect ratio. */
+.canvas-viewport-outer{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;background-color:var(--bg);background-image:var(--workBg);background-size:var(--workBgSize)}
+.canvas-wrap{position:relative;background:transparent;overflow:hidden;touch-action:none}
 .status{padding:9px 12px;text-align:center;color:var(--muted);font-size:13px;background:var(--sideBg);border-top:1px solid var(--line)}
 canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-action:none;image-rendering:auto;box-shadow:0 14px 35px rgba(0,0,0,.35)}
 .motif-tray{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
@@ -280,7 +289,7 @@ canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-a
   <button id="sidebarToggleBtn" class="sidebar-toggle" title="Hide tools panel">‹</button>
   <main class="workspace">
     <div class="toolbar"><button id="undoBtn" class="tool-btn">↩️ Undo</button><button id="redoBtn" class="tool-btn">↪️ Redo</button><div id="zoomPill" class="pill">100%</div><button id="resetRot" class="tool-btn">0° Rotation</button><button id="guidesBtn" class="tool-btn active">📐 Guides</button><button id="paintModePill" class="pill" style="display:none;cursor:pointer;">🎨 Paint Inside — tap for Free Paint</button><button id="editMotifBar" class="pill" style="display:none;cursor:pointer;background:var(--accentTeal);border:1px solid rgba(92,184,171,.5);font:inherit;">✏️ Editing: <span id="editMotifBarName"></span> — tap Done</button><div class="toolbar-spacer"></div><button id="viewToggleBtn" class="tool-btn">⋯ View</button><button id="exportBtn" class="tool-btn primary">📸 Export</button></div>
-    <div id="canvasWrap" class="canvas-wrap"><div id="viewPopover" class="sym-pop"><div class="section-title">🧭 Canvas / View</div><button id="symToggle" class="tool-btn" style="width:100%;margin-bottom:10px;">🦋 Symmetry Off</button><div class="row" style="margin-bottom:10px;"><button id="tilingBtn" class="tool-btn active" style="flex:1">Tiling On</button><div id="layoutPill" class="pill">📍 Grid Mode</div></div><button id="themeToggle" class="tool-btn" style="width:100%;margin-bottom:10px;">☀️ Light Mode</button><button id="clearDrawing" class="btn mini danger" style="width:100%;margin-bottom:10px;">Clear Drawing</button><button id="viewCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="symPopover" class="sym-pop"><div class="section-title">🦋 Symmetry</div><div class="grid"><button class="sym-btn btn active" data-sym="off">Off</button><button class="sym-btn btn" data-sym="vertical">Vertical</button><button class="sym-btn btn" data-sym="horizontal">Horizontal</button><button class="sym-btn btn" data-sym="quad">Quad</button><button class="sym-btn btn" data-sym="diamond">Diamond</button></div><div class="slider-row"><label>Axis X</label><input id="symX" type="range" min="0" max="1800" value="900"><span id="symXVal">50%</span></div><div class="slider-row"><label>Axis Y</label><input id="symY" type="range" min="0" max="1800" value="900"><span id="symYVal">50%</span></div><div class="row"><button id="symCentre" class="btn mini">Centre Axis</button><button id="symClose" class="btn mini">Done</button></div><div class="hint">Move the mirror point to make flowers, leaves and playful asymmetric symmetry.</div></div><canvas id="canvas" width="1800" height="1800"></canvas><div id="selectionBox" class="selection-box"><div id="resizeHandle" class="handle"></div><div id="rotateHandle" class="rotHandle"></div></div><div id="symAxis" class="sym-axis"></div><div id="rotateChip" class="rotate-chip">Canvas 0°</div><div id="pathNodeOverlay"></div><div id="pathEditBar" class="sym-pop" style="display:none;">
+    <div id="canvasViewportOuter" class="canvas-viewport-outer"><div id="canvasWrap" class="canvas-wrap"><div id="viewPopover" class="sym-pop"><div class="section-title">🧭 Canvas / View</div><button id="symToggle" class="tool-btn" style="width:100%;margin-bottom:10px;">🦋 Symmetry Off</button><div class="row" style="margin-bottom:10px;"><button id="tilingBtn" class="tool-btn active" style="flex:1">Tiling On</button><div id="layoutPill" class="pill">📍 Grid Mode</div></div><button id="themeToggle" class="tool-btn" style="width:100%;margin-bottom:10px;">☀️ Light Mode</button><button id="clearDrawing" class="btn mini danger" style="width:100%;margin-bottom:10px;">Clear Drawing</button><button id="viewCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="symPopover" class="sym-pop"><div class="section-title">🦋 Symmetry</div><div class="grid"><button class="sym-btn btn active" data-sym="off">Off</button><button class="sym-btn btn" data-sym="vertical">Vertical</button><button class="sym-btn btn" data-sym="horizontal">Horizontal</button><button class="sym-btn btn" data-sym="quad">Quad</button><button class="sym-btn btn" data-sym="diamond">Diamond</button></div><div class="slider-row"><label>Axis X</label><input id="symX" type="range" min="0" max="1800" value="900"><span id="symXVal">50%</span></div><div class="slider-row"><label>Axis Y</label><input id="symY" type="range" min="0" max="1800" value="900"><span id="symYVal">50%</span></div><div class="row"><button id="symCentre" class="btn mini">Centre Axis</button><button id="symClose" class="btn mini">Done</button></div><div class="hint">Move the mirror point to make flowers, leaves and playful asymmetric symmetry.</div></div><canvas id="canvas" width="1800" height="1800"></canvas><div id="selectionBox" class="selection-box"><div id="resizeHandle" class="handle"></div><div id="rotateHandle" class="rotHandle"></div></div><div id="symAxis" class="sym-axis"></div><div id="rotateChip" class="rotate-chip">Canvas 0°</div><div id="pathNodeOverlay"></div><div id="pathEditBar" class="sym-pop" style="display:none;">
   <div class="section-title">✎ Edit Path</div>
   <div class="row"><button id="nodeSmoothBtn" class="btn mini">⌒ Smooth</button><button id="nodeCornerBtn" class="btn mini">⌐ Corner</button></div>
   <div class="row" style="margin-top:6px;">
@@ -299,7 +308,7 @@ canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-a
   <div class="section-title">⋈ Choose Endpoint to Join</div>
   <div class="hint">The gold node is the endpoint you're joining from. Tap any pulsing green endpoint to connect it there.</div>
   <button id="joinCancelBtn" class="btn mini" style="width:100%;margin-top:10px;">✕ Cancel</button>
-</div></div>
+</div></div></div>
     <div id="status" class="status">✨ Apple Pencil draws | one finger protected | two fingers pan/pinch/rotate | two-finger tap Undo | three-finger tap Redo | Capture Motif saves drawing ✨</div>
   </main>
 </div>
@@ -307,7 +316,7 @@ canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-a
 <script>
 (()=>{
 'use strict';
-const canvas=document.getElementById('canvas'),ctx=canvas.getContext('2d'),wrap=document.getElementById('canvasWrap');
+const canvas=document.getElementById('canvas'),ctx=canvas.getContext('2d'),wrap=document.getElementById('canvasWrap'),viewportOuter=document.getElementById('canvasViewportOuter');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=true,layout='grid',mode='draw';
 // ---- Display resolution (crisp vector strokes at any zoom) ----------------------------------
 // Every stroke is stored as vector point data and rasterised by stamping dabs with plain canvas
@@ -2490,26 +2499,38 @@ function setSidebarCollapsed(collapsed){
   updateBaseScale();
 }
 $('sidebarToggleBtn').onclick=()=>setSidebarCollapsed(!sidebarCollapsed);
-// ---- What "100% zoom" actually means --------------------------------------------------------
-// baseScale is the CSS-px-per-canvas-unit factor that makes zoom=1 (100%) show the repeat TILE
-// at a comfortable, ALWAYS-CURRENT-VIEWPORT-FITTING size — not "1 canvas unit = 1 CSS px" (which
-// on an 1800x1800 document made 100% mean "zoomed in far past the edge of the screen"). The
-// actual on-screen scale everywhere is zoom*baseScale: `zoom` is purely the user's own pinch
-// multiplier on top of that (starts at 1, changed only by a real pinch — see touchstart/touchmove
-// below), while baseScale is recomputed from the CURRENT workspace size (boot, panel collapse/
-// expand, window resize) and never by user action, so the two can never fight each other. Neither
-// the document (W/H/TILE) nor the repeat/tiling logic itself changes — this only changes how much
-// of it a given zoom number shows on screen. (baseScale itself is declared up near renderScale.)
+// ---- What "100% zoom" actually means: a fixed-size camera window, not a bigger scale factor ---
+//
+// The bug in the first attempt at this: baseScale was sized to fill the workspace, but the CROP
+// came from whatever size canvasWrap happened to be (the full flex:1 remaining space) — on a wide
+// landscape workspace that's much wider than it is tall, so a LOT of horizontal neighbouring
+// repeat still showed at "100%", not just an edge clone.
+//
+// The fix is a real two-part camera, matching how camera/viewport zoom actually works: a FIXED-
+// SIZE window (canvasWrap itself, sized in JS below to VIEW_WINDOW_PX — a near-square box that
+// fills most of canvasViewportOuter, recomputed only when the WORKSPACE changes size: boot, panel
+// collapse/expand, window resize) looking at DOCUMENT CONTENT that scales behind it. `zoom` never
+// changes the window's own size — only how many canvas units fit inside that fixed window, via
+// baseScale = VIEW_WINDOW_PX / windowUnits, where windowUnits = TILE + a modest fixed margin (the
+// "necessary edge clones"). At zoom=1 exactly windowUnits worth of document is visible; at
+// zoom=0.5, TWICE as many canvas units fit in that SAME fixed window (so more of the surrounding
+// tiling becomes visible, each unit just takes up less screen space) — that inverse relationship
+// is what makes zooming out progressively reveal the wider repeat, and zooming in progressively
+// crop into fine detail, exactly as asked. Neither W/H/TILE nor any repeat/tiling/export
+// calculation changes — this is purely how big a fixed viewport window is and what scale factor
+// it renders the SAME document at.
+const EDGE_CLONE_MARGIN=TILE*0.12; // ~12% of the tile on each side — a real neighbour peeking in, not a full extra repeat
+const VIEW_WINDOW_UNITS=TILE+EDGE_CLONE_MARGIN*2;
 function updateBaseScale(){
-  const availW=wrap.clientWidth-32,availH=wrap.clientHeight-32;
+  const availW=viewportOuter.clientWidth-32,availH=viewportOuter.clientHeight-32;
   if(availW<=0||availH<=0)return;
-  // The TILE (the actual repeat unit, not the full padded document) fills ~85% of the smaller
-  // workspace dimension at 100% — comfortably large to draw on, with just enough of its own
-  // neighbouring repeat visible at the cropped edges to see how it tiles, not a wide surrounding
-  // preview. Zooming below 100% (smaller baseScale x zoom) reveals more of that wider tiling;
-  // above 100% zooms past it into fine editing detail — exactly the brief's three bands.
-  const fitPx=Math.min(availW,availH)*0.85;
-  baseScale=Math.max(.05,fitPx/TILE);
+  // The window itself is a near-square box filling ~94% of the SMALLER outer dimension — square
+  // because the tile it's framing is square; the outer flex container centres it, so any leftover
+  // width in a wide landscape workspace is plain background either side, not more visible canvas.
+  const windowPx=Math.max(80,Math.min(availW,availH)*0.94);
+  wrap.style.width=windowPx+'px';
+  wrap.style.height=windowPx+'px';
+  baseScale=Math.max(.02,windowPx/VIEW_WINDOW_UNITS);
   applyTransform();
 }
 window.addEventListener('resize',updateBaseScale);
