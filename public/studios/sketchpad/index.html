@@ -666,7 +666,7 @@ $('templateImportInput').onchange=e=>{
 };
 // Fills the selected empty slot if there is one, else the first remaining empty slot, else
 // (no template active, or all slots filled) falls back to a plain free-placed motif.
-function placeMotif(motifId,img){
+function placeMotif(motifId,img,returnToDraw){
  let slot=placed.find(p=>p.id===selected&&!p.img)||placed.find(p=>!p.img);
  if(slot){
   const boxW=slot.boxW||slot.w,boxH=slot.boxH||slot.h,fit=Math.min(boxW/img.width,boxH/img.height);
@@ -675,7 +675,15 @@ function placeMotif(motifId,img){
   placed.push({id:crypto.randomUUID(),motifId,img,x:W/2,y:H/2,w:Math.min(320,img.width),h:Math.min(320,img.height),s:1,r:0,fx:1,fy:1});
   selected=placed[placed.length-1].id;
  }
- mode='edit';syncMode();pushHist();redraw();updateSelectedControls();
+ // Placing a motif normally switches to Edit Mode so the just-placed instance can be dragged/
+ // resized right away — the right default when the user explicitly picked a motif to place.
+ // Capture Motif is different: it passes returnToDraw=true because the user was mid-drawing and
+ // capturing is meant to be a checkpoint, not a stop — landing in Edit Mode there would silently
+ // swallow their very next pointer gesture as "select/drag the new motif" instead of starting a
+ // new stroke, discarding it with no error and nothing to show for it. The new instance stays
+ // `selected` either way, so its sidebar controls (Edit Motif/Duplicate/Make Independent) are
+ // available immediately regardless of which mode the canvas itself ends up in.
+ mode=returnToDraw?'draw':'edit';syncMode();pushHist();redraw();updateSelectedControls();
 }
 // Same point-transform math as the original app's symmetryPairs (segment pairs -> per-point,
 // since the transforms are uniform along a segment either way) — one transform function per
@@ -908,7 +916,9 @@ function captureMotif(){
     layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity}))),
     bounds:preview.bounds,
   };
-  addMotif(preview.src,'Motif '+(motifs.length+1),true,source);
+  // returnToDraw=true: the user was mid-drawing when they captured — see the comment on
+  // placeMotif() for why capture must NOT silently strand the canvas in Edit Mode afterward.
+  addMotif(preview.src,'Motif '+(motifs.length+1),true,source,true);
   strokes=[];rebuildAllLayers();selectedStrokeId=null;syncStrokeSelectionUI();pushHist();redraw();
   setStatus('✂️ Captured as an editable motif and cleared the canvas — select it and tap Edit Motif any time to return to it.');
 }
@@ -917,12 +927,12 @@ function captureMotif(){
 // null for a motif created before this architecture existed (a legacy, preview-only motif) or one
 // deliberately without editable data; Edit Motif checks for that and refuses cleanly rather than
 // inventing vector information that was never actually captured.
-function addMotif(src,name,placeNow=false,source=null){
+function addMotif(src,name,placeNow=false,source=null,returnToDraw=false){
   const img=new Image();
   img.onload=()=>{
     const entry={id:crypto.randomUUID(),img,src,name,source};
     motifs.push(entry);
-    if(placeNow)placeMotif(entry.id,img);
+    if(placeNow)placeMotif(entry.id,img,returnToDraw);
     renderTray();pushHist();redraw();
   };
   img.src=src;
