@@ -167,7 +167,10 @@ canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-a
    of Symmetry's left-side one. */
 #viewPopover{left:auto;right:12px}
 #viewPopover:before{left:auto;right:44px}
-@media(max-width:900px){.app{padding:8px;gap:8px}.sidebar{width:270px}.btn,.tool-btn{font-size:12px;padding:9px 11px}.toolbar{padding:10px}}
+/* Narrow viewports get tighter spacing only — text, buttons, sliders and controls stay at their
+   normal readable size regardless of screen width; the collapsible panel (not a smaller font) is
+   how this app makes room on a small screen. */
+@media(max-width:900px){.app{padding:8px;gap:8px}.sidebar{width:270px}.toolbar{padding:10px}}
 </style>
 </head>
 <body>
@@ -288,7 +291,7 @@ canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-a
   </aside>
   <button id="sidebarToggleBtn" class="sidebar-toggle" title="Hide tools panel">‹</button>
   <main class="workspace">
-    <div class="toolbar"><button id="undoBtn" class="tool-btn">↩️ Undo</button><button id="redoBtn" class="tool-btn">↪️ Redo</button><div id="zoomPill" class="pill">100%</div><button id="resetRot" class="tool-btn">0° Rotation</button><button id="guidesBtn" class="tool-btn active">📐 Guides</button><button id="paintModePill" class="pill" style="display:none;cursor:pointer;">🎨 Paint Inside — tap for Free Paint</button><button id="editMotifBar" class="pill" style="display:none;cursor:pointer;background:var(--accentTeal);border:1px solid rgba(92,184,171,.5);font:inherit;">✏️ Editing: <span id="editMotifBarName"></span> — tap Done</button><div class="toolbar-spacer"></div><button id="viewToggleBtn" class="tool-btn">⋯ View</button><button id="exportBtn" class="tool-btn primary">📸 Export</button></div>
+    <div class="toolbar"><button id="undoBtn" class="tool-btn">↩️ Undo</button><button id="redoBtn" class="tool-btn">↪️ Redo</button><div id="zoomPill" class="pill">100%</div><button id="resetRot" class="tool-btn">0° Rotation</button><button id="guidesBtn" class="tool-btn">📐 Guides</button><button id="paintModePill" class="pill" style="display:none;cursor:pointer;">🎨 Paint Inside — tap for Free Paint</button><button id="editMotifBar" class="pill" style="display:none;cursor:pointer;background:var(--accentTeal);border:1px solid rgba(92,184,171,.5);font:inherit;">✏️ Editing: <span id="editMotifBarName"></span> — tap Done</button><div class="toolbar-spacer"></div><button id="viewToggleBtn" class="tool-btn">⋯ View</button><button id="exportBtn" class="tool-btn primary">📸 Export</button></div>
     <div id="canvasViewportOuter" class="canvas-viewport-outer"><div id="canvasWrap" class="canvas-wrap"><div id="viewPopover" class="sym-pop"><div class="section-title">🧭 Canvas / View</div><button id="symToggle" class="tool-btn" style="width:100%;margin-bottom:10px;">🦋 Symmetry Off</button><div class="row" style="margin-bottom:10px;"><button id="tilingBtn" class="tool-btn active" style="flex:1">Tiling On</button><div id="layoutPill" class="pill">📍 Grid Mode</div></div><button id="themeToggle" class="tool-btn" style="width:100%;margin-bottom:10px;">☀️ Light Mode</button><button id="clearDrawing" class="btn mini danger" style="width:100%;margin-bottom:10px;">Clear Drawing</button><button id="viewCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="symPopover" class="sym-pop"><div class="section-title">🦋 Symmetry</div><div class="grid"><button class="sym-btn btn active" data-sym="off">Off</button><button class="sym-btn btn" data-sym="vertical">Vertical</button><button class="sym-btn btn" data-sym="horizontal">Horizontal</button><button class="sym-btn btn" data-sym="quad">Quad</button><button class="sym-btn btn" data-sym="diamond">Diamond</button></div><div class="slider-row"><label>Axis X</label><input id="symX" type="range" min="0" max="1800" value="900"><span id="symXVal">50%</span></div><div class="slider-row"><label>Axis Y</label><input id="symY" type="range" min="0" max="1800" value="900"><span id="symYVal">50%</span></div><div class="row"><button id="symCentre" class="btn mini">Centre Axis</button><button id="symClose" class="btn mini">Done</button></div><div class="hint">Move the mirror point to make flowers, leaves and playful asymmetric symmetry.</div></div><canvas id="canvas" width="1800" height="1800"></canvas><div id="selectionBox" class="selection-box"><div id="resizeHandle" class="handle"></div><div id="rotateHandle" class="rotHandle"></div></div><div id="symAxis" class="sym-axis"></div><div id="rotateChip" class="rotate-chip">Canvas 0°</div><div id="pathNodeOverlay"></div><div id="pathEditBar" class="sym-pop" style="display:none;">
   <div class="section-title">✎ Edit Path</div>
   <div class="row"><button id="nodeSmoothBtn" class="btn mini">⌒ Smooth</button><button id="nodeCornerBtn" class="btn mini">⌐ Corner</button></div>
@@ -317,7 +320,7 @@ canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-a
 (()=>{
 'use strict';
 const canvas=document.getElementById('canvas'),ctx=canvas.getContext('2d'),wrap=document.getElementById('canvasWrap'),viewportOuter=document.getElementById('canvasViewportOuter');
-const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=true,layout='grid',mode='draw';
+const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
 // ---- Display resolution (crisp vector strokes at any zoom) ----------------------------------
 // Every stroke is stored as vector point data and rasterised by stamping dabs with plain canvas
 // primitives (BrushEngine.renderStroke -> ctx.arc/gradient fills) — genuinely resolution-
@@ -600,13 +603,17 @@ function applyTransform(){
 }
 function screenToCanvas(x,y){const r=canvas.getBoundingClientRect();const cx=x-(r.left+r.width/2),cy=y-(r.top+r.height/2);const a=-rot*Math.PI/180;const s=zoom*baseScale;const ux=(cx*Math.cos(a)-cy*Math.sin(a))/s+W/2;const uy=(cx*Math.sin(a)+cy*Math.cos(a))/s+H/2;return {x:ux,y:uy};}
 function canvasToScreen(x,y){const rect=canvas.getBoundingClientRect(),wrapRect=wrap.getBoundingClientRect();const cx=rect.left+rect.width/2-wrapRect.left,cy=rect.top+rect.height/2-wrapRect.top;const a=rot*Math.PI/180;const s=zoom*baseScale;const px=(x-W/2)*s,py=(y-H/2)*s;return {x:cx+px*Math.cos(a)-py*Math.sin(a),y:cy+px*Math.sin(a)+py*Math.cos(a)};}
-function redraw(){if(redraw._q)return;redraw._q=requestAnimationFrame(()=>{redraw._q=0;updateComposite();updateDisplayComposite();ctx.clearRect(0,0,W,H);ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);drawBackground();drawTraces();if(showTiling)drawTiles();else{ctx.drawImage(displayCanvas,0,0,W,H);if(liveActive)ctx.drawImage(liveLayer,0,0);}drawPlaced();drawStrokeSelection();if(showGuides)drawGuides();updateSelectionBox();});}
+function redraw(){if(redraw._q)return;redraw._q=requestAnimationFrame(()=>{redraw._q=0;updateComposite();updateDisplayComposite();ctx.clearRect(0,0,W,H);ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);drawBackground();drawTraces();if(showTiling)drawTiles();else{ctx.drawImage(displayCanvas,0,0,W,H);if(liveActive)ctx.drawImage(liveLayer,0,0);}drawPlaced();drawStrokeSelection();drawTileBoundary();if(showGuides)drawGuides();updateSelectionBox();});}
 // A pattern (e.g. exported from Magic Builder) loaded as the base of the design - unlike Trace
 // Reference (a non-exported, freely-scaled/positioned tracing guide), this is sized to exactly
 // fill the guide-square tile, tiles using the same repeat offsets as the hand-drawn layer/motifs
 // so it stays aligned with everything drawn on top, and IS included in the final export.
 function drawBackground(){if(!bgImg||!bgShown)return;ctx.save();ctx.globalAlpha=bgOpacity;offsets().forEach(([ox,oy])=>ctx.drawImage(bgImg,C+ox,C+oy,TILE,TILE));ctx.restore();}
-function drawGuides(){ctx.save();ctx.strokeStyle='rgba(54,60,110,.18)';ctx.lineWidth=3;for(let x=C;x<=C+TILE;x+=TILE/4){ctx.beginPath();ctx.moveTo(x,C);ctx.lineTo(x,C+TILE);ctx.stroke()}for(let y=C;y<=C+TILE;y+=TILE/4){ctx.beginPath();ctx.moveTo(C,y);ctx.lineTo(C+TILE,y);ctx.stroke()}ctx.strokeStyle='rgba(65,70,130,.62)';ctx.lineWidth=5;ctx.strokeRect(C,C,TILE,TILE);if(symMode!=='off'){ctx.strokeStyle='rgba(223,111,165,.75)';ctx.lineWidth=3;ctx.setLineDash([14,10]);if(symMode==='vertical'||symMode==='quad'||symMode==='diamond'){ctx.beginPath();ctx.moveTo(symX,C);ctx.lineTo(symX,C+TILE);ctx.stroke()}if(symMode==='horizontal'||symMode==='quad'||symMode==='diamond'){ctx.beginPath();ctx.moveTo(C,symY);ctx.lineTo(C+TILE,symY);ctx.stroke()}if(symMode==='diamond'){ctx.beginPath();ctx.moveTo(C,symY-(symX-C));ctx.lineTo(C+TILE,symY+(C+TILE-symX));ctx.stroke();ctx.beginPath();ctx.moveTo(C,symY+(symX-C));ctx.lineTo(C+TILE,symY-(C+TILE-symX));ctx.stroke();}}ctx.restore();}
+// The tile boundary itself is always visible — it's how the camera-window view reads as "this is
+// the editable tile, everything outside it is a repeat edge-clone", independent of the optional
+// grid/guides overlay (which is off by default and purely a drawing aid).
+function drawTileBoundary(){ctx.save();ctx.strokeStyle='rgba(65,70,130,.62)';ctx.lineWidth=5;ctx.strokeRect(C,C,TILE,TILE);ctx.restore();}
+function drawGuides(){ctx.save();ctx.strokeStyle='rgba(54,60,110,.18)';ctx.lineWidth=3;for(let x=C;x<=C+TILE;x+=TILE/4){ctx.beginPath();ctx.moveTo(x,C);ctx.lineTo(x,C+TILE);ctx.stroke()}for(let y=C;y<=C+TILE;y+=TILE/4){ctx.beginPath();ctx.moveTo(C,y);ctx.lineTo(C+TILE,y);ctx.stroke()}if(symMode!=='off'){ctx.strokeStyle='rgba(223,111,165,.75)';ctx.lineWidth=3;ctx.setLineDash([14,10]);if(symMode==='vertical'||symMode==='quad'||symMode==='diamond'){ctx.beginPath();ctx.moveTo(symX,C);ctx.lineTo(symX,C+TILE);ctx.stroke()}if(symMode==='horizontal'||symMode==='quad'||symMode==='diamond'){ctx.beginPath();ctx.moveTo(C,symY);ctx.lineTo(C+TILE,symY);ctx.stroke()}if(symMode==='diamond'){ctx.beginPath();ctx.moveTo(C,symY-(symX-C));ctx.lineTo(C+TILE,symY+(C+TILE-symX));ctx.stroke();ctx.beginPath();ctx.moveTo(C,symY+(symX-C));ctx.lineTo(C+TILE,symY-(C+TILE-symX));ctx.stroke();}}ctx.restore();}
 function drawTraces(){traces.forEach(t=>{ctx.save();ctx.globalAlpha=t.opacity;t.w=t.img.width*t.scale;t.h=t.img.height*t.scale;ctx.drawImage(t.img,t.x-t.w/2,t.y-t.h/2,t.w,t.h);ctx.restore();});}
 function offsets(){let arr=[[0,0]];if(!showTiling)return arr;for(let ix=-1;ix<=1;ix++)for(let iy=-1;iy<=1;iy++){let ox=ix*TILE,oy=iy*TILE;if(layout==='halfDrop'&&ix%2)oy+=TILE/2;if(layout==='halfBrick'&&iy%2)ox+=TILE/2;if(layout==='diamond'){ox+=iy*TILE/2}if(!(ix===0&&iy===0))arr.push([ox,oy]);}return arr;}
 function drawTiles(){offsets().forEach(([ox,oy])=>{ctx.drawImage(displayCanvas,ox,oy,W,H);if(liveActive)ctx.drawImage(liveLayer,ox,oy);});}
@@ -2370,7 +2377,7 @@ bindTapButton($('breakPathBtn'),breakPathAtSelectedNode);
 bindTapButton($('simplifyPathBtn'),simplifyCurrentPath);
 $('moreSettingsToggle').onclick=()=>{const box=$('moreSettings');const showing=box.style.display!=='none';box.style.display=showing?'none':'block';$('moreSettingsToggle').textContent=showing?'⚙️ More Settings':'⚙️ Hide Settings';};
 renderBrushFamilies();syncRecents();syncFavorites();syncControlsFromSettings();
-document.querySelectorAll('.layout-btn').forEach(b=>b.onclick=()=>{document.querySelectorAll('.layout-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');layout=b.dataset.layout;$('layoutPill').textContent='📍 '+b.textContent+' Mode';redraw();});$('tilingBtn').onclick=()=>{showTiling=!showTiling;$('tilingBtn').classList.toggle('active',showTiling);$('tilingBtn').textContent=showTiling?'Tiling On':'Tiling Off';redraw();};$('guidesBtn').onclick=()=>{showGuides=!showGuides;$('guidesBtn').classList.toggle('active',showGuides);redraw();};
+document.querySelectorAll('.layout-btn').forEach(b=>b.onclick=()=>{document.querySelectorAll('.layout-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');layout=b.dataset.layout;$('layoutPill').textContent='📍 '+b.textContent+' Mode';redraw();});$('tilingBtn').onclick=()=>{showTiling=!showTiling;$('tilingBtn').classList.toggle('active',showTiling);$('tilingBtn').textContent=showTiling?'Tiling On':'Tiling Off';redraw();};$('guidesBtn').onclick=()=>{showGuides=!showGuides;$('guidesBtn').classList.toggle('active',showGuides);sessionStorage.setItem('sp-showGuides',showGuides?'1':'0');redraw();};
 $('motifScale').oninput=e=>{const m=getSel();if(!m)return;m.s=+e.target.value/100;$('motifScaleVal').textContent=e.target.value+'%';redraw();};$('motifScale').onchange=pushHist;$('rotL').onclick=()=>{const m=getSel();if(m){m.r-=15;pushHist();redraw();}};$('rotR').onclick=()=>{const m=getSel();if(m){m.r+=15;pushHist();redraw();}};$('flipH').onclick=()=>{const m=getSel();if(m){m.fx*=-1;pushHist();redraw();}};$('flipV').onclick=()=>{const m=getSel();if(m){m.fy*=-1;pushHist();redraw();}};$('deleteSel').onclick=()=>{placed=placed.filter(p=>p.id!==selected);selected=null;pushHist();redraw();updateSelectedControls();};
 
 // --- Non-destructive Motif editing: Motif Source (motifs[] entry, with .source = editable master
@@ -2499,38 +2506,37 @@ function setSidebarCollapsed(collapsed){
   updateBaseScale();
 }
 $('sidebarToggleBtn').onclick=()=>setSidebarCollapsed(!sidebarCollapsed);
-// ---- What "100% zoom" actually means: a fixed-size camera window, not a bigger scale factor ---
+// ---- What "100% zoom" actually means: the tile itself is the canvas, filling the workspace -----
 //
-// The bug in the first attempt at this: baseScale was sized to fill the workspace, but the CROP
-// came from whatever size canvasWrap happened to be (the full flex:1 remaining space) — on a wide
-// landscape workspace that's much wider than it is tall, so a LOT of horizontal neighbouring
-// repeat still showed at "100%", not just an edge clone.
+// Two earlier attempts at this both undershot: the first let the crop area default to whatever
+// size canvasWrap happened to be (the full flex:1 remaining space), showing far too much
+// surrounding repeat at "100%". The second fix corrected the crop but capped canvasWrap to a
+// small SQUARE (min of the available width/height), which left large empty letterboxed bands
+// down the sides (or top/bottom) of a non-square workspace — reading as "a big blank area with a
+// smaller tile floating in it", exactly the opposite of what was asked.
 //
-// The fix is a real two-part camera, matching how camera/viewport zoom actually works: a FIXED-
-// SIZE window (canvasWrap itself, sized in JS below to VIEW_WINDOW_PX — a near-square box that
-// fills most of canvasViewportOuter, recomputed only when the WORKSPACE changes size: boot, panel
-// collapse/expand, window resize) looking at DOCUMENT CONTENT that scales behind it. `zoom` never
-// changes the window's own size — only how many canvas units fit inside that fixed window, via
-// baseScale = VIEW_WINDOW_PX / windowUnits, where windowUnits = TILE + a modest fixed margin (the
-// "necessary edge clones"). At zoom=1 exactly windowUnits worth of document is visible; at
-// zoom=0.5, TWICE as many canvas units fit in that SAME fixed window (so more of the surrounding
-// tiling becomes visible, each unit just takes up less screen space) — that inverse relationship
-// is what makes zooming out progressively reveal the wider repeat, and zooming in progressively
-// crop into fine detail, exactly as asked. Neither W/H/TILE nor any repeat/tiling/export
-// calculation changes — this is purely how big a fixed viewport window is and what scale factor
-// it renders the SAME document at.
-const EDGE_CLONE_MARGIN=TILE*0.12; // ~12% of the tile on each side — a real neighbour peeking in, not a full extra repeat
+// The fix: canvasWrap now fills the ENTIRE available workspace rectangle (both axes, no
+// letterboxing) — recomputed only when the WORKSPACE changes size (boot, panel collapse/expand,
+// window resize). baseScale — how many canvas units fit per pixel — is governed only by the
+// SMALLER of the two available dimensions, via VIEW_WINDOW_UNITS = TILE + a small fixed margin
+// (the "necessary edge clones", now tightened to ~6% of the tile per side so the tile itself
+// dominates the view). That smaller axis exactly frames tile+small-margin; the longer axis simply
+// shows a bit more of that same margin, proportional to the workspace's own aspect ratio — never
+// a full extra repeat, just a slightly wider sliver on whichever side is longer. `zoom` never
+// changes the window's own size, only how many canvas units fit inside it (baseScale is
+// zoom-independent; the effective per-frame scale is always zoom*baseScale): at zoom=0.5, TWICE
+// as many canvas units fit in the SAME window, revealing more surrounding tiling as zoom
+// decreases, and cropping into finer detail as zoom increases above 1 — exactly as asked. Neither
+// W/H/TILE nor any repeat/tiling/export calculation changes — this only changes how much of the
+// document a given zoom level shows on screen.
+const EDGE_CLONE_MARGIN=TILE*0.06; // ~6% of the tile on each side — a real neighbour peeking in, not a full extra repeat
 const VIEW_WINDOW_UNITS=TILE+EDGE_CLONE_MARGIN*2;
 function updateBaseScale(){
   const availW=viewportOuter.clientWidth-32,availH=viewportOuter.clientHeight-32;
   if(availW<=0||availH<=0)return;
-  // The window itself is a near-square box filling ~94% of the SMALLER outer dimension — square
-  // because the tile it's framing is square; the outer flex container centres it, so any leftover
-  // width in a wide landscape workspace is plain background either side, not more visible canvas.
-  const windowPx=Math.max(80,Math.min(availW,availH)*0.94);
-  wrap.style.width=windowPx+'px';
-  wrap.style.height=windowPx+'px';
-  baseScale=Math.max(.02,windowPx/VIEW_WINDOW_UNITS);
+  wrap.style.width=availW+'px';
+  wrap.style.height=availH+'px';
+  baseScale=Math.max(.02,Math.min(availW,availH)/VIEW_WINDOW_UNITS);
   applyTransform();
 }
 window.addEventListener('resize',updateBaseScale);
@@ -2630,6 +2636,7 @@ async function restoreDocOnBoot(){
 }
 async function boot(){
   applyTransform();
+  $('guidesBtn').classList.toggle('active',showGuides);
   const restored=await restoreDocOnBoot();
   if(!layers.length){layers=defaultLayers();activeLayerId=layers[layers.length-1].id;}
   renderLayersList();
