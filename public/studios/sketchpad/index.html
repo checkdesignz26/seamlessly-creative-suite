@@ -2134,11 +2134,17 @@ function computeAreaFillPolygon(px,py,gapTolerance){
     return layer&&layer.visible;
   });
   if(!inkStrokes.length)return {ok:false,reason:'empty'};
+  // The flood fill below naturally stops at the OUTER edge of each wall (the fully-padded line
+  // width it was rasterised with), which would otherwise leave a visible paper-white gap between
+  // the fill and the ink's visual centreline — maxHalfWidth tracks how far to later dilate the
+  // filled mask back out to close that gap (see the dilate step after the flood fill).
+  let maxHalfWidth=0;
   inkStrokes.forEach(s=>{
     const pts=s.nodes?nodesToPoints(s.nodes,s.closed):s.points;
     if(!pts||pts.length<2)return;
-    const baseWidth=(s.settings&&s.settings.size)||BrushEngine.getSettings(s.brushId).size||4;
-    octx.lineWidth=Math.max(1,baseWidth)+gapTolerance*2;
+    const baseWidth=Math.max(1,(s.settings&&s.settings.size)||BrushEngine.getSettings(s.brushId).size||4);
+    if(baseWidth/2>maxHalfWidth)maxHalfWidth=baseWidth/2;
+    octx.lineWidth=baseWidth+gapTolerance*2;
     octx.beginPath();
     octx.moveTo(pts[0].x,pts[0].y);
     for(let i=1;i<pts.length;i++)octx.lineTo(pts[i].x,pts[i].y);
@@ -2170,12 +2176,31 @@ function computeAreaFillPolygon(px,py,gapTolerance){
     }
   }
   if(touchedEdge)return {ok:false,reason:'open'};
-  const bw=maxX-minX+1,bh=maxY-minY+1;
-  const mask=new Uint8Array(bw*bh);
-  for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++)mask[(y-minY)*bw+(x-minX)]=visited[y*mw+x];
+  // Expand the crop box by the dilation radius on every side (clamped to the canvas) so growing
+  // the mask outward below has somewhere to grow INTO — otherwise the dilation would just get cut
+  // off at the original flood-fill bounding box and the gap would never actually close.
+  const expand=Math.min(24,Math.ceil(maxHalfWidth));
+  const ex0=Math.max(0,minX-expand),ey0=Math.max(0,minY-expand);
+  const ex1=Math.min(mw-1,maxX+expand),ey1=Math.min(mh-1,maxY+expand);
+  const bw=ex1-ex0+1,bh=ey1-ey0+1;
+  let mask=new Uint8Array(bw*bh);
+  for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++)mask[(y-ey0)*bw+(x-ex0)]=visited[y*mw+x];
+  // Dilate the fill outward by roughly half the boundary ink's width, so the traced contour
+  // reaches back up to the stroke's own centreline instead of stopping at the inner edge of its
+  // (fully gap-tolerance-padded) wall — the ink drawn on top then hides the overlap seam entirely,
+  // closing what would otherwise read as a halo of unpainted paper around every fill.
+  for(let iter=0;iter<expand;iter++){
+    const next=new Uint8Array(bw*bh);
+    for(let y=0;y<bh;y++)for(let x=0;x<bw;x++){
+      const i=y*bw+x;
+      if(mask[i]){next[i]=1;continue;}
+      if((x>0&&mask[i-1])||(x<bw-1&&mask[i+1])||(y>0&&mask[i-bw])||(y<bh-1&&mask[i+bw])){next[i]=1;}
+    }
+    mask=next;
+  }
   const loop=traceMaskContour(mask,bw,bh);
   if(!loop||loop.length<4)return {ok:false,reason:'traceFailed'};
-  let pts=loop.map(v=>({x:v.x+minX,y:v.y+minY}));
+  let pts=loop.map(v=>({x:v.x+ex0,y:v.y+ey0}));
   if(pts.length>3000){ // cap before the O(n^2) closed-loop RDP below, however large the raw trace was
     const stride=Math.ceil(pts.length/3000);
     pts=pts.filter((_,i)=>i%stride===0);
