@@ -374,6 +374,21 @@ canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-a
         <button id="shapeConvertBtn" class="btn mini primary" style="width:100%;margin-top:8px;">Convert to Path</button>
         <div class="hint">While it stays a Shape, resizing keeps its clean mathematical geometry. Convert to Path to freely edit individual nodes (this cannot be undone back into a parametric shape).</div>
       </div>
+      <div id="shapeToolsBox" style="margin-top:12px;padding-top:10px;border-top:1px solid var(--btnBorder);">
+        <div class="section-title">✂️ Shape Tools</div>
+        <div class="row" style="align-items:center;gap:8px;">
+          <span id="shapeToolsBaseSwatch" style="width:20px;height:20px;border-radius:5px;border:2px solid var(--btnBorder);flex:0 0 auto;"></span>
+          <span id="shapeToolsBaseHint" class="hint" style="flex:1;margin:0;">Select a closed vector shape first to use as the base.</span>
+        </div>
+        <button id="shapeMultiSelectToggle" class="btn mini" style="width:100%;margin-top:8px;">➕ Add Shapes: Off</button>
+        <div id="shapeOtherCountHint" class="hint"></div>
+        <div class="row" style="margin-top:8px;">
+          <button id="shapeMergeBtn" class="btn mini" style="flex:1;" disabled title="Merge">⊕ Merge</button>
+          <button id="shapeSubtractBtn" class="btn mini" style="flex:1;" disabled title="Subtract">⊖ Subtract</button>
+          <button id="shapeIntersectBtn" class="btn mini" style="flex:1;" disabled title="Intersect">⊗ Intersect</button>
+        </div>
+        <div class="hint">The result uses the base shape's own colour and brush, stays a real editable vector path (including any hole it creates), and becomes the new selection. Only closed vector outlines work here — open paths, fills, and painted content aren't supported yet.</div>
+      </div>
     </section>
   </aside>
   <div class="float-panel" id="pathEditBar" style="display:none;">
@@ -436,6 +451,13 @@ canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-a
   </main>
 </div>
 <script src="brush-engine.js"></script>
+<!-- Vendored unmodified: PolyBool v1.2.2 (MIT, Sean Connelly / voidqk, https://github.com/velipso/polybooljs)
+     — the polygon union/intersect/difference engine behind Shape Tools (Merge/Subtract/Intersect).
+     No existing geometry here does real polygon boolean ops (holes, multi-piece results), and
+     writing a robust Vatti/Greiner-Hormann clipper from scratch is not something to risk getting
+     subtly wrong on floating-point edge cases — this is a small (22KB), dependency-free, battle-
+     tested library that exposes window.PolyBool with a union/intersect/difference/.regions API. -->
+<script src="polybool.min.js"></script>
 <script>
 (()=>{
 'use strict';
@@ -765,6 +787,17 @@ function rebuildLayersClippedBy(strokeId){
   layerIds.forEach(id=>rebuildLayer(id));
 }
 function renderStrokeClipped(ctx,stroke,brush,settings,alphaMul){
+  // Shape Tools multi-region result (a hole, or several separate pieces from Subtract/Merge) —
+  // each region is just stroked independently with the SAME brush/settings, which is exactly
+  // correct for a hole (the outer boundary AND the inner hole boundary both get an outline, like
+  // a real donut) and for disjoint islands (each piece gets its own outline). Reuses the normal
+  // single-region brush rendering per region — no new brush code needed.
+  if(stroke.regions){
+    stroke.regions.forEach(region=>{
+      if(region&&region.length>=2)BrushEngine.renderStroke(ctx,{...stroke,points:region},brush,settings,alphaMul);
+    });
+    return;
+  }
   // Fill Shape strokes aren't brush-rendered at all — they ARE a closed path, solid-filled with
   // their own fillColor. This runs before the clipStrokeId check below since a fill defines its
   // own boundary and was never meant to be clipped by some OTHER shape.
@@ -930,7 +963,7 @@ function applyTransform(){
 }
 function screenToCanvas(x,y){const r=canvas.getBoundingClientRect();const cx=x-(r.left+r.width/2),cy=y-(r.top+r.height/2);const a=-rot*Math.PI/180;const s=zoom*baseScale;const ux=(cx*Math.cos(a)-cy*Math.sin(a))/s+W/2;const uy=(cx*Math.sin(a)+cy*Math.cos(a))/s+H/2;return {x:ux,y:uy};}
 function canvasToScreen(x,y){const rect=canvas.getBoundingClientRect(),wrapRect=wrap.getBoundingClientRect();const cx=rect.left+rect.width/2-wrapRect.left,cy=rect.top+rect.height/2-wrapRect.top;const a=rot*Math.PI/180;const s=zoom*baseScale;const px=(x-W/2)*s,py=(y-H/2)*s;return {x:cx+px*Math.cos(a)-py*Math.sin(a),y:cy+px*Math.sin(a)+py*Math.cos(a)};}
-function redraw(){if(redraw._q)return;redraw._q=requestAnimationFrame(()=>{redraw._q=0;if(compositeDirty){updateComposite();updateDisplayComposite();compositeDirty=false;}ctx.clearRect(0,0,W,H);ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);drawBackground();drawTraces();if(showTiling)drawTiles();else{ctx.drawImage(displayCanvas,0,0,W,H);if(liveActive)ctx.drawImage(liveLayer,0,0);}drawPlaced();drawMultiSelectHighlights();drawStrokeSelection();drawTileBoundary();if(showGuides)drawGuides();updateSelectionBox();updatePaintBBoxOverlay();});}
+function redraw(){if(redraw._q)return;redraw._q=requestAnimationFrame(()=>{redraw._q=0;if(compositeDirty){updateComposite();updateDisplayComposite();compositeDirty=false;}ctx.clearRect(0,0,W,H);ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);drawBackground();drawTraces();if(showTiling)drawTiles();else{ctx.drawImage(displayCanvas,0,0,W,H);if(liveActive)ctx.drawImage(liveLayer,0,0);}drawPlaced();drawMultiSelectHighlights();drawShapeToolsHighlights();drawStrokeSelection();drawTileBoundary();if(showGuides)drawGuides();updateSelectionBox();updatePaintBBoxOverlay();});}
 // A pattern (e.g. exported from Magic Builder) loaded as the base of the design - unlike Trace
 // Reference (a non-exported, freely-scaled/positioned tracing guide), this is sized to exactly
 // fill the guide-square tile, tiles using the same repeat offsets as the hand-drawn layer/motifs
@@ -972,6 +1005,32 @@ function drawMultiSelectHighlights(){
     const m=placed.find(p=>p.id===id);if(!m)return;
     const box=motifAABB(m);
     ctx.strokeRect(box.x0,box.y0,box.x1-box.x0,box.y1-box.y0);
+  });
+  ctx.restore();
+}
+// Base shape gets a solid gold outline (it's the one whose fill/stroke the result will use);
+// each "other" gets the same dashed teal outline the motif Align tool already uses elsewhere, so
+// the two multi-select systems read visually consistently despite being independent.
+function strokeOutlineBBox(stroke){
+  const pts=stroke.regions?stroke.regions.flat():(stroke.nodes?nodesToPoints(stroke.nodes,!!stroke.closed):stroke.points);
+  if(!pts||!pts.length)return null;
+  let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+  pts.forEach(p=>{if(p.x<x0)x0=p.x;if(p.x>x1)x1=p.x;if(p.y<y0)y0=p.y;if(p.y>y1)y1=p.y;});
+  return {x0,y0,x1,y1};
+}
+function drawShapeToolsHighlights(){
+  if(!shapeMultiSelectMode&&!shapeOtherIds.length)return;
+  const base=strokes.find(s=>s.id===selectedStrokeId);
+  ctx.save();
+  if(base){
+    const box=strokeOutlineBBox(base);
+    if(box){ctx.strokeStyle='#e0b020';ctx.lineWidth=4;ctx.setLineDash([]);ctx.strokeRect(box.x0-4,box.y0-4,box.x1-box.x0+8,box.y1-box.y0+8);}
+  }
+  ctx.strokeStyle='#5cb8ab';ctx.lineWidth=4;ctx.setLineDash([12,7]);
+  shapeOtherIds.forEach(id=>{
+    const s=strokes.find(x=>x.id===id);if(!s)return;
+    const box=strokeOutlineBBox(s);if(!box)return;
+    ctx.strokeRect(box.x0-4,box.y0-4,box.x1-box.x0+8,box.y1-box.y0+8);
   });
   ctx.restore();
 }
@@ -1544,6 +1603,36 @@ function selectAt(x,y){
     }
     return;
   }
+  // Shape Tools "Add Shapes" multi-select: tap a closed vector shape (other than the base, which
+  // stays whatever was single-selected before this mode was armed) to add/remove it from the
+  // "other shapes" set. Tapping something ineligible (open path, fill, paint, locked layer) just
+  // explains why instead of silently adding it, matching the hybrid-artwork-protection rule.
+  if(shapeMultiSelectMode){
+    const lockedIds=new Set(layers.filter(l=>l.locked).map(l=>l.id));
+    let hitStroke=null;
+    for(let i=strokes.length-1;i>=0;i--){
+      const s=strokes[i];if(lockedIds.has(s.layerId)||s.id===selectedStrokeId)continue;
+      const d=s.regions?distanceToMultiPolyline(p.x,p.y,s.regions):distanceToPolyline(p.x,p.y,s.points);
+      const settings=s.settings||BrushEngine.getSettings(s.brushId);
+      const tolerance=Math.max(18,(settings.size||6)/2+12);
+      if(d<tolerance){hitStroke=s;break;}
+    }
+    if(!hitStroke){
+      for(let i=strokes.length-1;i>=0;i--){
+        const s=strokes[i];if(lockedIds.has(s.layerId)||s.id===selectedStrokeId)continue;
+        if(s.closed&&(s.regions?pointInMultiPolygon(p.x,p.y,s.regions):pointInPolygon(p.x,p.y,s.points))){hitStroke=s;break;}
+      }
+    }
+    if(!hitStroke)return;
+    if(!isShapeOpEligible(hitStroke)){
+      setStatus('✂️ '+shapeOpIneligibleReason(hitStroke)+' — Shape Tools only works on closed vector outlines.');
+      return;
+    }
+    const idx=shapeOtherIds.indexOf(hitStroke.id);
+    if(idx>=0)shapeOtherIds.splice(idx,1);else shapeOtherIds.push(hitStroke.id);
+    syncShapeToolsUI();redraw();
+    return;
+  }
   selected=null;selectedStrokeId=null;
   for(let i=placed.length-1;i>=0;i--){const m=placed[i];if(Math.abs(p.x-m.x)<m.w*m.s/2&&Math.abs(p.y-m.y)<m.h*m.s/2){selected=m.id;break}}
   if(!selected){
@@ -1555,7 +1644,7 @@ function selectAt(x,y){
       const s=strokes[i];if(lockedIds.has(s.layerId))continue;
       const settings=s.settings||BrushEngine.getSettings(s.brushId);
       const tolerance=Math.max(18,(settings.size||6)/2+12);
-      const d=distanceToPolyline(p.x,p.y,s.points);
+      const d=s.regions?distanceToMultiPolyline(p.x,p.y,s.regions):distanceToPolyline(p.x,p.y,s.points);
       if(d<tolerance&&d<bestDist){bestDist=d;best=s.id;}
     }
     // Closed shapes (rectangles, circles...) are ALSO selectable by tapping anywhere inside their
@@ -1567,7 +1656,9 @@ function selectAt(x,y){
     if(!best){
       for(let i=strokes.length-1;i>=0;i--){
         const s=strokes[i];if(lockedIds.has(s.layerId))continue;
-        if(s.closed&&pointInPolygon(p.x,p.y,s.points)){best=s.id;break;}
+        if(!s.closed)continue;
+        const inside=s.regions?pointInMultiPolygon(p.x,p.y,s.regions):pointInPolygon(p.x,p.y,s.points);
+        if(inside){best=s.id;break;}
       }
     }
     selectedStrokeId=best;
@@ -1584,12 +1675,28 @@ function pointInPolygon(px,py,pts){
   }
   return inside;
 }
+// Even-odd across every region of a Shape Tools multi-region result — a point inside the outer
+// boundary AND inside a hole toggles twice (correctly outside); inside a separate disjoint piece
+// toggles once via that piece's own region (correctly inside). Matches how the shape actually
+// looks on screen (each region independently outlined) far better than naively ray-casting the
+// flattened point soup across all regions at once would.
+function pointInMultiPolygon(px,py,regions){
+  let inside=false;
+  regions.forEach(pts=>{if(pointInPolygon(px,py,pts))inside=!inside;});
+  return inside;
+}
+function distanceToMultiPolyline(px,py,regions){
+  let best=Infinity;
+  regions.forEach(pts=>{const d=distanceToPolyline(px,py,pts);if(d<best)best=d;});
+  return best;
+}
 function syncStrokeSelectionUI(){
   const section=$('strokeSelectSection');
   if(!section)return;
   section.style.display=selectedStrokeId?'block':'none';
   if(selectedStrokeId){renderStrokeReassignSwatches();syncStrokeRecipeUI();}
   if(typeof syncColourTargetUI==='function')syncColourTargetUI();
+  if(typeof syncShapeToolsUI==='function')syncShapeToolsUI();
   $('applyBrushStyleBtn').disabled=!copiedBrushStyle||!selectedStrokeId;
   const stroke=strokes.find(s=>s.id===selectedStrokeId);
   const paintBtn=$('paintInsideBtn'),paintHint=$('paintInsideHint');
@@ -1621,8 +1728,11 @@ function syncStrokeSelectionUI(){
   const editPathBtnEl=$('editPathBtn');
   if(editPathBtnEl){
     const isPaint=!!(stroke&&stroke.clipStrokeId);
-    editPathBtnEl.disabled=!stroke||isPaint;
-    editPathBtnEl.title=isPaint?'Painted content is edited by dragging its bounding-box handles on the canvas, not as individual nodes.':'';
+    const isMultiRegion=!!(stroke&&stroke.regions&&stroke.regions.length>1);
+    editPathBtnEl.disabled=!stroke||isPaint||isMultiRegion;
+    editPathBtnEl.title=isPaint?'Painted content is edited by dragging its bounding-box handles on the canvas, not as individual nodes.'
+      :isMultiRegion?'This shape has a hole or several separate pieces — node editing a multi-piece Shape Tools result isn\'t supported yet. It\'s still a real, movable, recolourable vector shape.'
+      :'';
   }
   const joinBtnEl=$('joinStrokesBtn');
   if(joinBtnEl){
@@ -1706,6 +1816,11 @@ function strokeBBox(stroke){
 function transformStrokePoints(stroke,fn){
   stroke.points=stroke.points.map(p=>{const t=fn(p.x,p.y);return {...p,x:t.x,y:t.y};});
   if(stroke.nodes)stroke.nodes=stroke.nodes.map(n=>{const t=fn(n.x,n.y);return {...n,x:t.x,y:t.y};});
+  // Shape Tools multi-region results (a hole or several separate pieces from Subtract/Merge) keep
+  // their structured per-region geometry in .regions, with .points holding the flat concatenation
+  // of all of them purely so strokeBBox/legacy code that only reads .points still gets a correct
+  // union bounding box for free — so every region has to move/scale/rotate in lockstep too.
+  if(stroke.regions)stroke.regions=stroke.regions.map(region=>region.map(p=>{const t=fn(p.x,p.y);return {...p,x:t.x,y:t.y};}));
 }
 function translateStrokeGeometry(stroke,dx,dy){
   transformStrokePoints(stroke,(x,y)=>({x:x+dx,y:y+dy}));
@@ -1903,10 +2018,11 @@ canvas.addEventListener('pointerdown',e=>{
   if(mode!=='edit'||!isPen(e))return;
   if(areaFillArmed)return; // Area Fill owns canvas taps itself while armed — see the earlier pointerdown listener
   if(pathEditStrokeId)return; // Edit Path owns canvas taps itself — see the earlier pointerdown listener
-  // Multi-Select owns canvas taps itself too (toggling membership, never arming a drag) — calling
-  // selectAt again here would double-toggle the very same tap right back off (this listener and
-  // the earlier one both run on every pointerdown).
-  if(multiSelectMode)return;
+  // Multi-Select (motifs) and Shape Tools' Add Shapes (strokes) both own canvas taps themselves
+  // too (toggling membership, never arming a drag) — calling selectAt again here would double-
+  // toggle the very same tap right back off (this listener and the earlier one both run on every
+  // pointerdown).
+  if(multiSelectMode||shapeMultiSelectMode)return;
   // A stroke only starts moving on a tap-and-drag of the stroke it ALREADY selected — the very
   // first tap that selects it never arms a drag. Requiring that extra intentional step (select,
   // then drag) is what keeps an ordinary re-select tap, or the Pencil wobbling slightly, from
@@ -2155,7 +2271,7 @@ $('multiSelectToggle').onclick=()=>{
   if(!multiSelectMode)multiSelectIds=[];
   $('multiSelectToggle').textContent='🔢 Multi-Select: '+(multiSelectMode?'On':'Off');
   $('multiSelectToggle').classList.toggle('active',multiSelectMode);
-  if(multiSelectMode){selected=null;selectedStrokeId=null;syncStrokeSelectionUI();mode='edit';syncMode();}
+  if(multiSelectMode){selected=null;selectedStrokeId=null;disarmShapeMultiSelect();syncStrokeSelectionUI();mode='edit';syncMode();}
   syncAlignUI();redraw();
   setStatus(multiSelectMode?'🔢 Multi-Select on — tap motifs on the canvas to add/remove them.':'🔢 Multi-Select off.');
 };
@@ -2173,8 +2289,155 @@ $('alignVMiddleBtn').onclick=()=>applyAlign('vmiddle');
 $('alignBottomBtn').onclick=()=>applyAlign('bottom');
 $('distributeHBtn').onclick=()=>applyDistribute('h');
 $('distributeVBtn').onclick=()=>applyDistribute('v');
+// ---- Shape Tools (Merge / Subtract / Intersect) — first stage toward a full Shape Builder ------
+// Real polygon boolean ops (union/intersect/difference, including holes and multi-piece results)
+// need a proper geometry engine — ray-casting/point-in-polygon alone can't compute a new boundary.
+// There's nothing like that here yet, and a hand-rolled clipper is exactly the kind of thing that
+// looks right on a simple test case and then silently corrupts geometry on a real one (T-junctions,
+// collinear edges, shared endpoints), so this vendors PolyBool (polybool.min.js, MIT, ~22KB,
+// dependency-free) rather than approximate it — see the <script> tag loading it, near brush-engine.js.
+let shapeMultiSelectMode=false,shapeOtherIds=[];
+function isShapeOpEligible(stroke){return !!(stroke&&stroke.closed&&!stroke.fillColor&&!stroke.clipStrokeId);}
+function shapeOpIneligibleReason(stroke){
+  if(!stroke)return 'Nothing selected';
+  if(!stroke.closed)return 'That\'s an open path';
+  if(stroke.fillColor)return 'That\'s a flat fill, not an outline';
+  if(stroke.clipStrokeId)return 'That\'s painted content, not a vector shape';
+  return 'That shape';
+}
+// PolyBool works on plain polyline regions — converts a stroke's resolved geometry (curves already
+// sampled into a dense polyline by nodesToPoints, exactly like every other render/hit-test in this
+// app already does) into {regions:[[[x,y],...]],inverted:false}. A stroke that is ITSELF an earlier
+// multi-region result feeds every one of its regions back in directly, so holes/islands round-trip
+// correctly through a second operation.
+function strokeToPolyBoolPoly(stroke){
+  if(stroke.regions){
+    const regs=stroke.regions.filter(r=>r&&r.length>=3).map(r=>r.map(p=>[p.x,p.y]));
+    return regs.length?{regions:regs,inverted:false}:null;
+  }
+  const pts=stroke.nodes?nodesToPoints(stroke.nodes,true):stroke.points;
+  if(!pts||pts.length<3)return null;
+  let clean=pts;
+  if(clean.length>1){
+    const first=clean[0],last=clean[clean.length-1];
+    if(Math.hypot(first.x-last.x,first.y-last.y)<0.01)clean=clean.slice(0,-1); // drop the repeated seam point
+  }
+  return clean.length>=3?{regions:[clean.map(p=>[p.x,p.y])],inverted:false}:null;
+}
+// The raw boolean result can have a lot of segments (every intersection adds vertices) — simplify
+// each region with the SAME RDP epsilon pointsToNodes already uses everywhere else in the app, so
+// a Shape Tools result doesn't look needlessly dense or jagged compared to any other shape.
+function polyBoolRegionsToStrokeRegions(regions){
+  return (regions||[]).map(region=>{
+    const pts=region.map(([x,y])=>({x,y,pressure:0.5}));
+    const simplified=pts.length>3?rdpSimplifyClosedLoop(pts,5):pts;
+    return simplified.length>=3?simplified:null;
+  }).filter(Boolean);
+}
+function polygonArea(pts){
+  let a=0;
+  for(let i=0,j=pts.length-1;i<pts.length;j=i++)a+=(pts[j].x+pts[i].x)*(pts[j].y-pts[i].y);
+  return Math.abs(a/2);
+}
+function runShapeOp(opKind){
+  const base=strokes.find(s=>s.id===selectedStrokeId);
+  if(!base||!isShapeOpEligible(base)){setStatus('✂️ Select a closed vector shape as the base first.');return;}
+  const others=shapeOtherIds.map(id=>strokes.find(s=>s.id===id)).filter(s=>s&&isShapeOpEligible(s));
+  if(!others.length){setStatus('✂️ Turn on Add Shapes and tap at least one other closed shape.');return;}
+  let acc=strokeToPolyBoolPoly(base);
+  if(!acc){setStatus('✂️ The base shape has no usable area.');return;}
+  for(const other of others){
+    const otherPoly=strokeToPolyBoolPoly(other);
+    if(!otherPoly)continue;
+    if(opKind==='merge')acc=PolyBool.union(acc,otherPoly);
+    else if(opKind==='intersect')acc=PolyBool.intersect(acc,otherPoly);
+    else acc=PolyBool.difference(acc,otherPoly); // base - other, folded across every "other"
+  }
+  const regions=polyBoolRegionsToStrokeRegions(acc.regions);
+  const totalArea=regions.reduce((sum,r)=>sum+polygonArea(r),0);
+  const names={merge:'Merge',subtract:'Subtract',intersect:'Intersect'};
+  if(!regions.length||totalArea<1){
+    // Explicitly does NOT touch strokes[] at all — the originals, their styling and their
+    // placement are left completely untouched, per the brief.
+    setStatus('✂️ '+names[opKind]+' produced no area — the original shapes are unchanged.');
+    return;
+  }
+  const otherIdsSet=new Set(others.map(o=>o.id));
+  const resultStroke={
+    id:crypto.randomUUID(),brushId:base.brushId,layerId:base.layerId,
+    color:base.color,settings:base.settings?{...base.settings}:null,
+    closed:true,clipStrokeId:null,shape:null,fillColor:null,
+  };
+  if(regions.length===1){
+    // The common case (merging overlapping shapes, most intersections) — an ordinary single-loop
+    // stroke, auto-fit to smooth/corner nodes exactly like Edit Path already does for any other
+    // traced path, so it's immediately fully node-editable with zero special-casing.
+    resultStroke.nodes=pointsToNodes(regions[0],true);
+    resultStroke.points=nodesToPoints(resultStroke.nodes,true);
+  }else{
+    // A hole or several separate pieces — real structured multi-region vector geometry (see
+    // transformStrokePoints/renderStrokeClipped/pointInMultiPolygon), just not yet editable node-
+    // by-node in this first stage (disabled with an explanation — see syncStrokeSelectionUI).
+    resultStroke.regions=regions;
+    resultStroke.points=regions.flat();
+    resultStroke.nodes=null;
+  }
+  strokes=strokes.filter(s=>s.id!==base.id&&!otherIdsSet.has(s.id));
+  strokes.push(resultStroke);
+  const affectedLayerIds=new Set([base.layerId,...others.map(o=>o.layerId)]);
+  affectedLayerIds.forEach(id=>rebuildLayer(id));
+  shapeOtherIds=[];shapeMultiSelectMode=false;
+  $('shapeMultiSelectToggle').textContent='➕ Add Shapes: Off';$('shapeMultiSelectToggle').classList.remove('active');
+  selectedStrokeId=resultStroke.id;
+  syncStrokeSelectionUI();updateSelectedControls();
+  pushHist();redraw();
+  setStatus('✂️ '+{merge:'Merged',subtract:'Subtracted',intersect:'Intersected'}[opKind]+' into one shape — selected and ready to move or edit.');
+}
+function syncShapeToolsUI(){
+  const swatch=$('shapeToolsBaseSwatch'),hint=$('shapeToolsBaseHint');
+  if(!swatch||!hint)return;
+  const base=strokes.find(s=>s.id===selectedStrokeId);
+  const baseEligible=isShapeOpEligible(base);
+  swatch.style.background=baseEligible?(base.color||'#000'):'transparent';
+  hint.textContent=baseEligible
+    ?'Base shape — its colour and brush carry onto the result.'
+    :base?(shapeOpIneligibleReason(base)+' — pick a closed vector shape to use as the base.')
+    :'Select a closed vector shape first to use as the base.';
+  const validOthers=shapeOtherIds.filter(id=>strokes.some(s=>s.id===id)&&id!==selectedStrokeId);
+  if(validOthers.length!==shapeOtherIds.length)shapeOtherIds=validOthers;
+  $('shapeOtherCountHint').textContent=shapeOtherIds.length?(shapeOtherIds.length+' other shape'+(shapeOtherIds.length===1?'':'s')+' selected — tap more, or run an operation.'):(shapeMultiSelectMode?'Tap one or more other closed shapes on the canvas to add them.':'');
+  const canOp=baseEligible&&shapeOtherIds.length>=1;
+  $('shapeMergeBtn').disabled=!canOp;$('shapeSubtractBtn').disabled=!canOp;$('shapeIntersectBtn').disabled=!canOp;
+  $('shapeMultiSelectToggle').disabled=!baseEligible&&!shapeMultiSelectMode;
+}
+function disarmShapeMultiSelect(){
+  if(!shapeMultiSelectMode&&!shapeOtherIds.length)return;
+  shapeMultiSelectMode=false;shapeOtherIds=[];
+  const btn=$('shapeMultiSelectToggle');if(btn){btn.textContent='➕ Add Shapes: Off';btn.classList.remove('active');}
+}
+$('shapeMultiSelectToggle').onclick=()=>{
+  const base=strokes.find(s=>s.id===selectedStrokeId);
+  if(!shapeMultiSelectMode&&!isShapeOpEligible(base)){
+    setStatus('✂️ Select a closed vector shape in Edit Mode first, then turn on Add Shapes.');
+    return;
+  }
+  if(pathEditStrokeId)commitEditPath();
+  if(joinPendingStrokeId)endJoinPick();
+  disarmAreaFill();
+  if(multiSelectMode){multiSelectMode=false;multiSelectIds=[];$('multiSelectToggle').textContent='🔢 Multi-Select: Off';$('multiSelectToggle').classList.remove('active');syncAlignUI();}
+  shapeMultiSelectMode=!shapeMultiSelectMode;
+  if(!shapeMultiSelectMode)shapeOtherIds=[];
+  $('shapeMultiSelectToggle').textContent='➕ Add Shapes: '+(shapeMultiSelectMode?'On':'Off');
+  $('shapeMultiSelectToggle').classList.toggle('active',shapeMultiSelectMode);
+  mode='edit';syncMode();
+  syncShapeToolsUI();redraw();
+  setStatus(shapeMultiSelectMode?'✂️ Add Shapes on — tap other closed shapes on the canvas.':'✂️ Add Shapes off.');
+};
+$('shapeMergeBtn').onclick=()=>runShapeOp('merge');
+$('shapeSubtractBtn').onclick=()=>runShapeOp('subtract');
+$('shapeIntersectBtn').onclick=()=>runShapeOp('intersect');
 function syncMode(){$('drawModeBtn').classList.toggle('active',mode==='draw');$('editModeBtn').classList.toggle('active',mode==='edit');canvas.style.cursor=mode==='draw'?'crosshair':'grab';setStatus(mode==='draw'?'✏️ Draw Mode: Apple Pencil draws, two fingers move the canvas.':'↔️ Edit Mode: tap motif with Pencil/mouse, then move, scale, rotate or flip.');}
-$('drawModeBtn').onclick=()=>{if(pathEditStrokeId)commitEditPath();if(joinPendingStrokeId)endJoinPick();disarmAreaFill();armedShapeType=null;syncShapeToolUI();mode='draw';selected=null;selectedStrokeId=null;multiSelectMode=false;multiSelectIds=[];$('multiSelectToggle').textContent='🔢 Multi-Select: Off';$('multiSelectToggle').classList.remove('active');syncAlignUI();syncStrokeSelectionUI();syncMode();redraw()};$('editModeBtn').onclick=()=>{disarmAreaFill();armedShapeType=null;syncShapeToolUI();mode='edit';syncMode()};$('captureBtn').onclick=captureMotif;$('undoBtn').onclick=undo;$('redoBtn').onclick=redo;$('resetRot').onclick=()=>{rot=0;applyTransform()};
+$('drawModeBtn').onclick=()=>{if(pathEditStrokeId)commitEditPath();if(joinPendingStrokeId)endJoinPick();disarmAreaFill();disarmShapeMultiSelect();armedShapeType=null;syncShapeToolUI();mode='draw';selected=null;selectedStrokeId=null;multiSelectMode=false;multiSelectIds=[];$('multiSelectToggle').textContent='🔢 Multi-Select: Off';$('multiSelectToggle').classList.remove('active');syncAlignUI();syncStrokeSelectionUI();syncMode();redraw()};$('editModeBtn').onclick=()=>{disarmAreaFill();armedShapeType=null;syncShapeToolUI();mode='edit';syncMode()};$('captureBtn').onclick=captureMotif;$('undoBtn').onclick=undo;$('redoBtn').onclick=redo;$('resetRot').onclick=()=>{rot=0;applyTransform()};
 // Clear Drawing only clears the ACTIVE layer's strokes — clearing the whole document across
 // every layer from one button would be far too easy to trigger by accident once layers are
 // holding genuinely different content (Sketch vs Colour vs Outline).
@@ -2308,7 +2571,7 @@ function syncPaintModePill(){
 function startPaintInside(){
   const stroke=strokes.find(s=>s.id===selectedStrokeId);
   if(!stroke||!stroke.closed)return;
-  disarmAreaFill();
+  disarmAreaFill();disarmShapeMultiSelect();
   paintMode='inside';paintInsideTargetId=stroke.id;
   // Prefer a layer actually named "Colour" (the default raster layer) — if it's been renamed or
   // removed, fall back to whatever layer is already active rather than forcing one into existence.
@@ -2615,7 +2878,7 @@ $('areaFillToggleBtn').onclick=()=>{
     if(pathEditStrokeId)commitEditPath();
     if(joinPendingStrokeId)endJoinPick();
     if(paintMode==='inside')setFreePaintMode();
-    eraserActive=false;armedShapeType=null;syncShapeToolUI();
+    eraserActive=false;armedShapeType=null;syncShapeToolUI();disarmShapeMultiSelect();
     selected=null;selectedStrokeId=null;syncStrokeSelectionUI();
     syncAreaFillLayerSelect();
     setStatus('🪣 Area Fill: tap inside any enclosed region to fill it.');
@@ -3357,7 +3620,7 @@ function enterEditPath(strokeId){
   const stroke=strokes.find(s=>s.id===strokeId);if(!stroke)return;
   const layer=layers.find(l=>l.id===stroke.layerId);
   if(layer&&layer.locked){setStatus('🔒 "'+layer.name+'" is locked.');return;}
-  disarmAreaFill();
+  disarmAreaFill();disarmShapeMultiSelect();
   pathEditStrokeId=stroke.id;
   pathEditNodes=stroke.nodes?stroke.nodes.map(n=>({...n})):pointsToNodes(stroke.points,stroke.closed);
   pathEditClosed=!!stroke.closed;
