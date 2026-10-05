@@ -1391,7 +1391,10 @@ canvas.addEventListener('pointerup',e=>{
       stroke.points=currentPoints.map(p=>({...p}));
       stroke.nodes=null; // the continuation invalidated any prior sparse node representation
       rebuildLayer(stroke.layerId);
-      selectedStrokeId=stroke.id;syncStrokeSelectionUI();
+      // Deliberately NOT auto-selecting the stroke here (that used to pop the Selected Stroke
+      // panel open right as the pencil lifts) — both explicit Continue Path and automatic
+      // Continuous Draw land back in plain Draw mode afterward, same as finishing any ordinary
+      // stroke; tap it in Edit Mode afterward if you actually want to edit it.
     }
     continueStrokeId=null;continueBasePoints=null;
     currentPoints=[];currentStrokeId=null;liveActive=false;lctx.clearRect(0,0,W,H);
