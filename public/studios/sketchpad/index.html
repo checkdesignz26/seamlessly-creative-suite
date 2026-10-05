@@ -84,6 +84,11 @@ input[type=range]{accent-color:var(--pink)}
 .toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;padding:6px 10px;background:var(--toolbarBg);border-bottom:1px solid var(--line)}
 .toolbar-spacer{flex:1}
 .pill{background:rgba(255,142,214,.10);border:1px solid rgba(255,142,214,.25);border-radius:999px;padding:8px 12px;color:var(--text);font-size:13px;font-weight:900}
+.ac-sw{width:30px;height:30px;border-radius:8px;border:2px solid rgba(0,0,0,.15);cursor:pointer;box-shadow:inset 0 0 0 1px rgba(255,255,255,.2)}
+.ac-sw.selected{outline:3px solid var(--pink)}
+.ac-palette-card{border:1px solid var(--btnBorder);border-radius:12px;padding:8px;margin-top:6px}
+.ac-palette-card .ac-palette-head{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:6px;font-weight:800;font-size:13px}
+.ac-palette-swatches{display:flex;flex-wrap:wrap;gap:4px}
 #saveStatusPill{background:rgba(255,142,214,.06);border:1px solid rgba(255,142,214,.18);cursor:default;min-width:84px;text-align:center}
 #saveStatusPill.saving{opacity:.75}
 #saveStatusPill.failed{background:var(--dangerBg)!important;border:1px solid var(--dangerBorder)!important}
@@ -206,6 +211,43 @@ canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-a
     </div><label class="upload accentPurple" style="margin-top:8px">📥 Import Template from Magic Builder<input id="templateImportInput" type="file" accept="application/json,.json" style="display:none"></label><button id="templateClear" class="btn mini danger" style="width:100%;margin-top:8px">✕ Clear Template</button><div class="hint">Pick a layout above, or import a template's layout exported from Magic Builder ("export for playground"), then tap a motif below to drop it into the next empty slot - bigger (hero) slots take your focal motifs, smaller (accent/filler) slots take details.</div></section>
     <section class="section"><div class="section-title">🖼️ Motif Tray</div><div id="motifTray" class="motif-tray"></div><div id="motifEmpty" class="hint">Captured drawings and uploaded motifs appear here.</div></section>
     <section class="section"><div class="section-title">📚 Trace Reference</div><label class="upload accentTeal">➕ Trace Artwork<input id="traceInput" type="file" accept="image/*" multiple style="display:none"></label><div id="traceList" class="trace-list" style="margin-top:8px"></div><div class="slider-row"><label>Opacity</label><input id="traceOpacity" type="range" min="5" max="100" value="35"><span id="traceOpacityVal">35%</span></div><div class="slider-row"><label>Scale</label><input id="traceScale" type="range" min="20" max="400" value="100"><span id="traceScaleVal">100%</span></div><div class="row"><button id="traceFit" class="btn mini">Fit</button><button id="traceCentre" class="btn mini">Centre</button><button id="traceLock" class="btn mini active">🔒 Locked</button><button id="traceClear" class="btn mini danger">Clear</button></div></section>
+    <section class="section" id="colourSection">
+      <div class="section-title">🎨 Colour</div>
+      <div class="hint" style="margin-top:0;">Pick a target below, then tap any swatch to send that colour there. Adjusting hero/vibe/richness or an image upload only regenerates the swatches — it never recolours anything on its own.</div>
+      <div class="section-title" style="font-size:11px;margin:10px 0 6px;">Colour target</div>
+      <div class="grid" id="colourTargetRow">
+        <button class="btn mini colour-target-btn active" data-target="brush">✏️ Brush</button>
+        <button class="btn mini colour-target-btn" data-target="stroke">🖊️ Stroke</button>
+        <button class="btn mini colour-target-btn" data-target="fill">🎨 Fill</button>
+        <button class="btn mini colour-target-btn" data-target="areaFill">🪣 Area Fill</button>
+      </div>
+      <div id="colourTargetHint" class="hint"></div>
+      <div class="slider-row" style="margin-top:10px;"><label>Hero</label><input id="acHero" class="color" type="color" value="#9b6bff"></div>
+      <div class="slider-row"><label>Vibe</label><select id="acMood" style="flex:1;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);">
+        <option value="spring">spring</option><option value="summer" selected>summer</option><option value="autumn">autumn</option><option value="winter">winter</option><option value="retro">retro</option><option value="neon">neon</option><option value="focused">focused / minimal</option><option value="romantic">romantic / intimate</option><option value="bold">bold / confident</option><option value="nostalgic">nostalgic / vintage</option><option value="fresh">fresh / clean</option><option value="pastel">pastel</option><option value="luxe">luxurious / opulent</option><option value="jewel">jewel tones</option><option value="christmas">christmas / festive</option>
+      </select></div>
+      <div class="slider-row"><label>Richness</label><input id="acRichness" type="range" min="0" max="100" value="40"></div>
+      <div class="slider-row"><label>Extra</label><input id="acVariationCount" type="range" min="0" max="24" value="8"><span id="acVariationVal">8</span></div>
+      <div class="swatches" id="acSwatches" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;"></div>
+      <button id="acExtractToggle" class="btn mini" style="width:100%;margin-top:10px;">🖼️ Extract from Image</button>
+      <div id="acExtractBox" style="display:none;margin-top:8px;padding:9px;border:1px solid var(--btnBorder);border-radius:12px;">
+        <div class="row">
+          <label class="btn mini" style="flex:1;text-align:center;cursor:pointer;">Upload Image<input id="acImageFile" type="file" accept="image/*" style="display:none"></label>
+          <button id="acUseRefImageBtn" class="btn mini" style="flex:1;">Use Background/Trace</button>
+        </div>
+        <img id="acImagePreview" style="display:none;width:100%;max-height:120px;object-fit:contain;border-radius:8px;margin-top:8px;background:var(--btnBg);">
+        <div class="slider-row" style="margin-top:8px;"><label>Colours</label><input id="acImageCount" type="range" min="3" max="32" value="8"><span id="acImageCountVal">8</span></div>
+        <div class="swatches" id="acImageSwatches" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;"><span class="hint">Upload an image, or use the loaded background/trace artwork, to pull its colours.</span></div>
+        <div class="row" style="margin-top:8px;">
+          <input id="acPaletteName" placeholder="palette name" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);">
+          <button id="acSavePaletteBtn" class="btn mini primary" style="flex:1;">💾 Save Palette</button>
+        </div>
+      </div>
+      <div id="acSavedPalettesBox" style="margin-top:10px;">
+        <div class="section-title" style="font-size:11px;margin-bottom:6px;">Saved palettes</div>
+        <div id="acSavedPalettesList" class="hint">No saved palettes yet — extract one from an image and save it above.</div>
+      </div>
+    </section>
     <section class="section" id="brushSection">
       <div class="section-title">✏️ Draw</div>
       <div class="mode-switch"><button id="drawModeBtn" class="btn active">✏️ Draw</button><button id="editModeBtn" class="btn">↔️ Edit</button></div>
@@ -276,6 +318,29 @@ canvas{position:absolute;left:50%;top:50%;transform-origin:center center;touch-a
     </section>
     <section class="section"><div class="section-title">📐 Repeat Layouts</div><div class="grid"><button class="layout-btn active" data-layout="grid">Grid</button><button class="layout-btn" data-layout="halfDrop">Half Drop</button><button class="layout-btn" data-layout="halfBrick">Half Brick</button><button class="layout-btn" data-layout="diamond">Diamond</button><button class="layout-btn" data-layout="ogee">Ogee</button><button class="layout-btn" data-layout="tossed">Tossed</button></div></section>
     <section class="section"><div class="section-title">🔧 Selected Motif</div><div class="slider-row"><label>Size</label><input id="motifScale" type="range" min="15" max="300" value="100"><span id="motifScaleVal">100%</span></div><div class="row"><button id="rotL" class="btn mini">↺</button><button id="rotR" class="btn mini">↻</button><button id="flipH" class="btn mini">Flip H</button><button id="flipV" class="btn mini">Flip V</button><button id="deleteSel" class="btn mini danger">Delete</button></div><div class="row" style="margin-top:6px;"><button id="editMotifBtn" class="btn mini primary" style="flex:1 1 100%;display:none;">✏️ Edit Motif</button></div><div class="row" style="margin-top:6px;"><button id="duplicateMotifBtn" class="btn mini" style="flex:1 1 45%;display:none;">⧉ Duplicate</button><button id="makeIndependentBtn" class="btn mini" style="flex:1 1 45%;display:none;">🔓 Make Independent</button></div></section>
+    <section class="section" id="alignSection">
+      <div class="section-title">📐 Align Motifs</div>
+      <button id="multiSelectToggle" class="btn mini" style="width:100%;">🔢 Multi-Select: Off</button>
+      <div id="multiSelectHint" class="hint">On: tap motifs on the canvas to add/remove them from the alignment selection instead of single-selecting.</div>
+      <div id="alignCountHint" class="hint" style="display:none;"></div>
+      <div class="grid" style="margin-top:8px;">
+        <button class="btn mini align-to-btn active" data-align-to="canvas">To Canvas</button>
+        <button class="btn mini align-to-btn" data-align-to="selection">To Selection</button>
+      </div>
+      <div class="grid" style="margin-top:8px;grid-template-columns:repeat(3,1fr);">
+        <button id="alignLeftBtn" class="btn mini" title="Align Left">⇤ Left</button>
+        <button id="alignHCenterBtn" class="btn mini" title="Align Horizontal Centre">⟷ Centre</button>
+        <button id="alignRightBtn" class="btn mini" title="Align Right">⇥ Right</button>
+        <button id="alignTopBtn" class="btn mini" title="Align Top">⇡ Top</button>
+        <button id="alignVMiddleBtn" class="btn mini" title="Align Vertical Middle">↕ Middle</button>
+        <button id="alignBottomBtn" class="btn mini" title="Align Bottom">⇣ Bottom</button>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <button id="distributeHBtn" class="btn mini" style="flex:1;" disabled>↔ Distribute H</button>
+        <button id="distributeVBtn" class="btn mini" style="flex:1;" disabled>↕ Distribute V</button>
+      </div>
+      <div class="hint">Distribution needs 3 or more selected motifs. Each action is one undoable step and always preserves every motif's own scale, rotation and internal arrangement.</div>
+    </section>
     <section class="section" id="strokeSelectSection" style="display:none;">
       <div class="section-title">🖊️ Selected Stroke</div>
       <div id="strokeRecipe" class="recipe-text"></div>
@@ -463,6 +528,162 @@ let continueStrokeId=null,continueBasePoints=null; // Continue Path: next drawn 
 let continuousDrawMode=false; // Continuous Draw toggle: auto-continue a nearby stroke's end instead of starting a new one — see findContinuousDrawTarget
 let joinPendingStrokeId=null,joinPendingFromEnd=false; // Join Path: waiting for a tap on another stroke's endpoint
 let areaFillArmed=false; // Vector Area Fill: next canvas tap fills the enclosed region under it instead of drawing/selecting
+// ---- Adaptive Colour (ported from Pattern Playground's "colour mode" panel) --------------------
+// colorTarget tracks which control a tapped swatch writes into — 'brush' (next raster/vector
+// stroke), 'stroke' (the currently selected stroke, recoloured immediately — same as using the
+// Selected Stroke colour input by hand), 'fill' (Fill Shape's colour, for the NEXT fill), or
+// 'areaFill' (Vector Area Fill's colour, for the NEXT tap). Only 'stroke' can ever touch existing
+// artwork, and only because that is literally what the Selected Stroke colour control already
+// does — regenerating the palette (hero/vibe/richness/image) never recolours anything by itself,
+// exactly like the source panel's own swatch-click design.
+let colorTarget='brush';
+let savedPalettes=[]; // [{id,name,hexes:[...]}] — named, saved extracted-image palettes; persisted with the project
+let acLastUploadedImg=null,acExtractedColours=[];
+function hexToRgbMB(hex){hex=(hex||'#000000').replace('#','').trim();if(hex.length===3)hex=hex.split('').map(c=>c+c).join('');let n=parseInt(hex,16);if(Number.isNaN(n))n=0;return{r:(n>>16)&255,g:(n>>8)&255,b:n&255};}
+function rgbToHexMB(r,g,b){return '#'+[r,g,b].map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');}
+function rgbToHsvMB(r,g,b){r/=255;g/=255;b/=255;let max=Math.max(r,g,b),min=Math.min(r,g,b),d=max-min,h=0,s=max===0?0:d/max,v=max;if(d!==0){switch(max){case r:h=((g-b)/d+(g<b?6:0));break;case g:h=((b-r)/d+2);break;case b:h=((r-g)/d+4);break;}h*=60;}return{h,s:s*100,v:v*100};}
+function hsvToHexMB(h,s,v){h=((h%360)+360)%360;s=Math.max(0,Math.min(100,s))/100;v=Math.max(0,Math.min(100,v))/100;let c=v*s,x=c*(1-Math.abs((h/60)%2-1)),m=v-c,r=0,g=0,b=0;if(h<60){r=c;g=x}else if(h<120){r=x;g=c}else if(h<180){g=c;b=x}else if(h<240){g=x;b=c}else if(h<300){r=x;b=c}else{r=c;b=x}return rgbToHexMB((r+m)*255,(g+m)*255,(b+m)*255);}
+function cmMixWithWhite(hex,amount){const rgb=hexToRgbMB(hex);const t=Math.max(0,Math.min(1,amount));return rgbToHexMB(rgb.r+(255-rgb.r)*t,rgb.g+(255-rgb.g)*t,rgb.b+(255-rgb.b)*t);}
+// Each mood is (sat range, val range, hue spread, accent punch, other-roles damp) — identical
+// curves and identical role-derivation math to the source panel, so palettes this produces match
+// it exactly for the same hero/vibe/richness input.
+const MOOD_CURVES={
+ spring:   {sat:[25,50],val:[80,92],spread:1.0,accentPunch:1.0,damp:1.0},
+ summer:   {sat:[45,75],val:[70,88],spread:1.0,accentPunch:1.0,damp:1.0},
+ autumn:   {sat:[35,60],val:[45,65],spread:0.8,accentPunch:1.0,damp:1.0},
+ winter:   {sat:[20,42],val:[30,68],spread:0.7,accentPunch:1.05,damp:0.9,hueOffsets:[-30,-55,15,-15]},
+ retro:    {sat:[35,55],val:[50,68],spread:0.9,accentPunch:1.0,damp:1.0},
+ neon:     {sat:[75,98],val:[60,85],spread:1.3,accentPunch:1.2,damp:1.0},
+ focused:  {sat:[8,20], val:[55,80],spread:0.25,accentPunch:1.6,damp:0.5},
+ romantic: {sat:[20,38],val:[55,75],spread:0.45,accentPunch:1.0,damp:0.85},
+ bold:     {sat:[70,95],val:[20,45],spread:0.9,accentPunch:1.8,damp:0.35},
+ nostalgic:{sat:[22,38],val:[55,72],spread:0.55,accentPunch:0.9,damp:0.85},
+ fresh:    {sat:[25,45],val:[85,97],spread:0.75,accentPunch:1.0,damp:1.0},
+ pastel:   {sat:[14,28],val:[88,97],spread:0.6,accentPunch:0.65,damp:0.72},
+ luxe:     {sat:[55,85],val:[30,55],spread:1.15,accentPunch:1.3,damp:1.0},
+ jewel:    {sat:[65,92],val:[32,58],spread:1.35,accentPunch:1.25,damp:1.0}
+ // "christmas" isn't a hue-shift curve — see generateChristmasPalette below.
+};
+const CHRISTMAS_PALETTE=['#d62828','#8c1c3f','#6b1414','#0b3d24','#1f7a4d','#043927','#f2b705','#c98a1f','#e8c37a','#fdf6e3','#c0c0c0','#2f2f2f'];
+function generateChristmasPalette(heroHex,richness){
+ const r=Math.max(0,Math.min(100,+richness||0))/100;
+ const rgb=hexToRgbMB(heroHex);
+ const heroHsv=rgbToHsvMB(rgb.r,rgb.g,rgb.b);
+ const pale=(1-r)*(1-r)*0.4;
+ const tone=(hex)=>cmMixWithWhite(hex,pale);
+ const hue=heroHsv.h;
+ const cs=(s)=>Math.max(4,Math.min(98,s)), cv=(v)=>Math.max(4,Math.min(98,v));
+ const roles={
+  hero:heroHex,
+  secondary:tone('#0b3d24'),
+  accent:tone('#d62828'),
+  accent2:tone('#f2b705'),
+  filler:tone('#8c1c3f'),
+  deep:hsvToHexMB(hue,cs(Math.min(98,heroHsv.s*1.15)),cv(Math.max(12,heroHsv.v*0.42))),
+  tint:hsvToHexMB(hue,cs(Math.max(6,heroHsv.s*0.25)),cv(Math.min(97,heroHsv.v+(100-heroHsv.v)*0.55))),
+  black:hsvToHexMB(hue,cs(Math.min(60,heroHsv.s*0.6)),14),
+  grey:hsvToHexMB(hue,cs(Math.min(35,heroHsv.s*0.35)),52),
+  white:hsvToHexMB(hue,cs(Math.min(14,heroHsv.s*0.12)),95)
+ };
+ return {roles};
+}
+function generateAdaptivePalette(heroHex,mood,richness){
+ if(mood==='christmas')return generateChristmasPalette(heroHex,richness);
+ const curve=MOOD_CURVES[mood]||MOOD_CURVES.summer;
+ const r=Math.max(0,Math.min(100,+richness||0))/100;
+ const rgb=hexToRgbMB(heroHex);
+ const heroHsv=rgbToHsvMB(rgb.r,rgb.g,rgb.b);
+ const hue=heroHsv.h;
+ const pull=0.35;
+ const targetSat=curve.sat[0]+(curve.sat[1]-curve.sat[0])*r;
+ const targetVal=curve.val[0]+(curve.val[1]-curve.val[0])*r;
+ const sat=targetSat*(1-pull)+heroHsv.s*pull;
+ const val=targetVal*(1-pull)+heroHsv.v*pull;
+ const spread=curve.spread??1, damp=curve.damp??1, punch=curve.accentPunch??1;
+ const [secOff,accOff,acc2Off,fillOff]=curve.hueOffsets||[130,-40,80,200];
+ const [hSec,hAcc,hAcc2,hFill]=curve.hueAbsolute||[hue+secOff*spread,hue+accOff*spread,hue+acc2Off*spread,hue+fillOff*spread];
+ const cs=(s)=>Math.max(4,Math.min(98,s)), cv=(v)=>Math.max(4,Math.min(98,v));
+ const roles={
+  hero:heroHex,
+  secondary:hsvToHexMB(hSec,cs(sat*0.85*damp),cv(Math.min(96,val+6))),
+  accent:hsvToHexMB(hAcc,cs(Math.min(98,sat*1.1*punch)),cv(Math.max(20,val-4))),
+  accent2:hsvToHexMB(hAcc2,cs(sat*0.75*damp),cv(Math.min(96,val+2))),
+  filler:hsvToHexMB(hFill,cs(sat*0.7*damp),cv(Math.min(96,val+10))),
+  deep:hsvToHexMB(hue,cs(Math.min(98,sat*1.15)),cv(Math.max(12,val*0.42))),
+  tint:hsvToHexMB(hue,cs(Math.max(6,sat*0.25)),cv(Math.min(97,val+(100-val)*0.55))),
+  black:hsvToHexMB(hue,cs(Math.min(60,sat*0.6)),14),
+  grey:hsvToHexMB(hue,cs(Math.min(35,sat*0.35)),52),
+  white:hsvToHexMB(hue,cs(Math.min(14,sat*0.12)),95)
+ };
+ return {roles};
+}
+function cmChristmasVariations(richness,count){
+ const r=Math.max(0,Math.min(100,+richness||0))/100;
+ const pale=(1-r)*(1-r)*0.55;
+ const out=[];
+ for(let i=0;i<count;i++){
+  const cycle=Math.floor(i/CHRISTMAS_PALETTE.length);
+  const base=CHRISTMAS_PALETTE[i%CHRISTMAS_PALETTE.length];
+  out.push(cmMixWithWhite(base,Math.min(0.85,pale+cycle*0.12)));
+ }
+ return out;
+}
+function cmGenerateVariations(heroHex,mood,richness,count){
+ if(!count)return [];
+ if(mood==='christmas')return cmChristmasVariations(richness,count);
+ const curve=MOOD_CURVES[mood]||MOOD_CURVES.summer;
+ const r=Math.max(0,Math.min(100,+richness||0))/100;
+ const rgb=hexToRgbMB(heroHex);
+ const heroHsv=rgbToHsvMB(rgb.r,rgb.g,rgb.b);
+ const pull=0.35;
+ const targetSat=curve.sat[0]+(curve.sat[1]-curve.sat[0])*r;
+ const targetVal=curve.val[0]+(curve.val[1]-curve.val[0])*r;
+ const sat=Math.max(4,Math.min(98,targetSat*(1-pull)+heroHsv.s*pull));
+ const val=Math.max(4,Math.min(98,targetVal*(1-pull)+heroHsv.v*pull));
+ const span=160*(curve.spread??1);
+ const out=[];
+ for(let i=0;i<count;i++){
+  const t=count===1?0:(i/(count-1))-0.5;
+  out.push(hsvToHexMB(heroHsv.h+t*span*2,sat,val));
+ }
+ return out;
+}
+// Same bucket-quantise-then-dedupe approach as the source panel: downsample to a small working
+// canvas, bucket pixels into coarse RGB cells (÷16 per channel), average each bucket's true colour,
+// rank by how much of the image each bucket covers, skip near-black/near-white "background"
+// buckets when there are enough other candidates, then greedily keep only colours that aren't too
+// close (Manhattan distance) to one already picked — avoids a palette full of near-duplicate
+// off-whites from anti-aliased edges. Fully transparent (and near-transparent) pixels are skipped
+// entirely so they can never contribute a colour.
+function cmExtractColoursFromImage(img,n=16){
+ const size=260;
+ const canvas=document.createElement('canvas');canvas.width=size;canvas.height=size;
+ const ctx=canvas.getContext('2d');
+ const scale=Math.min(size/img.width,size/img.height);
+ const dw=Math.max(1,img.width*scale),dh=Math.max(1,img.height*scale);
+ ctx.drawImage(img,(size-dw)/2,(size-dh)/2,dw,dh);
+ const data=ctx.getImageData(0,0,size,size).data;
+ const buckets=new Map();
+ for(let i=0;i<data.length;i+=4){
+  const a=data[i+3];if(a<128)continue;
+  const r=data[i],g=data[i+1],b=data[i+2];
+  const key=[Math.round(r/16),Math.round(g/16),Math.round(b/16)].join(',');
+  const cur=buckets.get(key)||{r:0,g:0,b:0,count:0};
+  cur.r+=r;cur.g+=g;cur.b+=b;cur.count++;
+  buckets.set(key,cur);
+ }
+ let entries=[...buckets.values()].map(v=>({r:v.r/v.count,g:v.g/v.count,b:v.b/v.count,count:v.count}));
+ entries.sort((x,y)=>y.count-x.count);
+ const nonBg=entries.filter(e=>{const v=rgbToHsvMB(e.r,e.g,e.b).v;return v>8&&v<92;});
+ const pool=nonBg.length>=n?nonBg:entries;
+ const picked=[];
+ for(const e of pool){
+  if(picked.length>=n)break;
+  const tooClose=picked.some(p=>Math.abs(p.r-e.r)+Math.abs(p.g-e.g)+Math.abs(p.b-e.b)<55);
+  if(!tooClose)picked.push(e);
+ }
+ return picked.map(e=>rgbToHexMB(e.r,e.g,e.b));
+}
 // Paint Inside: 'free' is completely unchanged normal painting. 'inside' tags every NEW raster
 // stroke with clipStrokeId=paintInsideTargetId (the closed vector path chosen as the boundary);
 // the clip itself is applied live at render time from that path's CURRENT geometry (see
@@ -709,7 +930,7 @@ function applyTransform(){
 }
 function screenToCanvas(x,y){const r=canvas.getBoundingClientRect();const cx=x-(r.left+r.width/2),cy=y-(r.top+r.height/2);const a=-rot*Math.PI/180;const s=zoom*baseScale;const ux=(cx*Math.cos(a)-cy*Math.sin(a))/s+W/2;const uy=(cx*Math.sin(a)+cy*Math.cos(a))/s+H/2;return {x:ux,y:uy};}
 function canvasToScreen(x,y){const rect=canvas.getBoundingClientRect(),wrapRect=wrap.getBoundingClientRect();const cx=rect.left+rect.width/2-wrapRect.left,cy=rect.top+rect.height/2-wrapRect.top;const a=rot*Math.PI/180;const s=zoom*baseScale;const px=(x-W/2)*s,py=(y-H/2)*s;return {x:cx+px*Math.cos(a)-py*Math.sin(a),y:cy+px*Math.sin(a)+py*Math.cos(a)};}
-function redraw(){if(redraw._q)return;redraw._q=requestAnimationFrame(()=>{redraw._q=0;if(compositeDirty){updateComposite();updateDisplayComposite();compositeDirty=false;}ctx.clearRect(0,0,W,H);ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);drawBackground();drawTraces();if(showTiling)drawTiles();else{ctx.drawImage(displayCanvas,0,0,W,H);if(liveActive)ctx.drawImage(liveLayer,0,0);}drawPlaced();drawStrokeSelection();drawTileBoundary();if(showGuides)drawGuides();updateSelectionBox();updatePaintBBoxOverlay();});}
+function redraw(){if(redraw._q)return;redraw._q=requestAnimationFrame(()=>{redraw._q=0;if(compositeDirty){updateComposite();updateDisplayComposite();compositeDirty=false;}ctx.clearRect(0,0,W,H);ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);drawBackground();drawTraces();if(showTiling)drawTiles();else{ctx.drawImage(displayCanvas,0,0,W,H);if(liveActive)ctx.drawImage(liveLayer,0,0);}drawPlaced();drawMultiSelectHighlights();drawStrokeSelection();drawTileBoundary();if(showGuides)drawGuides();updateSelectionBox();updatePaintBBoxOverlay();});}
 // A pattern (e.g. exported from Magic Builder) loaded as the base of the design - unlike Trace
 // Reference (a non-exported, freely-scaled/positioned tracing guide), this is sized to exactly
 // fill the guide-square tile, tiles using the same repeat offsets as the hand-drawn layer/motifs
@@ -740,6 +961,20 @@ function drawStrokeSelection(){
   ctx.restore();
 }
 function drawPlaced(){placed.forEach(p=>{offsets().forEach(([ox,oy])=>{if(p.img)drawOne(p,ox,oy);else drawEmptySlot(p,ox,oy);});});}
+// Dashed highlight around every Multi-Select-picked motif (only on the primary, non-tiled
+// instance — offsets()[0] is always [0,0]) so it's obvious which motifs an Align/Distribute
+// action is about to affect, distinct from the single-selection box's solid outline.
+function drawMultiSelectHighlights(){
+  if(!multiSelectIds.length)return;
+  ctx.save();
+  ctx.strokeStyle='#5cb8ab';ctx.lineWidth=4;ctx.setLineDash([12,7]);
+  multiSelectIds.forEach(id=>{
+    const m=placed.find(p=>p.id===id);if(!m)return;
+    const box=motifAABB(m);
+    ctx.strokeRect(box.x0,box.y0,box.x1-box.x0,box.y1-box.y0);
+  });
+  ctx.restore();
+}
 function drawOne(p,ox=0,oy=0){ctx.save();ctx.translate(p.x+ox,p.y+oy);ctx.rotate(p.r*Math.PI/180);ctx.scale(p.s*p.fx,p.s*p.fy);ctx.drawImage(p.img,-p.w/2,-p.h/2,p.w,p.h);ctx.restore();}
 // An unfilled Template slot: a dashed placeholder shape (same idea as Magic Builder's blank
 // skeleton bricks) showing where a motif will land and roughly how big ("hero" slots are the
@@ -1289,6 +1524,23 @@ function selectAt(x,y){
   // the canvas is a no-op rather than a "nearest endpoint" guess.
   if(joinPendingStrokeId){setStatus('⋈ Tap a highlighted endpoint, or Cancel.');return;}
   const p=screenToCanvas(x,y);
+  // Multi-Select (for Align/Distribute) hijacks a tap on a placed motif into toggling its
+  // membership in multiSelectIds instead of the normal single-select — a tap that misses every
+  // motif leaves the current multi-selection untouched rather than clearing it, so the user can
+  // keep tapping several motifs in sequence without losing earlier picks.
+  if(multiSelectMode){
+    for(let i=placed.length-1;i>=0;i--){
+      const m=placed[i];
+      if(Math.abs(p.x-m.x)<m.w*m.s/2&&Math.abs(p.y-m.y)<m.h*m.s/2){
+        const idx=multiSelectIds.indexOf(m.id);
+        if(idx>=0)multiSelectIds.splice(idx,1);else multiSelectIds.push(m.id);
+        selected=null;selectedStrokeId=null;
+        syncAlignUI();updateSelectedControls();syncStrokeSelectionUI();redraw();
+        return;
+      }
+    }
+    return;
+  }
   selected=null;selectedStrokeId=null;
   for(let i=placed.length-1;i>=0;i--){const m=placed[i];if(Math.abs(p.x-m.x)<m.w*m.s/2&&Math.abs(p.y-m.y)<m.h*m.s/2){selected=m.id;break}}
   if(!selected){
@@ -1334,6 +1586,7 @@ function syncStrokeSelectionUI(){
   if(!section)return;
   section.style.display=selectedStrokeId?'block':'none';
   if(selectedStrokeId){renderStrokeReassignSwatches();syncStrokeRecipeUI();}
+  if(typeof syncColourTargetUI==='function')syncColourTargetUI();
   $('applyBrushStyleBtn').disabled=!copiedBrushStyle||!selectedStrokeId;
   const stroke=strokes.find(s=>s.id===selectedStrokeId);
   const paintBtn=$('paintInsideBtn'),paintHint=$('paintInsideHint');
@@ -1647,6 +1900,10 @@ canvas.addEventListener('pointerdown',e=>{
   if(mode!=='edit'||!isPen(e))return;
   if(areaFillArmed)return; // Area Fill owns canvas taps itself while armed — see the earlier pointerdown listener
   if(pathEditStrokeId)return; // Edit Path owns canvas taps itself — see the earlier pointerdown listener
+  // Multi-Select owns canvas taps itself too (toggling membership, never arming a drag) — calling
+  // selectAt again here would double-toggle the very same tap right back off (this listener and
+  // the earlier one both run on every pointerdown).
+  if(multiSelectMode)return;
   // A stroke only starts moving on a tap-and-drag of the stroke it ALREADY selected — the very
   // first tap that selects it never arms a drag. Requiring that extra intentional step (select,
   // then drag) is what keeps an ordinary re-select tap, or the Pencil wobbling slightly, from
@@ -1802,9 +2059,119 @@ function updateSelectedControls(){
   $('editMotifBtn').disabled=legacy;
   $('editMotifBtn').title=legacy?'This motif was captured before editable sources existed — it has no editable artwork to return to.':'';
  }
+ syncAlignUI();
 }
+// ---- Align Motifs --------------------------------------------------------------------------
+// Operates purely on placed[] motif instances' own stored x/y/w/h/s/r (already document-space,
+// independent of zoom/pan/view-rotation — screenToCanvas/canvasToScreen are the only place those
+// view concerns live), so every alignment/distribution action is correct at any zoom or canvas
+// rotation with no extra transform math. Only x/y are ever written — scale, rotation, flip and a
+// motif's own internal artwork are never touched, which is what keeps each motif's outlines and
+// fills (already one flattened, inseparable raster per placed instance) moving together correctly.
+let multiSelectMode=false,multiSelectIds=[],alignToMode='canvas';
+function getAlignTargetIds(){
+  if(multiSelectIds.length)return multiSelectIds.filter(id=>placed.some(p=>p.id===id));
+  if(selected&&placed.some(p=>p.id===selected))return [selected];
+  return [];
+}
+// Axis-aligned bounding box of a motif's actual artwork extent, accounting for its own rotation —
+// "use artwork bounds rather than selection handles" means this, not the on-screen resize box.
+// Flip (fx/fy) never changes the extent, only mirrors content within it, so it needs no handling.
+function motifAABB(m){
+  const hw=m.w*m.s/2,hh=m.h*m.s/2;
+  const rad=(m.r||0)*Math.PI/180,cos=Math.cos(rad),sin=Math.sin(rad);
+  const corners=[[-hw,-hh],[hw,-hh],[hw,hh],[-hw,hh]].map(([x,y])=>({x:m.x+x*cos-y*sin,y:m.y+x*sin+y*cos}));
+  const xs=corners.map(c=>c.x),ys=corners.map(c=>c.y);
+  return {x0:Math.min(...xs),x1:Math.max(...xs),y0:Math.min(...ys),y1:Math.max(...ys)};
+}
+function unionAABB(ids){
+  const boxes=ids.map(id=>{const m=placed.find(p=>p.id===id);return m?motifAABB(m):null;}).filter(Boolean);
+  if(!boxes.length)return null;
+  return {x0:Math.min(...boxes.map(b=>b.x0)),x1:Math.max(...boxes.map(b=>b.x1)),y0:Math.min(...boxes.map(b=>b.y0)),y1:Math.max(...boxes.map(b=>b.y1))};
+}
+function canvasAlignBounds(){return {x0:C,y0:C,x1:C+TILE,y1:C+TILE};}
+function applyAlign(kind){
+  const ids=getAlignTargetIds();
+  if(!ids.length){setStatus('📐 Select a motif first (or turn on Multi-Select for several).');return;}
+  if(alignToMode==='selection'&&ids.length<2){setStatus('📐 "To Selection" needs 2 or more selected motifs — try "To Canvas" for a single motif.');return;}
+  const bounds=alignToMode==='canvas'?canvasAlignBounds():unionAABB(ids);
+  if(!bounds)return;
+  ids.forEach(id=>{
+    const m=placed.find(p=>p.id===id);if(!m)return;
+    const box=motifAABB(m);
+    if(kind==='left')m.x+=bounds.x0-box.x0;
+    else if(kind==='right')m.x+=bounds.x1-box.x1;
+    else if(kind==='hcenter')m.x+=(bounds.x0+bounds.x1)/2-(box.x0+box.x1)/2;
+    else if(kind==='top')m.y+=bounds.y0-box.y0;
+    else if(kind==='bottom')m.y+=bounds.y1-box.y1;
+    else if(kind==='vmiddle')m.y+=(bounds.y0+bounds.y1)/2-(box.y0+box.y1)/2;
+  });
+  pushHist();redraw();
+  setStatus('📐 Aligned '+ids.length+' motif'+(ids.length===1?'':'s')+'.');
+}
+// Classic "equal GAP" distribution (the empty space between each pair of adjacent bounding boxes
+// is equal), not equal centre-to-centre spacing — the first and last (by position) stay put, only
+// the ones in between move.
+function applyDistribute(axis){
+  const ids=getAlignTargetIds();
+  if(ids.length<3){setStatus('📐 Distribution needs 3 or more selected motifs — turn on Multi-Select and tap a few more.');return;}
+  const items=ids.map(id=>{const m=placed.find(p=>p.id===id);return m?{m,box:motifAABB(m)}:null;}).filter(Boolean);
+  if(items.length<3)return;
+  if(axis==='h'){
+    items.sort((a,b)=>(a.box.x0+a.box.x1)-(b.box.x0+b.box.x1));
+    const span=items[items.length-1].box.x1-items[0].box.x0;
+    const sumW=items.reduce((s,it)=>s+(it.box.x1-it.box.x0),0);
+    const gap=(span-sumW)/(items.length-1);
+    let cursor=items[0].box.x0;
+    items.forEach(it=>{const w=it.box.x1-it.box.x0;it.m.x+=cursor-it.box.x0;cursor+=w+gap;});
+  }else{
+    items.sort((a,b)=>(a.box.y0+a.box.y1)-(b.box.y0+b.box.y1));
+    const span=items[items.length-1].box.y1-items[0].box.y0;
+    const sumH=items.reduce((s,it)=>s+(it.box.y1-it.box.y0),0);
+    const gap=(span-sumH)/(items.length-1);
+    let cursor=items[0].box.y0;
+    items.forEach(it=>{const h=it.box.y1-it.box.y0;it.m.y+=cursor-it.box.y0;cursor+=h+gap;});
+  }
+  pushHist();redraw();
+  setStatus('📐 Distributed '+items.length+' motifs evenly.');
+}
+function syncAlignUI(){
+  const ids=getAlignTargetIds();
+  $('distributeHBtn').disabled=ids.length<3;
+  $('distributeVBtn').disabled=ids.length<3;
+  const hint=$('alignCountHint');
+  if(multiSelectIds.length){
+    hint.style.display='block';
+    hint.textContent=multiSelectIds.length+' motif'+(multiSelectIds.length===1?'':'s')+' selected for alignment.';
+  }else{
+    hint.style.display='none';
+  }
+}
+$('multiSelectToggle').onclick=()=>{
+  multiSelectMode=!multiSelectMode;
+  if(!multiSelectMode)multiSelectIds=[];
+  $('multiSelectToggle').textContent='🔢 Multi-Select: '+(multiSelectMode?'On':'Off');
+  $('multiSelectToggle').classList.toggle('active',multiSelectMode);
+  if(multiSelectMode){selected=null;selectedStrokeId=null;syncStrokeSelectionUI();mode='edit';syncMode();}
+  syncAlignUI();redraw();
+  setStatus(multiSelectMode?'🔢 Multi-Select on — tap motifs on the canvas to add/remove them.':'🔢 Multi-Select off.');
+};
+document.querySelectorAll('.align-to-btn').forEach(btn=>{
+  btn.onclick=()=>{
+    alignToMode=btn.dataset.alignTo;
+    document.querySelectorAll('.align-to-btn').forEach(b=>b.classList.toggle('active',b===btn));
+  };
+});
+$('alignLeftBtn').onclick=()=>applyAlign('left');
+$('alignHCenterBtn').onclick=()=>applyAlign('hcenter');
+$('alignRightBtn').onclick=()=>applyAlign('right');
+$('alignTopBtn').onclick=()=>applyAlign('top');
+$('alignVMiddleBtn').onclick=()=>applyAlign('vmiddle');
+$('alignBottomBtn').onclick=()=>applyAlign('bottom');
+$('distributeHBtn').onclick=()=>applyDistribute('h');
+$('distributeVBtn').onclick=()=>applyDistribute('v');
 function syncMode(){$('drawModeBtn').classList.toggle('active',mode==='draw');$('editModeBtn').classList.toggle('active',mode==='edit');canvas.style.cursor=mode==='draw'?'crosshair':'grab';setStatus(mode==='draw'?'✏️ Draw Mode: Apple Pencil draws, two fingers move the canvas.':'↔️ Edit Mode: tap motif with Pencil/mouse, then move, scale, rotate or flip.');}
-$('drawModeBtn').onclick=()=>{if(pathEditStrokeId)commitEditPath();if(joinPendingStrokeId)endJoinPick();disarmAreaFill();armedShapeType=null;syncShapeToolUI();mode='draw';selected=null;selectedStrokeId=null;syncStrokeSelectionUI();syncMode();redraw()};$('editModeBtn').onclick=()=>{disarmAreaFill();armedShapeType=null;syncShapeToolUI();mode='edit';syncMode()};$('captureBtn').onclick=captureMotif;$('undoBtn').onclick=undo;$('redoBtn').onclick=redo;$('resetRot').onclick=()=>{rot=0;applyTransform()};
+$('drawModeBtn').onclick=()=>{if(pathEditStrokeId)commitEditPath();if(joinPendingStrokeId)endJoinPick();disarmAreaFill();armedShapeType=null;syncShapeToolUI();mode='draw';selected=null;selectedStrokeId=null;multiSelectMode=false;multiSelectIds=[];$('multiSelectToggle').textContent='🔢 Multi-Select: Off';$('multiSelectToggle').classList.remove('active');syncAlignUI();syncStrokeSelectionUI();syncMode();redraw()};$('editModeBtn').onclick=()=>{disarmAreaFill();armedShapeType=null;syncShapeToolUI();mode='edit';syncMode()};$('captureBtn').onclick=captureMotif;$('undoBtn').onclick=undo;$('redoBtn').onclick=redo;$('resetRot').onclick=()=>{rot=0;applyTransform()};
 // Clear Drawing only clears the ACTIVE layer's strokes — clearing the whole document across
 // every layer from one button would be far too easy to trigger by accident once layers are
 // holding genuinely different content (Sketch vs Colour vs Outline).
@@ -2302,6 +2669,135 @@ $('continuousDrawToggle').onclick=()=>{
 };
 $('brushSize').oninput=e=>{const v=+e.target.value;$('brushSizeVal').textContent=Math.round(v);patchCurrentSettings({size:v});};
 $('brushColor').oninput=e=>{currentColor=e.target.value;};
+// ---- Adaptive Colour panel -------------------------------------------------------------------
+function makeAcSwatch(hex,title){
+  const d=document.createElement('div');
+  d.className='ac-sw';d.style.background=hex;d.dataset.hex=hex;
+  d.title=(title?title+' — ':'')+hex+' — tap to apply';
+  d.onclick=()=>applyColorToTarget(hex);
+  return d;
+}
+function currentTargetColor(){
+  if(colorTarget==='brush')return currentColor;
+  if(colorTarget==='stroke'){const s=strokes.find(x=>x.id===selectedStrokeId);return s?(s.color||'#000000'):null;}
+  if(colorTarget==='fill')return $('fillColorInput').value;
+  if(colorTarget==='areaFill')return $('areaFillColorInput').value;
+  return null;
+}
+function markAcSwatchSelected(){
+  const cur=(currentTargetColor()||'').toLowerCase();
+  document.querySelectorAll('.ac-sw').forEach(d=>d.classList.toggle('selected',!!cur&&(d.dataset.hex||'').toLowerCase()===cur));
+}
+function renderAcSwatches(){
+  const hero=$('acHero').value,mood=$('acMood').value,richness=$('acRichness').value;
+  const pal=generateAdaptivePalette(hero,mood,richness);
+  const box=$('acSwatches');box.innerHTML='';
+  Object.entries(pal.roles).forEach(([name,hex])=>box.appendChild(makeAcSwatch(hex,name)));
+  const count=+$('acVariationCount').value;
+  $('acVariationVal').textContent=count;
+  if(count)cmGenerateVariations(hero,mood,richness,count).forEach(hex=>box.appendChild(makeAcSwatch(hex)));
+  markAcSwatchSelected();
+}
+['acHero','acMood','acRichness','acVariationCount'].forEach(id=>$(id).addEventListener('input',renderAcSwatches));
+function syncColourTargetUI(){
+  document.querySelectorAll('.colour-target-btn').forEach(b=>b.classList.toggle('active',b.dataset.target===colorTarget));
+  const msgs={
+    brush:'Tap a swatch to set the colour new brush/vector strokes draw with.',
+    stroke:selectedStrokeId?'Tap a swatch to recolour the selected stroke right now.':'Select a stroke first, then tap a swatch to recolour it.',
+    fill:'Tap a swatch to set the colour the next Fill Shape uses.',
+    areaFill:'Tap a swatch to set the colour the next Vector Area Fill uses.',
+  };
+  $('colourTargetHint').textContent=msgs[colorTarget]||'';
+  markAcSwatchSelected();
+}
+document.querySelectorAll('.colour-target-btn').forEach(btn=>{btn.onclick=()=>{colorTarget=btn.dataset.target;syncColourTargetUI();};});
+// The one place a swatch tap can touch EXISTING artwork — recolouring the already-selected
+// stroke — is deliberate and identical to using the Selected Stroke colour input by hand; every
+// other target just loads the colour into that tool's OWN input, ready for its next explicit use.
+function applyColorToTarget(hex){
+  if(colorTarget==='brush'){
+    currentColor=hex;$('brushColor').value=hex;
+  }else if(colorTarget==='stroke'){
+    const stroke=strokes.find(s=>s.id===selectedStrokeId);
+    if(!stroke){setStatus('🎨 Select a stroke first to recolour it.');return;}
+    stroke.color=hex;if(stroke.fillColor)stroke.fillColor=hex;
+    $('strokeColorInput').value=hex;
+    rebuildLayer(stroke.layerId);redraw();pushHist();
+  }else if(colorTarget==='fill'){
+    $('fillColorInput').value=hex;
+  }else if(colorTarget==='areaFill'){
+    $('areaFillColorInput').value=hex;
+  }
+  markAcSwatchSelected();
+}
+// ---- Extract from Image --------------------------------------------------------------------
+$('acExtractToggle').onclick=()=>{const box=$('acExtractBox');box.style.display=box.style.display==='none'?'block':'none';};
+function acExtractAndRender(){
+  if(!acLastUploadedImg)return;
+  acExtractedColours=cmExtractColoursFromImage(acLastUploadedImg,+$('acImageCount').value||8);
+  renderAcImageSwatches();
+}
+function renderAcImageSwatches(){
+  const box=$('acImageSwatches');box.innerHTML='';
+  if(!acExtractedColours.length){box.innerHTML='<span class="hint">Upload an image, or use the loaded background/trace artwork, to pull its colours.</span>';return;}
+  acExtractedColours.forEach(hex=>box.appendChild(makeAcSwatch(hex)));
+  markAcSwatchSelected();
+}
+$('acImageFile').onchange=e=>{
+  const file=e.target.files&&e.target.files[0];e.target.value='';
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const img=new Image();
+    img.onload=()=>{
+      acLastUploadedImg=img;
+      $('acImagePreview').src=ev.target.result;$('acImagePreview').style.display='block';
+      acExtractAndRender();
+      setStatus('🖼️ Colours extracted from image.');
+    };
+    img.onerror=()=>setStatus('⚠️ Could not read that image.');
+    img.src=ev.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+$('acUseRefImageBtn').onclick=()=>{
+  const img=bgImg||(traces[0]&&traces[0].img);
+  if(!img){setStatus('🖼️ No background or trace image loaded yet — upload one, or use Upload Image above.');return;}
+  acLastUploadedImg=img;
+  $('acImagePreview').src=img.src;$('acImagePreview').style.display='block';
+  acExtractAndRender();
+  setStatus('🖼️ Colours extracted from the loaded reference image.');
+};
+$('acImageCount').addEventListener('input',()=>{$('acImageCountVal').textContent=$('acImageCount').value;acExtractAndRender();});
+$('acSavePaletteBtn').onclick=()=>{
+  if(!acExtractedColours.length){setStatus('🖼️ Extract a palette from an image first.');return;}
+  const nameInput=$('acPaletteName');
+  const name=(nameInput.value||'').trim()||('Palette '+(savedPalettes.length+1));
+  savedPalettes.push({id:crypto.randomUUID(),name,hexes:acExtractedColours.slice()});
+  nameInput.value='';
+  renderSavedPalettesList();
+  scheduleAutosave();
+  setStatus('💾 Saved palette "'+name+'".');
+};
+function renderSavedPalettesList(){
+  const box=$('acSavedPalettesList');
+  if(!savedPalettes.length){box.className='hint';box.textContent='No saved palettes yet — extract one from an image and save it above.';return;}
+  box.className='';box.innerHTML='';
+  savedPalettes.forEach((pal,i)=>{
+    const card=document.createElement('div');card.className='ac-palette-card';
+    const head=document.createElement('div');head.className='ac-palette-head';
+    const nameSpan=document.createElement('span');nameSpan.textContent=pal.name;
+    const delBtn=document.createElement('button');delBtn.className='btn mini danger';delBtn.textContent='✕';delBtn.title='Delete this saved palette';
+    delBtn.onclick=()=>{savedPalettes.splice(i,1);renderSavedPalettesList();scheduleAutosave();};
+    head.appendChild(nameSpan);head.appendChild(delBtn);
+    card.appendChild(head);
+    const swRow=document.createElement('div');swRow.className='ac-palette-swatches';
+    pal.hexes.forEach(hex=>swRow.appendChild(makeAcSwatch(hex,pal.name)));
+    card.appendChild(swRow);
+    box.appendChild(card);
+  });
+}
+renderAcSwatches();syncColourTargetUI();renderSavedPalettesList();
 $('brushOpacity').oninput=e=>{const v=+e.target.value;$('brushOpacityVal').textContent=Math.round(v)+'%';patchCurrentSettings({opacity:v});};
 $('brushSmooth').oninput=e=>{const v=+e.target.value;$('brushSmoothVal').textContent=Math.round(v)+'%';patchCurrentSettings({smoothing:v});};
 $('pressureWidth').oninput=e=>{const v=+e.target.value;$('pressureWidthVal').textContent=Math.round(v)+'%';patchCurrentSettings({pressureWidth:v});};
@@ -3552,6 +4048,7 @@ function buildDocObject(){
     tracesJSON:JSON.stringify(traces.map(t=>({src:t.src,name:t.name,x:t.x,y:t.y,scale:t.scale,opacity:t.opacity}))),
     traceLocked,
     layout,activeTemplate,
+    savedPalettes:savedPalettes.map(p=>({id:p.id,name:p.name,hexes:p.hexes.slice()})),
     savedAt:Date.now(),
   };
 }
@@ -3645,6 +4142,11 @@ async function applyDocObject(doc){
       await new Promise(res=>{const img=new Image();img.onload=()=>{traces.push({img,src:t.src,name:t.name,x:t.x,y:t.y,scale:t.scale,opacity:t.opacity});res();};img.onerror=res;img.src=t.src;});
     }
     renderTraces();
+    // Backward compatible: a project saved before the Adaptive Colour panel existed simply has
+    // no savedPalettes field, which just leaves the list empty rather than failing to load.
+    savedPalettes=Array.isArray(doc.savedPalettes)?doc.savedPalettes.map(p=>({id:p.id||crypto.randomUUID(),name:p.name||'Palette',hexes:Array.isArray(p.hexes)?p.hexes.slice():[]})):[];
+    renderSavedPalettesList();
+    syncColourTargetUI();
     return true;
   }catch(e){console.warn('[sketchpad] restore failed',e);return false;}
 }
