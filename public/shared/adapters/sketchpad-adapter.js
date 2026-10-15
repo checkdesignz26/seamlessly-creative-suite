@@ -177,7 +177,51 @@
     });
   }
 
+  // The new Sketch Pad keeps its old sidebar tucked away, so the send action also lives in the top bar next to Export.
+  function addTopBarSend() {
+    const exp = document.getElementById('exportMenuBtn');
+    if (!exp || document.getElementById('scTopSendBtn')) return;
+    const btn = document.createElement('button');
+    btn.id = 'scTopSendBtn';
+    btn.type = 'button';
+    btn.className = 'tool-btn primary tb-fix';
+    btn.title = 'Send this pattern to your Seamlessly Creative project, so Mock-up Studio, Creative Resizer and Pattern Pages can use it';
+    btn.textContent = '☁️ Send to project';
+    exp.insertAdjacentElement('beforebegin', btn);
+    let resetTimer = 0;
+    const say = (t, ms) => {
+      btn.textContent = t;
+      clearTimeout(resetTimer);
+      if (ms) resetTimer = setTimeout(() => { btn.textContent = '☁️ Send to project'; }, ms);
+    };
+    btn.addEventListener('click', async () => {
+      if (typeof window.__scGetSketchpadExportCanvas !== 'function') return;
+      btn.disabled = true;
+      say('Sending…');
+      window.SCStatus && window.SCStatus.set('saving');
+      try {
+        const info = await window.__scGetSketchpadExportCanvas();
+        const dataUrl = canvasToWorkingDataUrl(info.canvas);
+        await window.SCLibrary.addAssetFromDataUrl(projectId, dataUrl, {
+          kind: 'pattern',
+          name: (document.getElementById('projNameTxt') && document.getElementById('projNameTxt').textContent.replace(/^\s*📄\s*/, '').trim()) || info.name,
+          source: { studio: 'sketchpad' },
+        });
+        say('✓ Sent to project', 3500);
+        window.SCStatus && window.SCStatus.set('saved');
+        try { const g = document.getElementById('scProjectAssetGrid'), st = document.getElementById('scProjectStatus'); if (g && st) renderGrid(g, st); } catch (e) { /* panel optional */ }
+      } catch (err) {
+        console.error('[suite] failed to send Sketch Pad pattern to project', err);
+        say('⚠ Could not send', 4000);
+        window.SCStatus && window.SCStatus.set('idle');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
   function init() {
+    addTopBarSend();
     const panel = buildPanel();
     if (!panel) {
       console.warn('[suite] Sketch Pad sidebar not found — adapter inactive');
