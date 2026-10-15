@@ -461,6 +461,18 @@ html.in-suite .suite-only{display:block!important}
 .ef-seg{display:flex;gap:4px;flex:1}.ef-seg .btn{flex:1;padding:6px 4px}
 .pal-sw-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .pal-sw{width:30px;height:30px;border-radius:50%;border:2px solid var(--btnBorder);position:relative;padding:0;cursor:pointer;flex:none}
+.pal-sw.none{background:#fff linear-gradient(to top right,transparent calc(50% - 1.6px),#e5484d calc(50% - 1.6px),#e5484d calc(50% + 1.6px),transparent calc(50% + 1.6px));border-radius:7px}
+.pat-btn{width:100%;margin-top:8px;min-height:38px;font-weight:800}
+#patEditor{position:fixed;left:50%;transform:translateX(-50%);bottom:52px;width:320px;max-width:calc(100vw - 24px);z-index:300;background:var(--panel2,#f3e6d3);border:1px solid var(--line,#c9b79c);border-radius:16px;padding:10px 12px;box-shadow:0 8px 30px rgba(0,0,0,.28);display:none;color:var(--text)}
+#patEditor h4{margin:0 0 4px;font-size:14px}#patEditor .hint{margin:2px 0 8px}
+#patEditor .pe-row{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:12.5px;font-weight:700}
+#patEditor .pe-row input[type=range]{flex:1;min-width:0}#patEditor .pe-val{width:46px;text-align:right}
+#patEditor .pe-btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}#patEditor .pe-btns .btn{flex:1 1 40%}
+#patPick{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center}
+#patPick .pp-box{background:var(--panel2,#f3e6d3);color:var(--text);border-radius:18px;padding:16px;width:min(560px,92vw);max-height:84vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.4)}
+#patPick .pp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin:10px 0}
+#patPick .pp-card{border:2px solid var(--btnBorder);border-radius:12px;background:var(--btnBg);padding:4px;cursor:pointer;text-align:center;font-size:11px;font-weight:700}
+#patPick .pp-card img{width:100%;height:90px;object-fit:cover;border-radius:8px;display:block}
 .pal-sw .px{position:absolute;right:-5px;top:-5px;width:16px;height:16px;border-radius:50%;background:#c0392b;color:#fff;font-size:11px;line-height:16px;text-align:center}
 .pal-sel{flex:1;min-width:0;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text)}
 .size-combo{display:flex;align-items:center;gap:2px}
@@ -1206,7 +1218,7 @@ html.in-suite .suite-only{display:block!important}
 </div>
     <div id="backupsPanel" style="display:none;position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:90;background:var(--sideBg);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:0 18px 50px rgba(0,0,0,.35);font-size:13.5px;max-width:min(560px,calc(100vw - 24px));max-height:70vh;overflow:auto;"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;font-weight:800;margin-bottom:6px;">🕘 Earlier saves<button id="backupsClose" class="btn mini">Close</button></div><div id="backupsList"></div><div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line);"><button id="newBlankBtn" class="btn mini" style="width:100%;">➕ New Project</button><div class="hint">Your current project is saved first, then a fresh one opens. Find every project under 📁 Projects.</div></div></div>
     <div id="restoreBanner" style="display:none;"><span id="restoreBannerText">📂 Autosaved session found from </span><span id="restoreBannerTime"></span> <button id="restoreAcceptBtn" class="btn mini primary">Restore</button><button id="restoreDeclineBtn" class="btn mini">Start Fresh</button><button id="restoreOkBtn" class="btn mini primary" style="display:none;">OK</button></div>
-    <div id="canvasViewportOuter" class="canvas-viewport-outer"><div id="canvasWrap" class="canvas-wrap"><div id="viewPopover" class="sym-pop"><div class="section-title">🧭 Canvas / View</div><div class="row" style="margin-bottom:10px;align-items:center;gap:8px;"><div id="viewRotVal" class="pill" style="flex:1;text-align:center;">Rotation 0°</div><button id="viewRotResetBtn" class="tool-btn" style="flex:1" title="Turn the canvas back upright">Reset to 0°</button></div><button id="viewRotLockBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">🔒 Lock rotation: On</button><button id="viewSharpBtn" class="tool-btn" style="width:100%;margin-bottom:10px;" title="How crisp the picture on screen is. Sharper uses more of the iPad memory.">🔍 Sharpness: Normal</button><button id="viewGuidesBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">📐 Guides: Off</button><button id="viewCursorBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">⭕ Brush cursor: On</button><button id="viewResetBtn" class="tool-btn" style="width:100%;margin-bottom:10px;" title="0°, centred and fitted">🔍 Reset view (0°, fit)</button><button id="symToggle" class="tool-btn" style="width:100%;margin-bottom:10px;">🦋 Symmetry Off</button><div class="row" style="margin-bottom:10px;"><button id="tilingBtn" class="tool-btn active" style="flex:1">Tiling On</button><div id="layoutPill" class="pill">📍 Grid Mode</div></div><button id="themeToggle" class="tool-btn" style="width:100%;margin-bottom:10px;">☀️ Light Mode</button><button id="clearDrawing" class="btn mini danger" style="width:100%;margin-bottom:10px;">Clear Drawing &amp; Motifs</button><button id="clearAllDrawing" class="btn mini danger" style="width:100%;margin-bottom:10px;">Clear All Layers &amp; Motifs</button><label class="row" style="gap:8px;align-items:center;margin:6px 0;font-size:13px;"><input type="checkbox" id="dblDupChk" checked> Double-tap a selected item to duplicate it (a motif opens for editing instead)</label><button id="viewCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="zoomPopover" class="sym-pop"><div class="section-title">🔍 View <span id="zoomPopPct" class="small"></span></div><div class="zoom-row"><button id="zoomOutBtn" class="tool-btn" aria-label="Zoom out">−</button><button id="zoomInBtn" class="tool-btn" aria-label="Zoom in">+</button></div><button id="zoom100Btn" class="tool-btn" style="width:100%;margin-bottom:8px;">100% — actual size</button><button id="zoomFitBtn" class="tool-btn" style="width:100%;margin-bottom:8px;">Fit to View</button><button id="zoomRotResetBtn" class="tool-btn" style="width:100%;margin-bottom:8px;">↺ Reset rotation to 0°</button><button id="zoomResetBtn" class="tool-btn primary" style="width:100%;margin-bottom:8px;">Reset View (0°, centre, fit)</button><button id="updateAppBtn" class="tool-btn" style="width:100%;margin-bottom:8px;" title="Fetch the newest version of the app">⟳ Get latest version <span style="opacity:.6;font-weight:600">(you have v278)</span></button><div class="hint" style="margin-bottom:8px;">These always work, even if the canvas has scrolled out of sight.</div><button id="zoomCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="hiPopover" class="sym-pop"><div class="section-title">🖼️ High-resolution card (PNG)</div><div class="hint" style="margin-bottom:8px;">Redraws your whole card sharply at the size you pick, with brushes, pictures and the background. Just the card, no repeat edges. </div><div class="hint" style="margin-bottom:4px;">A normal greeting card is <b>5 × 7 in</b> (a smaller one is 4.25 × 5.5 in). Pick the long side of your card in inches:</div><div class="row" style="margin-bottom:8px;"><button class="tool-btn hi-preset" data-in="5.5">5.5 in</button><button class="tool-btn hi-preset" data-in="7">7 in</button><button class="tool-btn hi-preset" data-in="10">10 in</button></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>Long side</label><input id="hiInInput" type="number" min="1" max="30" step="0.1" value="10" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><span>in</span></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>Quality</label><select id="hiDpi" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><option value="300">300 dpi (print)</option><option value="600">600 dpi (extra sharp)</option><option value="200">200 dpi (smaller file)</option><option value="150">150 dpi (screen / email)</option></select><span></span></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>or pixels</label><input id="hiLongInput" type="number" min="200" max="8000" step="1" value="3000" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><span>px</span></div><div id="hiInfo" class="hint" style="margin-bottom:8px;"></div><label class="hint" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;"><input id="hiTransparent" type="checkbox"> Transparent background (instead of white)</label><button id="hiSaveBtn" class="tool-btn primary" style="width:100%;margin-bottom:8px;min-height:44px;">⬇️ Save PNG</button><button id="hiCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="svgPopover" class="sym-pop"><div class="section-title">🖋️ Export SVG</div><div class="hint" style="margin-bottom:8px;">Vector strokes and fills only. Pictures (placed motifs, background image) are not vector, so they are left out.</div><div class="row" style="margin-bottom:8px;"><button class="tool-btn svg-preset" data-size="780">780</button><button class="tool-btn svg-preset" data-size="1800">1800</button><button class="tool-btn svg-preset" data-size="3600">3600</button></div><div class="slider-row" style="grid-template-columns:64px 1fr 30px;"><label>Size</label><input id="svgSizeInput" type="number" min="64" max="20000" step="1" value="3600" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><span>px</span></div><div class="hint" style="margin-bottom:8px;">Width and height of the square file. 3600 × 3600 is the usual pattern size. The artwork scales exactly.</div><button id="svgSaveBtn" class="tool-btn primary" style="width:100%;margin-bottom:8px;min-height:44px;">⬇️ Save SVG</button><button id="svgCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="recolourPopover" class="sym-pop"><div class="section-title">🎨 Recolour Parts</div><div class="hint" style="margin-bottom:8px;">Motif: <b id="recolourName"></b>. Each row is one colour used in the motif. Pick a new colour for any of them.</div><div id="recolourRows"></div><button id="recolourApplyBtn" class="tool-btn primary" style="width:100%;margin:8px 0;min-height:44px;">Apply to this motif</button><button id="recolourNewBtn" class="tool-btn" style="width:100%;margin-bottom:8px;min-height:44px;">Save as new colourway</button><div class="row"><button id="recolourResetBtn" class="btn mini" style="flex:1">Reset</button><button id="recolourCloseBtn" class="btn mini" style="flex:1">✕ Close</button></div></div><div id="symPopover" class="sym-pop"><div class="section-title">🦋 Symmetry</div><div class="grid"><button class="sym-btn btn active" data-sym="off">Off</button><button class="sym-btn btn" data-sym="vertical">Vertical</button><button class="sym-btn btn" data-sym="horizontal">Horizontal</button><button class="sym-btn btn" data-sym="quad">Quad</button><button class="sym-btn btn" data-sym="diamond">Diamond</button></div><div class="slider-row"><label>Axis X</label><input id="symX" type="range" min="0" max="1800" value="900"><span id="symXVal">50%</span></div><div class="slider-row"><label>Axis Y</label><input id="symY" type="range" min="0" max="1800" value="900"><span id="symYVal">50%</span></div><div class="slider-row"><label>Angle</label><input id="symAng" type="range" min="-90" max="90" step="1" value="0"><span id="symAngVal">0°</span></div><div class="row"><button id="symAngReset" class="btn mini">0° Straight</button><button id="symAng45" class="btn mini">45°</button></div><div class="row" style="margin-top:6px;"><button id="symLenWhole" class="btn mini active" style="flex:1">Line: whole canvas</button><button id="symLenShort" class="btn mini" style="flex:1">Line: short</button></div><div class="slider-row" id="symLenRow" style="display:none"><label>Length</label><input id="symLen" type="range" min="100" max="1800" step="10" value="500"><span id="symLenVal">500</span></div><div class="row" style="margin-top:6px;"><button id="symCentre" class="btn mini">Centre Axis</button><button id="symClose" class="btn mini">Done</button></div><div class="hint">Move the mirror point to make flowers, leaves and playful asymmetric symmetry.</div></div><canvas id="fabricCanvas" aria-hidden="true"></canvas><canvas id="canvas" width="1800" height="1800"></canvas><div id="tileOutline" aria-hidden="true"><svg id="tileDiamond" viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;left:0;top:0;width:100%;height:100%;display:none;overflow:visible"><polygon points="50,0 100,50 50,100 0,50" fill="none" stroke="rgba(214,70,150,.9)" stroke-width="2.5" vector-effect="non-scaling-stroke"/></svg></div><div id="traceBox" aria-hidden="true"></div><div id="replayGuide" aria-hidden="true"><div class="rgBox"><span></span></div></div><div id="selectionBox" class="selection-box"><button id="motifEditChip" class="btn mini primary" style="display:none">✏️ Edit Motif</button><div id="resizeHandle" class="handle"></div><div id="rotateHandle" class="rotHandle"></div></div><div id="pivotMarker" style="display:none;position:absolute;width:18px;height:18px;margin:-9px 0 0 -9px;border:2px solid var(--pink);border-radius:50%;background:rgba(255,255,255,.85);pointer-events:none;z-index:5;"><div style="position:absolute;left:50%;top:-6px;bottom:-6px;width:2px;margin-left:-1px;background:var(--pink)"></div><div style="position:absolute;top:50%;left:-6px;right:-6px;height:2px;margin-top:-1px;background:var(--pink)"></div></div><div id="paintBBoxOverlay" class="selection-box" style="display:none;"><div id="paintResizeHandle" class="handle" title="Drag to resize. Tap to make 25% bigger."></div><div id="paintRotateHandle" class="rotHandle" title="Drag to rotate. Tap to turn 45 degrees."></div><input id="strokeColourHandle" class="sel-colour strokeColourHandle" type="color" value="#000000" title="Tap to change colour"></div><div id="groupBox" class="selection-box" style="display:none;"><div class="gh" data-h="nw" style="left:0%;top:0%;cursor:nwse-resize"></div><div class="gh" data-h="n" style="left:50%;top:0%;cursor:ns-resize"></div><div class="gh" data-h="ne" style="left:100%;top:0%;cursor:nesw-resize"></div><div class="gh" data-h="e" style="left:100%;top:50%;cursor:ew-resize"></div><div class="gh" data-h="se" style="left:100%;top:100%;cursor:nwse-resize"></div><div class="gh" data-h="s" style="left:50%;top:100%;cursor:ns-resize"></div><div class="gh" data-h="sw" style="left:0%;top:100%;cursor:nesw-resize"></div><div class="gh" data-h="w" style="left:0%;top:50%;cursor:ew-resize"></div><div id="grpRotHandle" class="rotHandle" title="Drag to turn. Tap to turn 45 degrees."></div></div><div id="symAxis" class="sym-axis locked"></div><div id="rotateChip" class="rotate-chip">Canvas 0°</div><div id="pathNodeOverlay"></div></div></div>
+    <div id="canvasViewportOuter" class="canvas-viewport-outer"><div id="canvasWrap" class="canvas-wrap"><div id="viewPopover" class="sym-pop"><div class="section-title">🧭 Canvas / View</div><div class="row" style="margin-bottom:10px;align-items:center;gap:8px;"><div id="viewRotVal" class="pill" style="flex:1;text-align:center;">Rotation 0°</div><button id="viewRotResetBtn" class="tool-btn" style="flex:1" title="Turn the canvas back upright">Reset to 0°</button></div><button id="viewRotLockBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">🔒 Lock rotation: On</button><button id="viewSharpBtn" class="tool-btn" style="width:100%;margin-bottom:10px;" title="How crisp the picture on screen is. Sharper uses more of the iPad memory.">🔍 Sharpness: Normal</button><button id="viewGuidesBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">📐 Guides: Off</button><button id="viewCursorBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">⭕ Brush cursor: On</button><button id="viewResetBtn" class="tool-btn" style="width:100%;margin-bottom:10px;" title="0°, centred and fitted">🔍 Reset view (0°, fit)</button><button id="symToggle" class="tool-btn" style="width:100%;margin-bottom:10px;">🦋 Symmetry Off</button><div class="row" style="margin-bottom:10px;"><button id="tilingBtn" class="tool-btn active" style="flex:1">Tiling On</button><div id="layoutPill" class="pill">📍 Grid Mode</div></div><button id="themeToggle" class="tool-btn" style="width:100%;margin-bottom:10px;">☀️ Light Mode</button><button id="clearDrawing" class="btn mini danger" style="width:100%;margin-bottom:10px;">Clear Drawing &amp; Motifs</button><button id="clearAllDrawing" class="btn mini danger" style="width:100%;margin-bottom:10px;">Clear All Layers &amp; Motifs</button><label class="row" style="gap:8px;align-items:center;margin:6px 0;font-size:13px;"><input type="checkbox" id="dblDupChk" checked> Double-tap a selected item to duplicate it (a motif opens for editing instead)</label><button id="viewCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="zoomPopover" class="sym-pop"><div class="section-title">🔍 View <span id="zoomPopPct" class="small"></span></div><div class="zoom-row"><button id="zoomOutBtn" class="tool-btn" aria-label="Zoom out">−</button><button id="zoomInBtn" class="tool-btn" aria-label="Zoom in">+</button></div><button id="zoom100Btn" class="tool-btn" style="width:100%;margin-bottom:8px;">100% — actual size</button><button id="zoomFitBtn" class="tool-btn" style="width:100%;margin-bottom:8px;">Fit to View</button><button id="zoomRotResetBtn" class="tool-btn" style="width:100%;margin-bottom:8px;">↺ Reset rotation to 0°</button><button id="zoomResetBtn" class="tool-btn primary" style="width:100%;margin-bottom:8px;">Reset View (0°, centre, fit)</button><button id="updateAppBtn" class="tool-btn" style="width:100%;margin-bottom:8px;" title="Fetch the newest version of the app">⟳ Get latest version <span style="opacity:.6;font-weight:600">(you have v279)</span></button><div class="hint" style="margin-bottom:8px;">These always work, even if the canvas has scrolled out of sight.</div><button id="zoomCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="hiPopover" class="sym-pop"><div class="section-title">🖼️ High-resolution card (PNG)</div><div class="hint" style="margin-bottom:8px;">Redraws your whole card sharply at the size you pick, with brushes, pictures and the background. Just the card, no repeat edges. </div><div class="hint" style="margin-bottom:4px;">A normal greeting card is <b>5 × 7 in</b> (a smaller one is 4.25 × 5.5 in). Pick the long side of your card in inches:</div><div class="row" style="margin-bottom:8px;"><button class="tool-btn hi-preset" data-in="5.5">5.5 in</button><button class="tool-btn hi-preset" data-in="7">7 in</button><button class="tool-btn hi-preset" data-in="10">10 in</button></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>Long side</label><input id="hiInInput" type="number" min="1" max="30" step="0.1" value="10" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><span>in</span></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>Quality</label><select id="hiDpi" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><option value="300">300 dpi (print)</option><option value="600">600 dpi (extra sharp)</option><option value="200">200 dpi (smaller file)</option><option value="150">150 dpi (screen / email)</option></select><span></span></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>or pixels</label><input id="hiLongInput" type="number" min="200" max="8000" step="1" value="3000" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><span>px</span></div><div id="hiInfo" class="hint" style="margin-bottom:8px;"></div><label class="hint" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;"><input id="hiTransparent" type="checkbox"> Transparent background (instead of white)</label><button id="hiSaveBtn" class="tool-btn primary" style="width:100%;margin-bottom:8px;min-height:44px;">⬇️ Save PNG</button><button id="hiCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="svgPopover" class="sym-pop"><div class="section-title">🖋️ Export SVG</div><div class="hint" style="margin-bottom:8px;">Vector strokes and fills only. Pictures (placed motifs, background image) are not vector, so they are left out.</div><div class="row" style="margin-bottom:8px;"><button class="tool-btn svg-preset" data-size="780">780</button><button class="tool-btn svg-preset" data-size="1800">1800</button><button class="tool-btn svg-preset" data-size="3600">3600</button></div><div class="slider-row" style="grid-template-columns:64px 1fr 30px;"><label>Size</label><input id="svgSizeInput" type="number" min="64" max="20000" step="1" value="3600" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><span>px</span></div><div class="hint" style="margin-bottom:8px;">Width and height of the square file. 3600 × 3600 is the usual pattern size. The artwork scales exactly.</div><button id="svgSaveBtn" class="tool-btn primary" style="width:100%;margin-bottom:8px;min-height:44px;">⬇️ Save SVG</button><button id="svgCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="recolourPopover" class="sym-pop"><div class="section-title">🎨 Recolour Parts</div><div class="hint" style="margin-bottom:8px;">Motif: <b id="recolourName"></b>. Each row is one colour used in the motif. Pick a new colour for any of them.</div><div id="recolourRows"></div><button id="recolourApplyBtn" class="tool-btn primary" style="width:100%;margin:8px 0;min-height:44px;">Apply to this motif</button><button id="recolourNewBtn" class="tool-btn" style="width:100%;margin-bottom:8px;min-height:44px;">Save as new colourway</button><div class="row"><button id="recolourResetBtn" class="btn mini" style="flex:1">Reset</button><button id="recolourCloseBtn" class="btn mini" style="flex:1">✕ Close</button></div></div><div id="symPopover" class="sym-pop"><div class="section-title">🦋 Symmetry</div><div class="grid"><button class="sym-btn btn active" data-sym="off">Off</button><button class="sym-btn btn" data-sym="vertical">Vertical</button><button class="sym-btn btn" data-sym="horizontal">Horizontal</button><button class="sym-btn btn" data-sym="quad">Quad</button><button class="sym-btn btn" data-sym="diamond">Diamond</button></div><div class="slider-row"><label>Axis X</label><input id="symX" type="range" min="0" max="1800" value="900"><span id="symXVal">50%</span></div><div class="slider-row"><label>Axis Y</label><input id="symY" type="range" min="0" max="1800" value="900"><span id="symYVal">50%</span></div><div class="slider-row"><label>Angle</label><input id="symAng" type="range" min="-90" max="90" step="1" value="0"><span id="symAngVal">0°</span></div><div class="row"><button id="symAngReset" class="btn mini">0° Straight</button><button id="symAng45" class="btn mini">45°</button></div><div class="row" style="margin-top:6px;"><button id="symLenWhole" class="btn mini active" style="flex:1">Line: whole canvas</button><button id="symLenShort" class="btn mini" style="flex:1">Line: short</button></div><div class="slider-row" id="symLenRow" style="display:none"><label>Length</label><input id="symLen" type="range" min="100" max="1800" step="10" value="500"><span id="symLenVal">500</span></div><div class="row" style="margin-top:6px;"><button id="symCentre" class="btn mini">Centre Axis</button><button id="symClose" class="btn mini">Done</button></div><div class="hint">Move the mirror point to make flowers, leaves and playful asymmetric symmetry.</div></div><canvas id="fabricCanvas" aria-hidden="true"></canvas><canvas id="canvas" width="1800" height="1800"></canvas><div id="tileOutline" aria-hidden="true"><svg id="tileDiamond" viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;left:0;top:0;width:100%;height:100%;display:none;overflow:visible"><polygon points="50,0 100,50 50,100 0,50" fill="none" stroke="rgba(214,70,150,.9)" stroke-width="2.5" vector-effect="non-scaling-stroke"/></svg></div><div id="traceBox" aria-hidden="true"></div><div id="replayGuide" aria-hidden="true"><div class="rgBox"><span></span></div></div><div id="selectionBox" class="selection-box"><button id="motifEditChip" class="btn mini primary" style="display:none">✏️ Edit Motif</button><div id="resizeHandle" class="handle"></div><div id="rotateHandle" class="rotHandle"></div></div><div id="pivotMarker" style="display:none;position:absolute;width:18px;height:18px;margin:-9px 0 0 -9px;border:2px solid var(--pink);border-radius:50%;background:rgba(255,255,255,.85);pointer-events:none;z-index:5;"><div style="position:absolute;left:50%;top:-6px;bottom:-6px;width:2px;margin-left:-1px;background:var(--pink)"></div><div style="position:absolute;top:50%;left:-6px;right:-6px;height:2px;margin-top:-1px;background:var(--pink)"></div></div><div id="paintBBoxOverlay" class="selection-box" style="display:none;"><div id="paintResizeHandle" class="handle" title="Drag to resize. Tap to make 25% bigger."></div><div id="paintRotateHandle" class="rotHandle" title="Drag to rotate. Tap to turn 45 degrees."></div><input id="strokeColourHandle" class="sel-colour strokeColourHandle" type="color" value="#000000" title="Tap to change colour"></div><div id="groupBox" class="selection-box" style="display:none;"><div class="gh" data-h="nw" style="left:0%;top:0%;cursor:nwse-resize"></div><div class="gh" data-h="n" style="left:50%;top:0%;cursor:ns-resize"></div><div class="gh" data-h="ne" style="left:100%;top:0%;cursor:nesw-resize"></div><div class="gh" data-h="e" style="left:100%;top:50%;cursor:ew-resize"></div><div class="gh" data-h="se" style="left:100%;top:100%;cursor:nwse-resize"></div><div class="gh" data-h="s" style="left:50%;top:100%;cursor:ns-resize"></div><div class="gh" data-h="sw" style="left:0%;top:100%;cursor:nesw-resize"></div><div class="gh" data-h="w" style="left:0%;top:50%;cursor:ew-resize"></div><div id="grpRotHandle" class="rotHandle" title="Drag to turn. Tap to turn 45 degrees."></div></div><div id="symAxis" class="sym-axis locked"></div><div id="rotateChip" class="rotate-chip">Canvas 0°</div><div id="pathNodeOverlay"></div></div></div>
     <div id="status" class="status">✨ Apple Pencil draws | one finger protected | two fingers pan/pinch/rotate | two-finger tap Undo | three-finger tap Redo | Capture Motif saves drawing ✨</div>
   </main>
   <div id="dockR" class="dock"></div>
@@ -1370,6 +1382,7 @@ function invalidateDetail(){
   }catch(e){}
 }
 function strokeBoundsPad(s){
+  if(s.patFill){const t=strokes.find(x=>x.id===s.clipStrokeId);return t?strokeBoundsPad(t):null;}
   const pts=s.regions?[].concat.apply([],s.regions):(s.points||[]);
   const all=s.nodes?pts.concat(s.nodes):pts;
   if(!all.length)return null;
@@ -2233,6 +2246,8 @@ function svgGradFill(g,pts){
   return 'url(#'+id+')';
 }
 function renderStrokeClipped(ctx,stroke,brush,settings,alphaMul){
+  if(stroke.patFill)return renderPatFill(ctx,stroke,alphaMul);
+  if(stroke.noStroke&&!stroke.fillColor&&!stroke.text)return; // "None" stroke: the outline is invisible but its geometry (selection, clip boundary, fill) stays
   if(stroke.text)return txRender(ctx,stroke,alphaMul);
   if(stroke.outlined&&stroke.regions&&stroke.fillColor)return txFillRegions(ctx,stroke,alphaMul);
   if(stroke.atop)return renderStrokeAtop(ctx,stroke,brush,settings,alphaMul);
@@ -3594,7 +3609,7 @@ function selectAtBase(x,y){
     const lockedIds=new Set(layers.filter(l=>l.locked).map(l=>l.id));
     let best=null,bestDist=Infinity;
     for(let i=strokes.length-1;i>=0;i--){
-      const s=strokes[i];if(lockedIds.has(s.layerId)||s.guideHidden)continue;
+      const s=strokes[i];if(lockedIds.has(s.layerId)||s.guideHidden||s.patFill)continue;
       const settings=s.settings||BrushEngine.getSettings(s.brushId);
       const tolerance=Math.max(18,(settings.size||6)/2+12);
       const d=s.regions?distanceToMultiPolyline(p.x,p.y,s.regions):distanceToPolyline(p.x,p.y,s.points);
@@ -3824,6 +3839,8 @@ function transformStrokePoints(stroke,fn){
   if(stroke.regions)stroke.regions=stroke.regions.map(region=>region.map(p=>{const t=fn(p.x,p.y);return {...p,x:t.x,y:t.y};}));
 }
 function translateStrokeGeometry(stroke,dx,dy){
+  if(stroke.patFill){stroke.patFill.x+=dx;stroke.patFill.y+=dy;return;}
+  strokes.forEach(q=>{if(q.patFill&&q.clipStrokeId===stroke.id){q.patFill.x+=dx;q.patFill.y+=dy;}}); // a pattern clipped inside a shape travels with it
   transformStrokePoints(stroke,(x,y)=>({x:x+dx,y:y+dy}));
   if(stroke.shape){stroke.shape.x0+=dx;stroke.shape.y0+=dy;stroke.shape.x1+=dx;stroke.shape.y1+=dy;}
 }
@@ -6439,6 +6456,7 @@ function deleteSelectedStroke(){
   if(!selectedStrokeId)return;
   const stroke=strokes.find(s=>s.id===selectedStrokeId);
   const clippedLayerIds=stroke?new Set(strokes.filter(s=>s.clipStrokeId===stroke.id).map(s=>s.layerId)):new Set();
+  if(stroke){patRemoveFor(stroke.id,true);renderLayersList();}
   strokes=strokes.filter(s=>s.id!==selectedStrokeId);
   selectedStrokeId=null;
   // Deleting a Paint Inside boundary doesn't touch the paint it clipped — findClipTargetStroke
@@ -7251,7 +7269,7 @@ function palOnSelect(v){
   else{const L=libGet().find(x=>x.id===v.slice(2));if(L){const ex=savedPalettes.find(x=>x.name===L.name&&x.hexes.join()===L.hexes.join());if(ex)projectPaletteId=ex.id;else palNewCustom(L.name,L.hexes);setStatus('📚 Added “'+L.name+'” to this project.');}}
   scheduleAutosave();palRefresh();
 }
-function mountPalette(host,editor,onPick){
+function mountPalette(host,editor,onPick,withNone){
   host.innerHTML='';
   const top=document.createElement('div');top.className='ef-row';
   const sel=document.createElement('select');sel.className='pal-sel';top.appendChild(sel);host.appendChild(top);
@@ -7277,6 +7295,7 @@ function mountPalette(host,editor,onPick){
     palSelectHtml(sel);
     const a=activePalette();sw.innerHTML='';
     if(!a.hexes.length){const h=document.createElement('div');h.className='hint';h.textContent=a.custom?'No colours yet — pick one and tap ＋ Colour.':'No adaptive colours yet.';sw.appendChild(h);}
+    if(withNone){const nb=document.createElement('button');nb.type='button';nb.className='pal-sw none';nb.title='None (transparent)';nb.setAttribute('aria-label','None');nb.onclick=()=>onPick(null);sw.appendChild(nb);}
     a.hexes.forEach((hex,i)=>{
       const b=document.createElement('button');b.type='button';b.className='pal-sw';b.style.background=hex;b.title=hex;
       if(editing&&a.custom){const x=document.createElement('span');x.className='px';x.textContent='✕';b.appendChild(x);}
@@ -7287,6 +7306,153 @@ function mountPalette(host,editor,onPick){
   sel.onchange=()=>palOnSelect(sel.value);
   palInst.push(render);render();
 }
+// ---- Clip a pattern inside a shape ------------------------------------------------------------------------------------
+// The pattern is a stroke of its own ({patFill:{motifId,x,y,s,r}, clipStrokeId:<shape>}) on its own layer, drawn at render time inside the
+// shape's GEOMETRY (nodes/points). It never reads the shape's fill or stroke colour, so setting them to None can't remove the clip, and the
+// shape and its outline stay fully editable. It lives in the normal stroke list, so saving, undo/redo and layers all work as for any stroke.
+function patTargetPolys(t){
+  if(!t)return null;
+  if(t.regions&&t.regions.length)return t.regions.filter(r=>r&&r.length>=3);
+  const pts=t.nodes&&t.nodes.length>=3?nodesToPoints(t.nodes,true):t.points;
+  return pts&&pts.length>=3?[pts]:null;
+}
+function renderPatFill(ctx,stroke,alphaMul){
+  const pf=stroke.patFill,m=pf&&motifs.find(x=>x.id===pf.motifId);if(!m||!m.img)return;
+  const polys=patTargetPolys(strokes.find(x=>x.id===stroke.clipStrokeId));if(!polys||!polys.length)return;
+  const iw=m.img.naturalWidth||m.img.width,ih=m.img.naturalHeight||m.img.height;if(!iw||!ih)return;
+  ctx.save();
+  ctx.beginPath();
+  polys.forEach(pts=>{ctx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);ctx.closePath();});
+  ctx.clip(polys.length>1?'evenodd':'nonzero');
+  if(alphaMul!=null)ctx.globalAlpha*=alphaMul;
+  ctx.translate(pf.x,pf.y);ctx.rotate((pf.r||0)*Math.PI/180);ctx.scale(pf.s,pf.s);
+  try{ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';}catch(e){}
+  ctx.drawImage(m.img,-iw/2,-ih/2,iw,ih);
+  ctx.restore();
+}
+function patStrokesFor(id){return strokes.filter(q=>q.patFill&&q.clipStrokeId===id);}
+// Remove the patterns clipped to a shape, and their layers when nothing else is on them.
+function patRemoveFor(shapeId,quiet){
+  const gone=patStrokesFor(shapeId);if(!gone.length)return;
+  strokes=strokes.filter(q=>!gone.includes(q));
+  new Set(gone.map(q=>q.layerId)).forEach(id=>{
+    if(!strokes.some(q=>q.layerId===id)&&layers.length>1){
+      const i=layers.findIndex(l=>l.id===id);if(i>=0)layers.splice(i,1);
+      if(activeLayerId===id)activeLayerId=layers[Math.max(0,Math.min(i,layers.length-1))].id;
+    }else rebuildLayer(id);
+  });
+  if(!quiet){renderLayersList();rebuildAllLayers();pushHist();redraw();}
+}
+function patEligibleShape(s){return !!(s&&!s.patFill&&!s.fillColor&&!s.text&&!s.clipStrokeId&&(s.regions&&s.regions.length||s.closed||((s.points||[]).length>=3&&!s.shape&&efEligible(s))));}
+function patAddMotif(src,name){
+  return new Promise(res=>{const img=new Image();img.onload=()=>{const e={id:crypto.randomUUID(),img,src,name,source:null};motifs.push(e);try{renderTray();}catch(x){}res(e);};img.onerror=()=>res(null);img.src=src;});
+}
+function patReadFile(f){
+  return new Promise(res=>{const r=new FileReader();r.onload=()=>{
+    const img=new Image();img.onload=()=>{
+      const mx=Math.max(img.naturalWidth,img.naturalHeight);let src=r.result;
+      if(mx>3000){const k=3000/mx,c=document.createElement('canvas');c.width=Math.round(img.naturalWidth*k);c.height=Math.round(img.naturalHeight*k);c.getContext('2d').drawImage(img,0,0,c.width,c.height);src=c.toDataURL('image/jpeg',0.92);}
+      res({src,name:(f.name||'Pattern').replace(/\.[a-z0-9]+$/i,'')});
+    };img.onerror=()=>res(null);img.src=r.result;};r.onerror=()=>res(null);r.readAsDataURL(f);});
+}
+// Choose a picture: any motif/pattern already in the project, the background pattern, or a new image from the device.
+function patPick(){
+  return new Promise(resolve=>{
+    let ov=$('patPick');if(!ov){ov=document.createElement('div');ov.id='patPick';document.body.appendChild(ov);}
+    ov.innerHTML='<div class="pp-box"><div style="font-weight:800;font-size:16px">🧩 Choose a pattern to clip inside the shape</div><div class="hint">Pick one already in this project, or import an image.</div><div class="pp-grid" id="ppGrid"></div><div style="display:flex;gap:8px;flex-wrap:wrap"><label class="btn primary" style="cursor:pointer">📥 Import image…<input id="ppFile" type="file" accept="image/*" style="display:none"></label><button type="button" class="btn" id="ppCancel">Cancel</button></div></div>';
+    const grid=ov.querySelector('#ppGrid');let done=false;
+    const fin=v=>{if(done)return;done=true;ov.style.display='none';resolve(v);};
+    const card=(src,label,fn)=>{const c=document.createElement('div');c.className='pp-card';c.innerHTML='<img alt=""><div></div>';c.querySelector('img').src=src;c.lastChild.textContent=label;c.onclick=fn;grid.appendChild(c);};
+    motifs.filter(m=>m.img&&m.src).forEach(m=>card(m.src,m.name||'Pattern',()=>fin(m)));
+    if(bgImg&&bgImg.src)card(bgImg.src,'Background pattern',async()=>{
+      let src=bgImg.src;
+      if(!/^data:/.test(src)){try{const c=document.createElement('canvas');c.width=bgImg.naturalWidth;c.height=bgImg.naturalHeight;c.getContext('2d').drawImage(bgImg,0,0);src=c.toDataURL('image/png');}catch(e){fin(null);return;}}
+      const ex=motifs.find(m=>m.src===src);fin(ex||await patAddMotif(src,'Background pattern'));
+    });
+    if(!grid.children.length){const h=document.createElement('div');h.className='hint';h.textContent='No patterns in this project yet — import one.';grid.appendChild(h);}
+    ov.querySelector('#ppCancel').onclick=()=>fin(null);
+    ov.onclick=e=>{if(e.target===ov)fin(null);};
+    ov.querySelector('#ppFile').onchange=async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;const r=await patReadFile(f);if(!r){setStatus('That image could not be opened.');fin(null);return;}fin(await patAddMotif(r.src,r.name));};
+    ov.style.display='flex';
+  });
+}
+function patClipAction(){
+  const s=efOutline();
+  const ex=s?patStrokesFor(s.id)[0]:null;
+  if(ex){patOpenEditor(ex.id);return;}
+  if(!patEligibleShape(s)){setStatus('🧩 Select a closed shape first (tap the outline of the shape, like the dress), then tap “Clip a pattern inside”.');return;}
+  patPick().then(m=>{if(m)patCreate(s.id,m);});
+}
+function patCreate(shapeId,motif,replaceStrokeId){
+  const t=strokes.find(x=>x.id===shapeId),polys=patTargetPolys(t);
+  if(!t||!polys){setStatus('🧩 Select a closed shape first.');return;}
+  const img=motif.img,iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height;if(!iw||!ih){setStatus('That picture could not be read.');return;}
+  if(replaceStrokeId){const st=strokes.find(q=>q.id===replaceStrokeId);if(st){st.patFill.motifId=motif.id;rebuildLayer(st.layerId);pushHist();invalidateDetail&&invalidateDetail();redraw();patSyncEditor();}return;}
+  let x0=1e12,y0=1e12,x1=-1e12,y1=-1e12;polys.forEach(pts=>pts.forEach(p=>{if(p.x<x0)x0=p.x;if(p.x>x1)x1=p.x;if(p.y<y0)y0=p.y;if(p.y>y1)y1=p.y;}));
+  const cx=(x0+x1)/2,cy=(y0+y1)/2,cover=Math.max((x1-x0)/iw,(y1-y0)/ih)*1.03;
+  const shapeLayer=layers.find(l=>l.id===t.layerId),at=Math.max(0,layers.indexOf(shapeLayer));
+  const layer=makeLayer('Pattern · '+String(motif.name||'pattern').slice(0,22));
+  layers.splice(at,0,layer); // just below the shape's layer so the outline (and everything above) stays on top of it
+  const st={id:crypto.randomUUID(),brushId:'smoothPen',layerId:layer.id,color:'#000000',settings:null,points:[{x:cx,y:cy,pressure:.5},{x:cx+1,y:cy,pressure:.5}],nodes:null,closed:false,clipStrokeId:t.id,shape:null,patFill:{motifId:motif.id,x:cx,y:cy,s:cover,r:0}};
+  strokes.push(st);
+  let note='';
+  if(t.fill&&t.fill.on){t.fill.on=false;try{fillSync();}catch(e){}rebuildLayer(t.layerId);note=' The shape\'s fill was turned off so the pattern shows (Undo brings it back).';}
+  rebuildLayer(layer.id);compositeDirty=true;segVer++;
+  renderLayersList();pushHist();invalidateDetail&&invalidateDetail();redraw();
+  setStatus('🧩 Pattern placed inside the shape on its own layer, under the outline.'+note);
+  patOpenEditor(st.id);
+}
+let patEdit=null,patDrag=null;
+function patEditor(){
+  let ed=$('patEditor');if(ed)return ed;
+  ed=document.createElement('div');ed.id='patEditor';
+  ed.innerHTML='<h4>🧩 Pattern inside shape</h4><div class="hint">Drag on the canvas with the Pencil (or mouse) to move the pattern. Fingers still pan and zoom.</div>'
+   +'<div class="pe-row"><span style="width:44px">Size</span><input type="range" id="peSize" min="5" max="800" step="1"><span class="pe-val" id="peSizeV"></span></div>'
+   +'<div class="pe-row"><span style="width:44px">Turn</span><input type="range" id="peRot" min="-180" max="180" step="1"><span class="pe-val" id="peRotV"></span></div>'
+   +'<div class="pe-btns"><button type="button" class="btn mini" id="peFit">Fit to shape</button><button type="button" class="btn mini" id="peChange">Change pattern</button><button type="button" class="btn mini danger" id="peRemove">Remove pattern</button><button type="button" class="btn mini primary" id="peDone">✓ Done</button></div>';
+  document.body.appendChild(ed);
+  const cur=()=>patEdit&&strokes.find(q=>q.id===patEdit);
+  const live=()=>{const st=cur();if(!st)return;rebuildLayer(st.layerId);invalidateDetail&&invalidateDetail();redraw();};
+  const size=ed.querySelector('#peSize'),rot=ed.querySelector('#peRot');
+  size.oninput=()=>{const st=cur();if(!st)return;st.patFill.s=Math.max(0.01,(+size.value)/100);ed.querySelector('#peSizeV').textContent=size.value+'%';live();};
+  rot.oninput=()=>{const st=cur();if(!st)return;st.patFill.r=+rot.value;ed.querySelector('#peRotV').textContent=rot.value+'°';live();};
+  size.onchange=rot.onchange=()=>{if(cur())pushHist();};
+  ed.querySelector('#peFit').onclick=()=>{const st=cur();if(!st)return;const t=strokes.find(x=>x.id===st.clipStrokeId),polys=patTargetPolys(t),m=motifs.find(x=>x.id===st.patFill.motifId);if(!polys||!m||!m.img)return;
+    let x0=1e12,y0=1e12,x1=-1e12,y1=-1e12;polys.forEach(pts=>pts.forEach(p=>{if(p.x<x0)x0=p.x;if(p.x>x1)x1=p.x;if(p.y<y0)y0=p.y;if(p.y>y1)y1=p.y;}));
+    const iw=m.img.naturalWidth||m.img.width,ih=m.img.naturalHeight||m.img.height;st.patFill.x=(x0+x1)/2;st.patFill.y=(y0+y1)/2;st.patFill.s=Math.max((x1-x0)/iw,(y1-y0)/ih)*1.03;st.patFill.r=0;live();pushHist();patSyncEditor();};
+  ed.querySelector('#peChange').onclick=()=>{const st=cur();if(!st)return;patPick().then(m=>{if(m)patCreate(st.clipStrokeId,m,st.id);});};
+  ed.querySelector('#peRemove').onclick=()=>{const st=cur();if(!st)return;const sid=st.clipStrokeId;patEditClose();patRemoveFor(sid);setStatus('🧩 Pattern removed. Undo brings it back.');};
+  ed.querySelector('#peDone').onclick=()=>patEditClose();
+  return ed;
+}
+function patOpenEditor(strokeId){patEdit=strokeId;const ed=patEditor();ed.style.display='block';patSyncEditor();}
+function patEditClose(){patEdit=null;patDrag=null;const ed=$('patEditor');if(ed)ed.style.display='none';}
+function patSyncEditor(){
+  const ed=$('patEditor');if(!ed||!patEdit)return;
+  const st=strokes.find(q=>q.id===patEdit);if(!st){patEditClose();return;}
+  const sz=Math.round(st.patFill.s*100),r=Math.round(st.patFill.r||0);
+  const size=ed.querySelector('#peSize'),rot=ed.querySelector('#peRot');
+  size.max=Math.max(800,sz);if(document.activeElement!==size)size.value=sz;if(document.activeElement!==rot)rot.value=r;
+  ed.querySelector('#peSizeV').textContent=sz+'%';ed.querySelector('#peRotV').textContent=r+'°';
+}
+setInterval(()=>{try{patSyncEditor();}catch(e){}},500);
+// Pencil / mouse drag moves the pattern while the pattern editor is open (touch is left alone so fingers can still pan and zoom).
+canvas.addEventListener('pointerdown',e=>{
+  if(!patEdit||!isPen(e)||e.button>0)return;
+  const st=strokes.find(q=>q.id===patEdit);if(!st)return;
+  e.stopImmediatePropagation();e.preventDefault();
+  const p=screenToCanvas(e.clientX,e.clientY);patDrag={x:p.x,y:p.y,raf:0,moved:false};
+  try{canvas.setPointerCapture(e.pointerId);}catch(x){}
+},true);
+canvas.addEventListener('pointermove',e=>{
+  if(!patDrag)return;
+  const st=strokes.find(q=>q.id===patEdit);if(!st){patDrag=null;return;}
+  e.stopImmediatePropagation();
+  const p=screenToCanvas(e.clientX,e.clientY);st.patFill.x+=p.x-patDrag.x;st.patFill.y+=p.y-patDrag.y;patDrag.x=p.x;patDrag.y=p.y;patDrag.moved=true;
+  if(!patDrag.raf){const d=patDrag;d.raf=requestAnimationFrame(()=>{d.raf=0;rebuildLayer(st.layerId);invalidateDetail&&invalidateDetail();redraw();});}
+},true);
+const patUp=e=>{if(!patDrag)return;const d=patDrag;patDrag=null;e.stopImmediatePropagation&&e.stopImmediatePropagation();if(d.moved)pushHist();};
+canvas.addEventListener('pointerup',patUp,true);canvas.addEventListener('pointercancel',patUp,true);
 // ---- easy fill: a live fill under a closed outline that follows it ----
 const efInst=[];
 function efOutline(){const id=pathEditStrokeId||selectedStrokeId;const s=strokes.find(x=>x.id===id);return s&&!s.fillOf?s:null;}
@@ -7320,8 +7486,15 @@ function fillSync(){
 }
 function efApply(target,hex){
   const s=efOutline();if(!s){setStatus('Select a stroke or shape first.');return;}
+  if(hex===null){ // None = transparent (not white). Only the visible styling goes; the shape's geometry (and any clip boundary) stays.
+    if(target!=='fill'){s.noStroke=true;}
+    if(target!=='stroke'&&s.fill&&s.fill.on)s.fill.on=false;
+    fillSync();rebuildLayer(s.layerId);rebuildLayersClippedBy(s.id);pushHist();redraw();efRefresh();try{syncStrokeSelectionUI();}catch(e){}
+    setStatus('⌧ '+(target==='both'?'Fill and stroke are now None (transparent).':target==='fill'?'Fill is now None (transparent).':'Stroke is now None (transparent) — the shape is still there and still selectable.'));
+    return;
+  }
   if((target==='fill'||target==='both')&&!efEligible(s)){setStatus('Only closed shapes can have a fill — use Close Shape in Edit Path first.');if(target==='fill')return;target='stroke';}
-  if(target!=='fill')s.color=hex;
+  if(target!=='fill'){s.color=hex;delete s.noStroke;}
   if(target!=='stroke'){s.fill=Object.assign({on:true,same:false,opacity:1},s.fill||{});s.fill.on=true;s.fill.color=hex;s.fill.gradient=null;if(s.fill.same&&target==='fill')s.color=hex;}
   else if(s.fill&&s.fill.same)s.fill.color=hex;
   fillSync();rebuildLayer(s.layerId);pushHist();redraw();efRefresh();try{syncStrokeSelectionUI();}catch(e){}
@@ -7343,11 +7516,14 @@ function mountEasyFill(host){
   r2.appendChild(lab);r2.appendChild(seg);
   const pal=document.createElement('div');
   const hint=document.createElement('div');hint.className='hint';hint.style.margin='4px 0 0';
-  host.appendChild(r1);host.appendChild(r2);host.appendChild(pal);host.appendChild(hint);
+  const patBtn=document.createElement('button');patBtn.type='button';patBtn.className='btn pat-btn';patBtn.textContent='🧩 Clip a pattern inside';
+  patBtn.title='Put a pattern or image inside the selected closed shape, on its own layer';
+  patBtn.onclick=()=>patClipAction();
+  host.appendChild(r1);host.appendChild(r2);host.appendChild(pal);host.appendChild(hint);host.appendChild(patBtn);
   mountPalette(pal,false,hex=>{
     // "Both" without a fill yet turns the fill on; "Fill" too.
     efApply(target,hex);
-  });
+  },true);
   tg.onclick=()=>{
     const s=efOutline();if(!s)return;
     if(s.fill&&s.fill.on){s.fill.on=false;}
@@ -7367,6 +7543,7 @@ function mountEasyFill(host){
     ci.value=(on&&(s.fill.same?s.color:s.fill.color))||(s&&s.fill&&s.fill.color)||'#ffd166';ci.disabled=!ok;
     same.checked=!!(s&&s.fill&&s.fill.same);same.disabled=!s;
     Object.keys(segB).forEach(k=>segB[k].classList.toggle('active',k===target));
+    patBtn.textContent=(s&&strokes.some(q=>q.patFill&&q.clipStrokeId===s.id))?'🧩 Edit pattern inside':'🧩 Clip a pattern inside';
     hint.textContent=!s?'':!ok?'Select a line or shape to give it a fill (an open line is filled as if its ends were joined).':on?'The fill follows the outline when you edit it.':'';
   });
   efRefresh();
@@ -7374,9 +7551,10 @@ function mountEasyFill(host){
 document.querySelectorAll('.efHost').forEach(mountEasyFill);
 mountPalette($('palEditorHost'),true,hex=>{
   const s=efOutline();
+  if(hex===null&&!s){setStatus('Select a shape or stroke first, then tap the crossed-out square to make its fill or stroke None.');return;}
   if(s){efApply((()=>{try{return localStorage.getItem('sp-efTarget')||'stroke';}catch(e){return 'stroke';}})(),hex);}
   else{currentColor=hex;try{$('brushColor').value=hex;rememberBrushColour();renderBrushPreview();$('tbColor').value=hex;}catch(e){}setStatus('🎨 Drawing colour '+hex+'.');}
-});
+},true);
 setInterval(()=>{try{efRefresh();}catch(e){}},600);
 
 // ---- Gradient panel ----
@@ -10020,7 +10198,8 @@ function svgStrokeOutline(stroke,settings,brush){
   return {d,opacity};
 }
 function svgStrokeMarkup(stroke,clipIds){
-  if(stroke.guideHidden||stroke.brushId==='smudge')return '';
+  if(stroke.guideHidden||stroke.brushId==='smudge'||stroke.patFill)return '';
+  if(stroke.noStroke&&!stroke.fillColor&&!stroke.text)return '';
   if(stroke.text)return txSvgText(stroke);
   if(stroke.outlined&&stroke.regions&&stroke.fillColor)return txSvgOutlined(stroke);
   if(stroke.brushId==='eraser')return '';
@@ -11727,7 +11906,7 @@ async function runBenchmark(){
   }catch(e){out.push('Stopped early: '+(e&&e.message||e));}
   finally{zoom=save.zoom;panX=save.panX;panY=save.panY;rot=save.rot;activeLayerId=save.aid;try{getActiveLayer();syncAwake();applyTransform();compositeDirty=true;redraw();renderLayersList();}catch(e){}}
   const text=out.join('\n');
-  try{const h=JSON.parse(localStorage.getItem('sp-bench')||'[]');h.push({t:Date.now(),v:'v278',text});localStorage.setItem('sp-bench',JSON.stringify(h.slice(-6)));}catch(e){}
+  try{const h=JSON.parse(localStorage.getItem('sp-bench')||'[]');h.push({t:Date.now(),v:'v279',text});localStorage.setItem('sp-bench',JSON.stringify(h.slice(-6)));}catch(e){}
   return text;
 }
 window.__sketchpadBench=()=>runBenchmark();
@@ -11735,7 +11914,7 @@ async function showBenchmark(){
   const ok=await projAsk({title:'⏱ Speed test',message:'This times the project you have open, without changing it. Takes about 10 seconds. Please do not touch the screen until it finishes.',ok:'Start',cancel:'Cancel'});
   if(!ok)return;
   const text=await runBenchmark();
-  const r=await projAsk({title:'⏱ Speed test results',message:text+'\n\nApp v278. Send me a screenshot of this.',ok:'OK',cancel:null,extra:[{label:'Copy',value:'copy'}]});
+  const r=await projAsk({title:'⏱ Speed test results',message:text+'\n\nApp v279. Send me a screenshot of this.',ok:'OK',cancel:null,extra:[{label:'Copy',value:'copy'}]});
   if(r&&r.__extra==='copy'){try{await navigator.clipboard.writeText(text);setStatus('Copied.');}catch(e){}}
 }
 function tlLine(){
