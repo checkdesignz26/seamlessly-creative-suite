@@ -26,7 +26,8 @@
   if (!projectId) return;
 
   function buildPanel() {
-    const anchor = document.querySelector('.sidebar .section');
+    const bgBtn = document.getElementById('bgInput');
+    const anchor = (bgBtn && bgBtn.closest('.section')) || document.querySelector('.sidebar .section');
     if (!anchor || !anchor.parentNode) return null;
 
     const panel = document.createElement('section');
@@ -157,7 +158,7 @@
       btn.disabled = true;
       window.SCStatus && window.SCStatus.set('saving');
       try {
-        const info = window.__scGetSketchpadExportCanvas();
+        const info = await window.__scGetSketchpadExportCanvas();
         const dataUrl = canvasToWorkingDataUrl(info.canvas);
         await window.SCLibrary.addAssetFromDataUrl(projectId, dataUrl, {
           kind: 'pattern',

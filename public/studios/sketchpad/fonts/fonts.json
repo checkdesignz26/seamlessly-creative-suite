@@ -1,0 +1,321 @@
+{
+ "v": 1,
+ "fonts": [
+  {
+   "family": "Lora",
+   "category": "serif",
+   "license": "OFL",
+   "licenseFile": "licenses/Lora-OFL.txt",
+   "styles": [
+    {
+     "w": 400,
+     "i": false,
+     "file": "Lora-400.woff"
+    },
+    {
+     "w": 700,
+     "i": false,
+     "file": "Lora-700.woff"
+    },
+    {
+     "w": 400,
+     "i": true,
+     "file": "Lora-400i.woff"
+    },
+    {
+     "w": 700,
+     "i": true,
+     "file": "Lora-700i.woff"
+    }
+   ]
+  },
+  {
+   "family": "Crimson Pro",
+   "category": "serif",
+   "license": "OFL",
+   "licenseFile": "licenses/CrimsonPro-OFL.txt",
+   "styles": [
+    {
+     "w": 400,
+     "i": false,
+     "file": "CrimsonPro-400.woff"
+    },
+    {
+     "w": 700,
+     "i": false,
+     "file": "CrimsonPro-700.woff"
+    },
+    {
+     "w": 400,
+     "i": true,
+     "file": "CrimsonPro-400i.woff"
+    }
+   ]
+  },
+  {
+   "family": "Libre Baskerville",
+   "category": "serif",
+   "license": "OFL",
+   "licenseFile": "licenses/LibreBaskerville-OFL.txt",
+   "styles": [
+    {
+     "w": 400,
+     "i": false,
+     "file": "LibreBaskerville-400.woff"
+    }
+   ]
+  },
+  {
+   "family": "Young Serif",
+   "category": "serif",
+   "license": "OFL",
+   "licenseFile": "licenses/YoungSerif-OFL.txt",
+   "styles": [
+    {
+     "w": 400,
+     "i": false,
+     "file": "YoungSerif-400.woff"
+    }
+   ]
+  },
+  {
+   "family": "Instrument Serif",
+   "category": "serif",
+   "license": "OFL",
+   "licenseFile": "licenses/InstrumentSerif-OFL.txt",
+   "styles": [
+    {
+     "w": 400,
+     "i": false,
+     "file": "InstrumentSerif-400.woff"
+    },
+    {
+     "w": 400,
+     "i": true,
+     "file": "InstrumentSerif-400i.woff"
+    }
+   ]
+  },
+  {
+   "family": "Gloock",
+   "category": "display",
+   "license": "OFL",
+   "licenseFile": "licenses/Gloock-OFL.txt",
+   "styles": [
+    {
+     "w": 400,
+     "i": false,
+     "file": "Gloock-400.woff"
+    }
+   ]
+  },
+  {
+   "family": "Poiret One",
+   "category": "display",
+   "license": "OFL",
+   "licenseFile": "licenses/PoiretOne-OFL.txt",
+   "styles": [
+    {
+     "w": 400,
+     "i": false,
+     "file": "PoiretOne-400.woff"
+    }
+   ]
+  },
+  {
+   "family": "Italiana",
+   "category": "display",
+   "license": "OFL",
+   "licenseFile": "licenses/Italiana-OFL.txt",
+   "styles": [
+    {
+     "w": 400,
+     "i": false,
+     "file": "Italiana-400.woff"
+    }
+   ]
+  },
+  {
+   "family": "Erica One",
+   "category": "display",
+   "license": "OFL",
+   "licenseFile": "licenses/EricaOne-OFL.txt",
+   "styles": [
+    {
+     "w": 400,
+     "i": false,
+     "file": "EricaOne-400.woff"
+    }
+   ]
+  },
+  {
+   "family": "Big Shoulders Display",
+   "category": "display",
+   "license": "OFL",
+   "licenseFile": "licenses/BigShouldersDisplay-OFL.txt",
+   "styles": [
+    {
+     "w": 400,
+     "i": false,
+     "file": "BigShouldersDisplay-400.woff"
+    },
+    {
+     "w": 700,
+     "i": false,
+     "file": "BigShouldersDisplay-700.woff"
+    }
+   ]
+  },
+  {
+   "family": "Nothing You Could Do",
+   "category": "handwriting",
+   "license": "OFL",
+   "licenseFile": "licenses/NothingYouCouldDo-OFL.txt",
+   "styles": [
+    {
+     "w": 400,
+     "i": false,
+     "file": "NothingYouCouldDo-400.woff"
+    }
+   ]
+  },
+  {
+   "family": "Work Sans",
+   "category": "sans-serif",
+   "license": "OFL",
+   "licenseFile": "licenses/WorkSans-OFL.txt",
+   "styles": [
+    {
+     "w": 400,
+     "i": false,
+     "file": "WorkSans-400.woff"
+    },
+    {
+     "w": 700,
+     "i": false,
+     "file": "WorkSans-700.woff"
+    },
+    {
+     "w": 400,
+     "i": true,
+     "file": "WorkSans-400i.woff"
+    },
+    {
+     "w": 700,
+     "i": true,
+     "file": "WorkSans-700i.woff"
+    }
+   ]
+  },
+  {
+   "family": "Outfit",
+   "category": "sans-serif",
+   "license": "OFL",
+   "licenseFile": "licenses/Outfit-OFL.txt",
+   "styles": [
+    {
+     "w": 400,
+     "i": false,
+     "file": "Outfit-400.woff"
+    },
+    {
+     "w": 700,
+     "i": false,
+     "file": "Outfit-700.woff"
+    }
+   ]
+  },
+  {
+   "family": "Instrument Sans",
+   "category": "sans-serif",
+   "license": "OFL",
+   "licenseFile": "licenses/InstrumentSans-OFL.txt",
+   "styles": [
+    {
+     "w": 400,
+     "i": false,
+     "file": "InstrumentSans-400.woff"
+    },
+    {
+     "w": 700,
+     "i": false,
+     "file": "InstrumentSans-700.woff"
+    },
+    {
+     "w": 400,
+     "i": true,
+     "file": "InstrumentSans-400i.woff"
+    },
+    {
+     "w": 700,
+     "i": true,
+     "file": "InstrumentSans-700i.woff"
+    }
+   ]
+  },
+  {
+   "family": "Bricolage Grotesque",
+   "category": "sans-serif",
+   "license": "OFL",
+   "licenseFile": "licenses/BricolageGrotesque-OFL.txt",
+   "styles": [
+    {
+     "w": 400,
+     "i": false,
+     "file": "BricolageGrotesque-400.woff"
+    },
+    {
+     "w": 700,
+     "i": false,
+     "file": "BricolageGrotesque-700.woff"
+    }
+   ]
+  },
+  {
+   "family": "Poppins",
+   "category": "sans-serif",
+   "license": "OFL",
+   "licenseFile": "licenses/Poppins-OFL.txt",
+   "styles": [
+    {
+     "w": 400,
+     "i": false,
+     "file": "Poppins-400.woff"
+    },
+    {
+     "w": 700,
+     "i": false,
+     "file": "Poppins-700.woff"
+    },
+    {
+     "w": 400,
+     "i": true,
+     "file": "Poppins-400i.woff"
+    },
+    {
+     "w": 700,
+     "i": true,
+     "file": "Poppins-700i.woff"
+    }
+   ]
+  },
+  {
+   "family": "JetBrains Mono",
+   "category": "monospace",
+   "license": "OFL",
+   "licenseFile": "licenses/JetBrainsMono-OFL.txt",
+   "styles": [
+    {
+     "w": 400,
+     "i": false,
+     "file": "JetBrainsMono-400.woff"
+    },
+    {
+     "w": 700,
+     "i": false,
+     "file": "JetBrainsMono-700.woff"
+    }
+   ]
+  }
+ ]
+}
