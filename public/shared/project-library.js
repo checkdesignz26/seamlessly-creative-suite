@@ -350,6 +350,27 @@
     return hydrateAsset(record);
   }
 
+  // Byte size of everything a project's assets occupy in this library's own IndexedDB — reads raw
+  // store records directly (not through hydrateAsset/listAssets) purely as a perf/memory nicety for
+  // projects with many large assets, since summing byteLength needs no Blob reconstruction at all.
+  // Handles both current records (fileBuffer/thumbBuffer/repeatTileBuffer ArrayBuffers) and any
+  // legacy record still holding real Blob fields (file/thumb/repeatTile) from before that fix.
+  async function getProjectAssetsSize(projectId) {
+    const store = await tx(STORE_ASSETS, 'readonly');
+    const idx = store.index('byProject');
+    const all = await withTimeout(
+      reqToPromise(idx.getAll(IDBKeyRange.only(projectId))),
+      'getProjectAssetsSize'
+    );
+    let bytes = 0;
+    all.forEach((r) => {
+      bytes += (r.fileBuffer && r.fileBuffer.byteLength) || (r.file && r.file.size) || 0;
+      bytes += (r.thumbBuffer && r.thumbBuffer.byteLength) || (r.thumb && r.thumb.size) || 0;
+      bytes += (r.repeatTileBuffer && r.repeatTileBuffer.byteLength) || (r.repeatTile && r.repeatTile.size) || 0;
+    });
+    return { bytes, assetCount: all.length };
+  }
+
   async function deleteAsset(id) {
     const asset = await getAsset(id);
     const store = await tx(STORE_ASSETS, 'readwrite');
@@ -567,6 +588,7 @@
     deleteProject,
     listAssets,
     getAsset,
+    getProjectAssetsSize,
     addAssetFromDataUrl,
     addAssetFromBlob,
     deleteAsset,

@@ -77,14 +77,91 @@ html, body {
   z-index: 50;
 }
 
+#scProjectSummary {
+  padding: 4px 8px 8px;
+  color: var(--sc-muted);
+  font-size: 12px;
+}
+
+#scProjectToolbar {
+  display: flex;
+  gap: 6px;
+  padding: 0 2px 6px;
+  border-bottom: 1px solid var(--sc-border);
+  margin-bottom: 6px;
+}
+
+#scSelectModeBtn, .sc-danger {
+  flex: 1;
+  background: none;
+  border: 1px solid var(--sc-border);
+  color: var(--sc-text);
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+#scSelectModeBtn.active {
+  background: rgba(124, 92, 255, .18);
+  border-color: var(--sc-accent);
+}
+
+.sc-danger {
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, .4);
+}
+.sc-danger:hover {
+  background: rgba(239, 68, 68, .18);
+}
+
+#scBulkBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 2px;
+  margin-top: 4px;
+  border-top: 1px solid var(--sc-border);
+}
+#scBulkBar[hidden] { display: none; }
+
+#scBulkCount {
+  flex: 1;
+  color: var(--sc-muted);
+  font-size: 12px;
+}
+
+#scBulkDeleteBtn, #scBulkCancelBtn {
+  background: none;
+  border: 1px solid var(--sc-border);
+  color: var(--sc-text);
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .sc-project-row {
   display: flex;
   align-items: stretch;
   gap: 2px;
 }
 
+.sc-project-checkbox {
+  flex-shrink: 0;
+  width: 30px;
+  cursor: pointer;
+}
+
 .sc-project-item {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   flex: 1;
   min-width: 0;
   text-align: left;
@@ -96,8 +173,23 @@ html, body {
   cursor: pointer;
   font: inherit;
   overflow: hidden;
+}
+
+.sc-project-item-name {
+  max-width: 100%;
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.sc-project-item-size {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--sc-muted);
+  font-size: 11px;
+  font-weight: 400;
 }
 
 .sc-project-item:hover, .sc-project-item.active {

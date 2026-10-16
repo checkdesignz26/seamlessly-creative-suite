@@ -15,7 +15,17 @@
       <button id="scProjectName" type="button" title="Switch project"
         onclick="this.parentElement.toggleAttribute('open')">Loading…</button>
       <div id="scProjectMenu">
+        <div id="scProjectSummary"></div>
+        <div id="scProjectToolbar">
+          <button id="scSelectModeBtn" type="button">Select</button>
+          <button id="scDeleteAllBtn" type="button" class="sc-danger">Delete All…</button>
+        </div>
         <div id="scProjectList"></div>
+        <div id="scBulkBar" hidden>
+          <span id="scBulkCount"></span>
+          <button id="scBulkDeleteBtn" type="button" class="sc-danger">Delete Selected</button>
+          <button id="scBulkCancelBtn" type="button">Cancel</button>
+        </div>
         <button id="scNewProjectBtn" type="button">+ New project</button>
       </div>
     </div>
