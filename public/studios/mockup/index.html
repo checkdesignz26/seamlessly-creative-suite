@@ -1046,8 +1046,7 @@ input[type=range] {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  flex-wrap: wrap;
-  padding: 14px 20px;
+  padding: 8px 16px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
@@ -1055,22 +1054,37 @@ input[type=range] {
 .lookbook-editor-toolbar h2 {
   margin: 0;
   font-family: 'Caveat', cursive;
-  font-size: 28px;
+  font-size: 24px;
   color: var(--soft);
+  flex-shrink: 0;
 }
 
+/* Scrolls sideways instead of wrapping onto a second line (the previous
+   behaviour on an iPad-width screen — see the screenshot this was reported
+   against): a wrapped second row of buttons permanently eats as much
+   vertical height as the whole rest of the toolbar, which is exactly the
+   "unnecessary vertical space" an iPad has the least room to spare. */
 .lookbook-editor-actions {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 6px;
   align-items: center;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  min-width: 0;
+  flex: 1 1 auto;
+  padding-bottom: 2px;
+}
+
+.lookbook-editor-actions > * {
+  flex-shrink: 0;
 }
 
 .lookbook-editor-patterns {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 10px 20px;
+  padding: 6px 16px;
   border-bottom: 1px solid var(--border);
   flex-wrap: wrap;
   flex-shrink: 0;
@@ -1107,6 +1121,12 @@ input[type=range] {
   gap: 8px;
   margin-left: auto;
   flex: 0 0 auto;
+}
+
+/* "fit page" button lives right next to the zoom slider it's an alternative to — see ilFitPageBtn. */
+.lookbook-zoom-control .secondary {
+  padding: 5px 12px;
+  font-size: 12px;
 }
 
 .lookbook-zoom-control label {
@@ -1174,7 +1194,7 @@ input[type=range] {
    A constant-height wrapper makes that reflow impossible. */
 .lookbook-editor-controls-wrapper {
   position: relative;
-  height: 60px;
+  height: 52px;
   flex-shrink: 0;
   border-bottom: 1px solid var(--border);
   background: rgba(0,0,0,0.16);
@@ -1186,7 +1206,7 @@ input[type=range] {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 10px 20px;
+  padding: 8px 16px;
   /* Never wrap: on a narrower screen (an iPad, say) a wrapped second line
      would land below this box's fixed height and, since that height can
      never change (see the wrapper's own comment), be clipped out of view
@@ -1232,8 +1252,13 @@ input[type=range] {
 .lookbook-viewport {
   flex: 1;
   overflow: auto;
-  padding: 40px;
+  /* Was 40px — most of the "unnecessary space above the page" this was reported against was this
+     padding alone (80px/120px lost on every axis before the page even starts). A real 20px gutter
+     is still enough to keep the page's own drop-shadow readable while giving ilComputeFitZoom (see
+     the JS below) a meaningfully larger box to fit the page into on a cramped iPad viewport. */
+  padding: 20px;
   display: flex;
+  align-items: center;
   justify-content: center;
   background:
     repeating-conic-gradient(rgba(255,255,255,0.04) 0% 25%, transparent 0% 50%) 0 0 / 26px 26px,
@@ -1244,7 +1269,7 @@ input[type=range] {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 20px;
+  padding: 8px 16px;
   overflow-x: auto;
   flex-shrink: 0;
   border-top: 1px solid var(--border);
@@ -2282,6 +2307,7 @@ input[type=text] {
       <span class="lookbook-row-label">add a pattern swatch:</span>
       <div class="lookbook-pattern-strip" id="ilPatternStrip"></div>
       <div class="lookbook-zoom-control">
+        <button type="button" class="secondary" id="ilFitPageBtn" title="fit the whole page to the window">fit page</button>
         <label class="lookbook-row-label">zoom <span id="ilZoomValue">100%</span></label>
         <input type="range" id="ilZoomSlider" min="40" max="200" value="100">
       </div>
@@ -7100,6 +7126,18 @@ function ilRenderPatternStrip() {
 // math that turns screen-pixel movement into canvas-local px (dragging,
 // resizing, double-click placement) divides by ilZoom to compensate.
 let ilZoom = 1;
+// The page is a fixed 1200x850 native canvas (see .lookbook-canvas and the "do not change export
+// resolution" requirement this all exists to satisfy) — ilZoom only ever drives a CSS
+// transform:scale() on top of that, same as it always did; nothing below touches the canvas's own
+// width/height, so every export (ilRasterizeCanvas reads offsetWidth/item.style.left, neither of
+// which transform:scale changes) is completely unaffected by how it's displayed on screen.
+const IL_PAGE_W = 1200, IL_PAGE_H = 850;
+const IL_ZOOM_MIN = 0.4, IL_ZOOM_MAX = 2; // matches the zoom slider's own min="40" max="200"
+
+// Whether the current zoom is the auto-computed "fit" value (vs. a zoom the user picked by hand).
+// Drives whether rotating/resizing the iPad should silently re-fit (true) or leave a deliberate
+// manual zoom alone (false) — see the resize/orientationchange handler below.
+let ilZoomIsFit = true;
 
 function ilApplyZoom() {
   ilPages.forEach(p => {
@@ -7108,12 +7146,81 @@ function ilApplyZoom() {
   });
 }
 
+// transform:scale() only changes PAINT, not the layout box flexbox sizes the viewport's content
+// against — .lookbook-canvas keeps its true 1200x850 flex-basis at any zoom (deliberately: that's
+// what keeps item coordinates, offsetWidth and every export measurement correct regardless of
+// display zoom). That leaves the flex container's own scrollable area sized for the UNscaled page
+// even while fit-zoom paints it smaller and perfectly centered — so at fit zoom there's technically
+// scrollable space nothing is actually in. overflow:hidden while fit removes the ability to swipe
+// into that dead space at all; switching to overflow:auto the moment zoom is manual
+// (ilZoomIsFit === false) is what makes "zoom in to inspect detail" actually scrollable, per
+// requirement 6.
+function ilUpdateViewportOverflow() {
+  if (ilViewportEl) ilViewportEl.style.overflow = ilZoomIsFit ? 'hidden' : 'auto';
+}
+
+function ilSetZoom(zoom) {
+  ilZoom = Math.max(IL_ZOOM_MIN, Math.min(IL_ZOOM_MAX, zoom));
+  const pct = Math.round(ilZoom * 100);
+  const zoomSlider = document.getElementById('ilZoomSlider');
+  if (zoomSlider) zoomSlider.value = pct;
+  const zoomValue = document.getElementById('ilZoomValue');
+  if (zoomValue) zoomValue.textContent = pct + '%';
+  ilApplyZoom();
+}
+
+// Reads the viewport's REAL, already-laid-out size — after the header, toolbar, pattern row, layer
+// controls and page filmstrip have all taken their own space out of the editor card's fixed height,
+// since #lookbookViewport is the one flex:1 child that absorbs whatever's left. That's "the
+// available canvas space after accounting for the header, toolbar and other controls" without any
+// hardcoded, easily-stale height arithmetic — it's just however big the browser actually rendered
+// this element, which is correct in portrait, landscape, split-view, or any future toolbar change.
+function ilComputeFitZoom() {
+  if (!ilViewportEl) return 1;
+  const cs = getComputedStyle(ilViewportEl);
+  const availW = ilViewportEl.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const availH = ilViewportEl.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  if (availW <= 0 || availH <= 0) return 1;
+  return Math.max(IL_ZOOM_MIN, Math.min(IL_ZOOM_MAX, Math.min(availW / IL_PAGE_W, availH / IL_PAGE_H)));
+}
+
+function ilFitPage() {
+  ilSetZoom(ilComputeFitZoom());
+  ilZoomIsFit = true;
+  ilUpdateViewportOverflow();
+}
+
 document.getElementById('ilZoomSlider')?.addEventListener('input', e => {
   ilZoom = parseInt(e.target.value, 10) / 100;
+  ilZoomIsFit = false; // a manual zoom — leave it alone on rotation/resize until "fit page" is pressed again
+  ilUpdateViewportOverflow();
   const valueEl = document.getElementById('ilZoomValue');
   if (valueEl) valueEl.textContent = e.target.value + '%';
   ilApplyZoom();
 });
+
+document.getElementById('ilFitPageBtn')?.addEventListener('click', ilFitPage);
+
+// Keeps the page correctly fit across an iPad rotation (or a split-view resize) instead of leaving
+// it at whatever scale happened to fit the previous orientation — but only while the user hasn't
+// since picked their own zoom by hand (ilZoomIsFit), so "zoom in for detailed editing" isn't fought
+// every time the device so much as rotates.
+let ilResizeDebounce = null;
+function ilHandleViewportResize() {
+  clearTimeout(ilResizeDebounce);
+  ilResizeDebounce = setTimeout(() => {
+    const overlay = document.getElementById('interactiveLookbookOverlay');
+    if (!overlay || overlay.classList.contains('hidden')) return;
+    if (!ilZoomIsFit) return;
+    ilFitPage();
+  }, 120);
+}
+window.addEventListener('resize', ilHandleViewportResize);
+window.addEventListener('orientationchange', ilHandleViewportResize);
+
+function ilNextFrame() {
+  return new Promise(resolve => requestAnimationFrame(resolve));
+}
 
 // Only the very first open auto-populates from the current selection.
 // Reopening later (say, after going back to select one more mock-up)
@@ -7132,12 +7239,18 @@ async function ilOpenEditor() {
   lookbookOverlay?.classList.add('hidden');
   document.getElementById('interactiveLookbookOverlay')?.classList.remove('hidden');
   ilRenderPatternStrip();
-  ilZoom = 1;
-  const zoomSlider = document.getElementById('ilZoomSlider');
-  if (zoomSlider) zoomSlider.value = 100;
-  const zoomValue = document.getElementById('ilZoomValue');
-  if (zoomValue) zoomValue.textContent = '100%';
-  ilApplyZoom();
+
+  // Fit BEFORE populating: ilAddPage() (called from ilPopulateFromSelection below, for a
+  // first-ever open) stamps each new page with whatever ilZoom is current at creation time, so
+  // getting ilZoom right first means new pages appear already fit instead of snapping to size a
+  // moment later. Needs a frame to pass after unhiding the overlay above — clientWidth/
+  // clientHeight on a just-unhidden element can still read its previous (zero) size if measured
+  // in the same tick as the class change; two rAFs is cheap, reliable insurance for that, matching
+  // the same class of iPad Safari timing issue this app has hit before.
+  await ilNextFrame();
+  await ilNextFrame();
+  ilFitPage();
+
   await ilBuildPaletteFromCollection();
 
   if (!ilPages.length) {
