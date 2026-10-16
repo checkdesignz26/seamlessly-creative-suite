@@ -141,6 +141,81 @@
     wrap.querySelector('.scSendBtn').addEventListener('click', performSend);
   }
 
+  // ---- RECEIVE side: colour-extract from a pattern sent INTO this project --------------------
+  // Pattern Sketch (and anything else that sends a 'pattern' asset) lands here via the same
+  // shared project library every other send already uses — this just lists those assets and lets
+  // the user pick one as the colour-extraction source, reusing Playground's own existing
+  // extraction pipeline via window.__scExtractColoursFromProjectImage (see cmHandleProjectPatternImage
+  // in index.html) rather than building a second one. "Upload image" keeps working completely
+  // unchanged alongside this — this is an additional source, not a replacement.
+  function loadImageFromBlob(blob) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => { resolve(img); };
+      img.onerror = (err) => { URL.revokeObjectURL(url); reject(err); };
+      img.src = url;
+    });
+  }
+
+  async function renderProjectPatternPicker() {
+    const box = document.getElementById('cmProjectPatternBox');
+    if (!box) return; // standalone Playground (no colour-mode panel changes) — nothing to do
+
+    const assets = (await window.SCLibrary.listAssets(projectId)).filter((a) => a.kind === 'pattern');
+    if (!assets.length) {
+      box.style.display = 'none';
+      box.innerHTML = '';
+      return;
+    }
+
+    box.style.display = 'block';
+    box.innerHTML = `
+      <p class="tsHint" style="margin:0 0 6px">or pick a pattern sent to this project (e.g. from Pattern Sketch):</p>
+      <div id="cmProjectPatternGrid" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+    `;
+    const grid = box.querySelector('#cmProjectPatternGrid');
+
+    assets.forEach((asset) => {
+      const tile = document.createElement('button');
+      tile.type = 'button';
+      tile.title = asset.name;
+      tile.style.cssText =
+        'width:44px;height:44px;padding:0;border-radius:9px;overflow:hidden;' +
+        'border:2px solid rgba(255,235,250,.18);cursor:pointer;background:#0002;';
+      const img = document.createElement('img');
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+      window.SCLibrary.blobToDataUrl(asset.thumb || asset.file).then((dataUrl) => {
+        img.src = dataUrl;
+      });
+      tile.appendChild(img);
+
+      tile.addEventListener('click', async () => {
+        if (typeof window.__scExtractColoursFromProjectImage !== 'function') return;
+        tile.disabled = true;
+        tile.style.opacity = '0.5';
+        try {
+          // The repeat-safe tile (when this pattern has one) is the actual seamless artwork —
+          // prefer it over the plain original so extraction sees the same pixels the pattern
+          // repeats with; falls back to the original file for a pattern sent without one (e.g.
+          // Pattern Sketch's own tile, which is already seamless either way).
+          const blob = asset.repeatTile || asset.file;
+          const img2 = await loadImageFromBlob(blob);
+          window.__scExtractColoursFromProjectImage(img2, 'project pattern “' + asset.name + '”');
+          document.querySelectorAll('#cmProjectPatternGrid button').forEach((b) => { b.style.borderColor = 'rgba(255,235,250,.18)'; });
+          tile.style.borderColor = '#22c55e';
+        } catch (err) {
+          console.error('[suite] failed to extract colours from project pattern', asset, err);
+          tile.style.borderColor = '#ef4444';
+        } finally {
+          tile.disabled = false;
+          tile.style.opacity = '1';
+        }
+      });
+      grid.appendChild(tile);
+    });
+  }
+
   function init() {
     // Inserted into the app's OWN toolbars, not a floating overlay — a
     // fixed-position bar was tried first and pushed content off the
@@ -163,6 +238,20 @@
       .scSendStatus{font-size:12px;opacity:.85;white-space:nowrap;}
     `;
     document.head.appendChild(style);
+
+    renderProjectPatternPicker();
+    // Re-list on every "colour mode" open (mountColourMode re-parents the shared #cmPanel into
+    // whichever studio opened it) so a pattern sent from Pattern Sketch in the meantime — this
+    // tab stayed open, or a project backup was re-imported — shows up without a page reload.
+    // Decorates the page's own window.mountColourMode rather than touching index.html for a
+    // suite-only refresh concern; still calls straight through if it's missing for any reason.
+    if (typeof window.mountColourMode === 'function') {
+      const originalMountColourMode = window.mountColourMode;
+      window.mountColourMode = function (slotId) {
+        originalMountColourMode(slotId);
+        renderProjectPatternPicker();
+      };
+    }
   }
 
   if (document.readyState === 'loading') {

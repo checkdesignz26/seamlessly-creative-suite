@@ -1154,6 +1154,14 @@ body.theme-light .bgEditBadge{color:var(--roseInk)!important;border:1px solid rg
       <p class="tsHint" style="margin-top:0">Upload a hero pattern photo to pull its dominant colours.</p>
       <input id="cmImageFile" type="file" accept="image/*" style="display:none">
       <button id="cmImageUploadBtn" class="full">upload image</button>
+      <!-- Suite adapter hook (playground-adapter.js) injects a "patterns sent to this project"
+           picker here when running inside the suite shell — see cmHandleProjectPatternImage /
+           window.__scExtractColoursFromProjectImage. Standalone Playground never populates this. -->
+      <div id="cmProjectPatternBox" style="display:none;margin-top:8px"></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+        <img id="cmImagePreview" style="display:none;width:40px;height:40px;object-fit:cover;border-radius:8px;border:1px solid rgba(255,235,250,.18)">
+        <div id="cmImageSourceLabel" class="tsHint" style="margin:0"></div>
+      </div>
       <div class="range" style="margin-top:7px"><label>colours</label><input id="cmImageCount" type="range" min="6" max="24" value="16"></div>
       <div class="grid2" style="margin-top:7px"><button id="cmImageModeHero" class="small active">tap to adjust</button><button id="cmImageModePalette" class="small">use all as palette</button></div>
       <div class="swatches" id="cmImageSwatches"><span class="footerNote">upload an image to pull its colours</span></div>
@@ -4690,6 +4698,10 @@ function cmExtractColoursFromImage(img,n=16){
 let cmExtractedColours=[];
 let cmImageMode='adjust';
 let cmLastUploadedImg=null;
+function cmSetImageSourceLabel(text){
+ const el=document.getElementById('cmImageSourceLabel');
+ if(el)el.textContent=text?('Colour source: '+text):'';
+}
 function cmHandleImageUpload(e){
  const file=e.target.files&&e.target.files[0];
  if(!file)return;
@@ -4698,6 +4710,9 @@ function cmHandleImageUpload(e){
   const img=new Image();
   img.onload=()=>{
    cmLastUploadedImg=img;
+   cmSetImageSourceLabel('uploaded image ('+file.name+')');
+   const preview=document.getElementById('cmImagePreview');
+   if(preview){preview.src=img.src;preview.style.display='block';}
    const count=+document.getElementById('cmImageCount').value||16;
    cmExtractedColours=cmExtractColoursFromImage(img,count);
    cmRenderExtractedSwatches();
@@ -4709,6 +4724,27 @@ function cmHandleImageUpload(e){
  reader.readAsDataURL(file);
  e.target.value='';
 }
+// Suite adapter hook: colour-extract from a pattern SENT INTO this project (e.g. a seamless
+// pattern made in Pattern Sketch and transferred over via the suite's project system), reusing
+// the EXACT same extraction pipeline as "upload image" above — same cmExtractColoursFromImage,
+// same colours-count slider (re-running it just re-extracts from this same image, no re-pick
+// needed), same swatches/tap-to-adjust/use-as-palette flow. The only differences are where the
+// source Image came from and the label shown, so it's always clear which image is the colour
+// source. Populating the swatches here never touches Classics Studio or any saved project
+// colourway by itself — exactly like uploading an image doesn't — only an explicit swatch tap or
+// "use extracted palette" click (both pre-existing, both already require the user's own action)
+// actually applies anything.
+function cmHandleProjectPatternImage(img,label){
+ cmLastUploadedImg=img;
+ cmSetImageSourceLabel(label||'pattern from project');
+ const preview=document.getElementById('cmImagePreview');
+ if(preview){preview.src=img.src;preview.style.display='block';}
+ const count=+document.getElementById('cmImageCount').value||16;
+ cmExtractedColours=cmExtractColoursFromImage(img,count);
+ cmRenderExtractedSwatches();
+ cmFlashStatus(cmExtractedColours.length?'colours extracted ✓':'no colours found',!!cmExtractedColours.length);
+}
+window.__scExtractColoursFromProjectImage=cmHandleProjectPatternImage;
 function cmRenderExtractedSwatches(){
  const box=document.getElementById('cmImageSwatches');if(!box)return;
  box.innerHTML='';
