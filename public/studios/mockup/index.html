@@ -2347,6 +2347,7 @@ input[type=text] {
       <div class="lookbook-editor-actions">
         <button class="secondary" id="ilAddSelectedBtn" type="button">+ add selected mock-ups</button>
         <button class="secondary" id="ilAddTextBtn" type="button">+ add text</button>
+        <button class="secondary" id="ilAddPaletteBtn" type="button" title="uses the selected pattern's colours, or the page's patterns if nothing's selected">+ add colour palette</button>
         <button class="secondary" id="ilDeleteItemBtn" type="button" disabled>delete selected</button>
         <button class="secondary" id="ilExportPngBtn" type="button">export page as PNG</button>
         <button class="orange" id="ilExportPdfBtn" type="button">export all pages as PDF</button>
@@ -2388,7 +2389,6 @@ input[type=text] {
         <input type="range" id="ilRotateSlider" min="0" max="360" value="0">
         <label>shadow <span id="ilShadowValue">0%</span></label>
         <input type="range" id="ilShadowSlider" min="0" max="100" value="0">
-        <button type="button" class="secondary" id="ilAddPaletteBtn">+ add colour palette</button>
       </div>
 
       <div id="ilTextControls" class="lookbook-editor-layer-controls">
@@ -6797,22 +6797,46 @@ function ilCreatePaletteItem({ colors, x, y, w, h, zIndex }) {
   return item;
 }
 
+// Now a top-level toolbar action (used to live buried inside the layer-controls panel, only
+// visible once a pattern swatch happened to be selected — easy to never find). Still prefers the
+// SELECTED pattern's own colours when there is one (a design choice someone made on purpose, worth
+// keeping specific), but works with no selection at all too, falling back to ilCurrentPalette — the
+// same whole-collection palette the text-colour swatches already use, built once per editor open by
+// ilBuildPaletteFromCollection — so the button is never just a dead click.
 document.getElementById('ilAddPaletteBtn')?.addEventListener('click', async () => {
-  if (!ilSelectedItem || ilSelectedItem.dataset.hasPattern !== 'true') return;
-  const match = /url\("?(.*?)"?\)/.exec(ilSelectedItem.style.backgroundImage);
-  if (!match) return;
-  try {
-    const img = await ilLoadImage(match[1]);
-    const colors = ilExtractPaletteColors(img, 5);
-    const baseLeft = parseFloat(ilSelectedItem.style.left) || 0;
-    const baseTop = parseFloat(ilSelectedItem.style.top) || 0;
-    const baseHeight = ilSelectedItem.offsetHeight || 200;
-    ilCreatePaletteItem({ colors, x: baseLeft, y: baseTop + baseHeight + 20 });
-    await ilRenderSinglePageThumbnail(ilActivePageIndex);
-  } catch (err) {
-    console.error('colour palette extraction failed', err);
-    showToastMessage('could not read that pattern\'s colours — try a different one.');
+  const selectedPattern = ilSelectedItem && ilSelectedItem.dataset.hasPattern === 'true' ? ilSelectedItem : null;
+
+  if (selectedPattern) {
+    const match = /url\("?(.*?)"?\)/.exec(selectedPattern.style.backgroundImage);
+    if (match) {
+      try {
+        const img = await ilLoadImage(match[1]);
+        const colors = ilExtractPaletteColors(img, 5);
+        const baseLeft = parseFloat(selectedPattern.style.left) || 0;
+        const baseTop = parseFloat(selectedPattern.style.top) || 0;
+        const baseHeight = selectedPattern.offsetHeight || 200;
+        ilCreatePaletteItem({ colors, x: baseLeft, y: baseTop + baseHeight + 20 });
+        await ilRenderSinglePageThumbnail(ilActivePageIndex);
+        return;
+      } catch (err) {
+        console.error('colour palette extraction failed', err);
+        showToastMessage('could not read that pattern\'s colours — try a different one.');
+        return;
+      }
+    }
   }
+
+  // No pattern selected (or the selected item had no readable image): drop the page's own
+  // whole-collection palette, centred on the canvas rather than anchored below any particular item.
+  const colors = (ilCurrentPalette || []).filter((c, i, arr) => arr.indexOf(c) === i).slice(0, 6);
+  if (!colors.length) {
+    showToastMessage('no pattern colours to add yet — add a pattern swatch to the page first.');
+    return;
+  }
+  const w = Math.max(180, colors.length * 56);
+  const h = 84;
+  ilCreatePaletteItem({ colors, x: (IL_PAGE_W - w) / 2, y: (IL_PAGE_H - h) / 2 });
+  await ilRenderSinglePageThumbnail(ilActivePageIndex);
 });
 
 // Prompt 2: text anywhere. Double-clicking empty canvas spawns a
