@@ -1251,6 +1251,55 @@ input[type=range] {
   background: rgba(0,0,0,0.16);
 }
 
+/* "hide pages" toggle (see ilToggleThumbnailsBtn) — collapses the filmstrip entirely rather than
+   just scrolling it out of view, so it stops taking up vertical space in the editor card. */
+.lookbook-page-thumbnails.il-thumbnails-hidden {
+  display: none;
+}
+
+/* Font-mode toggle inside the text layer controls — switches between the curated title/body
+   pairing group and a plain single-font picker (see ilFontPairGroup / ilFontSingleGroup) without
+   needing two separate rows, since the controls bar only ever scrolls horizontally, never wraps. */
+.lookbook-font-mode-toggle {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.25);
+  border: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+
+.lookbook-font-mode-btn {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.lookbook-font-mode-btn.active {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #fff;
+}
+
+.lookbook-font-mode-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+/* Needed because the plain class rule above sets display:flex unconditionally, which otherwise
+   outranks the browser's default [hidden]{display:none} rule and leaves a "hidden" group visible
+   anyway — this restores hidden actually meaning hidden. */
+.lookbook-font-mode-group[hidden] {
+  display: none;
+}
+
 .lookbook-page-thumb {
   position: relative;
   width: 120px;
@@ -2223,6 +2272,7 @@ input[type=text] {
         <button class="secondary" id="ilDeleteItemBtn" type="button" disabled>delete selected</button>
         <button class="secondary" id="ilExportPngBtn" type="button">export page as PNG</button>
         <button class="orange" id="ilExportPdfBtn" type="button">export all pages as PDF</button>
+        <button class="secondary" id="ilToggleThumbnailsBtn" type="button">hide pages</button>
         <button class="secondary" id="ilCloseBtn" type="button">close</button>
       </div>
     </div>
@@ -2247,10 +2297,19 @@ input[type=text] {
       </div>
 
       <div id="ilTextControls" class="lookbook-editor-layer-controls">
-        <label>font pairing</label>
-        <select id="ilFontPairSelect"></select>
-        <button type="button" class="secondary" id="ilApplyTitleFontBtn">use as title</button>
-        <button type="button" class="secondary" id="ilApplyBodyFontBtn">use as body</button>
+        <div class="lookbook-font-mode-toggle">
+          <button type="button" class="lookbook-font-mode-btn active" id="ilFontModePairBtn">font pairing</button>
+          <button type="button" class="lookbook-font-mode-btn" id="ilFontModeSingleBtn">single font</button>
+        </div>
+        <div id="ilFontPairGroup" class="lookbook-font-mode-group">
+          <select id="ilFontPairSelect"></select>
+          <button type="button" class="secondary" id="ilApplyTitleFontBtn">use as title</button>
+          <button type="button" class="secondary" id="ilApplyBodyFontBtn">use as body</button>
+        </div>
+        <div id="ilFontSingleGroup" class="lookbook-font-mode-group" hidden>
+          <select id="ilFontSingleSelect"></select>
+          <button type="button" class="secondary" id="ilApplySingleFontBtn">apply font</button>
+        </div>
         <label>size <span id="ilFontSizeValue">24px</span></label>
         <input type="range" id="ilFontSizeSlider" min="10" max="96" value="24">
         <label>colour</label>
@@ -6186,6 +6245,8 @@ function ilRefreshSelectionControls(item) {
     const size = item.dataset.fontSize || '24';
     const pairSelect = document.getElementById('ilFontPairSelect');
     if (pairSelect) pairSelect.value = ilFindMatchingPairIndex(item.dataset.font || "'Quicksand', sans-serif");
+    const singleSelect = document.getElementById('ilFontSingleSelect');
+    if (singleSelect) singleSelect.value = ilFindSingleFontIndex(item.dataset.font || "'Quicksand', sans-serif");
     document.getElementById('ilFontSizeSlider').value = size;
     document.getElementById('ilFontSizeValue').textContent = size + 'px';
     ilRenderPaletteStrip(item.style.color);
@@ -6761,6 +6822,76 @@ function ilApplyPairFont(role) {
 
 document.getElementById('ilApplyTitleFontBtn')?.addEventListener('click', () => ilApplyPairFont('title'));
 document.getElementById('ilApplyBodyFontBtn')?.addEventListener('click', () => ilApplyPairFont('body'));
+
+// "single font" mode — for a page with just one text layer, picking a title/body pairing and
+// marking it as one half of that pairing is more steps than the job needs. This is the same font
+// list the pairings above already draw from (deduped), applied directly with no title/body role,
+// so a one-off price tag, brand mark, etc. is a single select + one click.
+const IL_SINGLE_FONTS = [
+  { name: 'Quicksand', value: "'Quicksand', sans-serif" },
+  { name: 'Playfair Display', value: "'Playfair Display', serif" },
+  { name: 'Bebas Neue', value: "'Bebas Neue', sans-serif" },
+  { name: 'Caveat', value: "'Caveat', cursive" },
+  { name: 'Helvetica', value: "'Helvetica Neue', Arial, sans-serif" },
+  { name: 'Georgia', value: 'Georgia, serif' },
+  { name: 'Courier New', value: "'Courier New', monospace" },
+  { name: 'Verdana', value: 'Verdana, sans-serif' }
+];
+
+(function populateFontSingleSelect() {
+  const select = document.getElementById('ilFontSingleSelect');
+  if (!select) return;
+  IL_SINGLE_FONTS.forEach((font, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = font.name;
+    select.appendChild(opt);
+  });
+})();
+
+function ilFindSingleFontIndex(font) {
+  const index = IL_SINGLE_FONTS.findIndex(f => f.value === font);
+  return index === -1 ? 0 : index;
+}
+
+document.getElementById('ilApplySingleFontBtn')?.addEventListener('click', () => {
+  if (!ilSelectedItem || !ilSelectedItem.classList.contains('text-item')) return;
+  const select = document.getElementById('ilFontSingleSelect');
+  const font = IL_SINGLE_FONTS[Number(select.value)];
+  if (!font) return;
+  ilSelectedItem.dataset.font = font.value;
+  ilSelectedItem.style.fontFamily = font.value;
+});
+
+function ilSetFontMode(mode) {
+  const isPair = mode === 'pair';
+  document.getElementById('ilFontModePairBtn')?.classList.toggle('active', isPair);
+  document.getElementById('ilFontModeSingleBtn')?.classList.toggle('active', !isPair);
+  document.getElementById('ilFontPairGroup')?.toggleAttribute('hidden', !isPair);
+  document.getElementById('ilFontSingleGroup')?.toggleAttribute('hidden', isPair);
+}
+
+document.getElementById('ilFontModePairBtn')?.addEventListener('click', () => ilSetFontMode('pair'));
+document.getElementById('ilFontModeSingleBtn')?.addEventListener('click', () => ilSetFontMode('single'));
+
+// Collapses the page filmstrip entirely (not just scrolled away) so it stops taking up vertical
+// space in the editor card — handy once a lookbook is mid-design and every extra inch of canvas
+// height matters. Remembered across sessions (and across every project, like the zoom/font
+// choices already are) since it's a personal layout preference, not something tied to one lookbook.
+const IL_THUMBNAILS_HIDDEN_KEY = 'il-thumbnails-hidden';
+function ilApplyThumbnailsVisibility(hidden) {
+  const strip = document.getElementById('ilPageThumbnails');
+  const btn = document.getElementById('ilToggleThumbnailsBtn');
+  if (strip) strip.classList.toggle('il-thumbnails-hidden', hidden);
+  if (btn) btn.textContent = hidden ? 'show pages' : 'hide pages';
+}
+document.getElementById('ilToggleThumbnailsBtn')?.addEventListener('click', () => {
+  const strip = document.getElementById('ilPageThumbnails');
+  const nowHidden = !strip?.classList.contains('il-thumbnails-hidden');
+  ilApplyThumbnailsVisibility(nowHidden);
+  try { localStorage.setItem(IL_THUMBNAILS_HIDDEN_KEY, nowHidden ? '1' : '0'); } catch (e) {}
+});
+try { ilApplyThumbnailsVisibility(localStorage.getItem(IL_THUMBNAILS_HIDDEN_KEY) === '1'); } catch (e) {}
 
 document.getElementById('ilFontSizeSlider')?.addEventListener('input', e => {
   if (!ilSelectedItem || !ilSelectedItem.classList.contains('text-item')) return;
