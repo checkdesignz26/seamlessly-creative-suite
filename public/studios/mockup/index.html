@@ -1031,7 +1031,15 @@ input[type=range] {
 
 .lookbook-editor-card {
   width: min(1440px, 98vw);
+  /* Plain vh first as a fallback for anything that doesn't understand dvh (that whole
+     declaration is simply invalid and skipped by the parser, leaving this one in effect).
+     On real mobile Safari, vh is defined against the LARGEST possible viewport — as if the
+     address bar were already collapsed — not the actually-visible one, so a card sized against
+     94vh can render taller than what's really on screen and push its own last child (the page
+     filmstrip) off the bottom edge, exactly as reported. dvh tracks the real, current viewport
+     and is what actually fixes it (supported iOS/iPadOS 15.4+). */
   height: min(920px, 94vh);
+  height: min(920px, 94dvh);
   display: flex;
   flex-direction: column;
   background: var(--panel);
@@ -6308,7 +6316,13 @@ function ilAddPage() {
   const canvasEl = document.createElement('div');
   canvasEl.className = 'lookbook-canvas';
   canvasEl.style.transform = `scale(${ilZoom})`;
-  canvasEl.style.transformOrigin = 'top center';
+  // 'center' (not 'top center'): the viewport centers this box via flexbox align-items/
+  // justify-content, which centers its UNSCALED layout box — scaling from any origin other than
+  // dead center then re-offsets the visible, painted box away from that already-centered position
+  // (scaling "from the top" pulls the painted box upward, clipping its top against the viewport's
+  // own edge at anything below 100% zoom). Center-origin scaling stays anchored on the same point
+  // flexbox already centered, so the fit (or any) zoom stays correctly centered at every scale.
+  canvasEl.style.transformOrigin = 'center';
   ilSetupCanvasPageEvents(canvasEl);
   ilViewportEl.appendChild(canvasEl);
   ilPages.push({ el: canvasEl });
@@ -7142,7 +7156,7 @@ let ilZoomIsFit = true;
 function ilApplyZoom() {
   ilPages.forEach(p => {
     p.el.style.transform = `scale(${ilZoom})`;
-    p.el.style.transformOrigin = 'top center';
+    p.el.style.transformOrigin = 'center'; // see the matching comment in ilAddPage() above
   });
 }
 
