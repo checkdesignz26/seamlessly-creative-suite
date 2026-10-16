@@ -1088,6 +1088,51 @@ input[type=range] {
   flex-shrink: 0;
 }
 
+/* "page background" button + its popover (see ilPageBgBtn/ilPageBgPopover) — an absolutely
+   positioned dropdown rather than a permanent row, so a page-level setting that's reached rarely
+   doesn't cost any of the vertical space the rest of this editor works hard to stay within. */
+.lookbook-bg-popover-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.lookbook-bg-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 200px;
+  padding: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+
+.lookbook-bg-popover[hidden] {
+  display: none;
+}
+
+.lookbook-bg-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.lookbook-bg-row input[type="color"] {
+  width: 44px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+
 .lookbook-editor-patterns {
   display: flex;
   align-items: center;
@@ -2305,6 +2350,20 @@ input[type=text] {
         <button class="secondary" id="ilDeleteItemBtn" type="button" disabled>delete selected</button>
         <button class="secondary" id="ilExportPngBtn" type="button">export page as PNG</button>
         <button class="orange" id="ilExportPdfBtn" type="button">export all pages as PDF</button>
+        <div class="lookbook-bg-popover-wrap">
+          <button class="secondary" id="ilPageBgBtn" type="button">page background</button>
+          <div id="ilPageBgPopover" class="lookbook-bg-popover" hidden>
+            <div class="lookbook-bg-row">
+              <span class="lookbook-row-label">solid colour</span>
+              <input type="color" id="ilPageBgColorInput" value="#ffffff">
+            </div>
+            <div class="lookbook-bg-row">
+              <button type="button" class="secondary" id="ilPageBgImageBtn">upload image…</button>
+              <input type="file" id="ilPageBgImageFile" accept="image/*" hidden>
+            </div>
+            <button type="button" class="secondary" id="ilPageBgClearBtn">clear (white)</button>
+          </div>
+        </div>
         <button class="secondary" id="ilToggleThumbnailsBtn" type="button">hide pages</button>
         <button class="secondary" id="ilCloseBtn" type="button">close</button>
       </div>
@@ -2327,6 +2386,8 @@ input[type=text] {
         <input type="range" id="ilScaleSlider" min="20" max="400" value="100">
         <label>rotate <span id="ilRotateValue">0°</span></label>
         <input type="range" id="ilRotateSlider" min="0" max="360" value="0">
+        <label>shadow <span id="ilShadowValue">0%</span></label>
+        <input type="range" id="ilShadowSlider" min="0" max="100" value="0">
         <button type="button" class="secondary" id="ilAddPaletteBtn">+ add colour palette</button>
       </div>
 
@@ -6265,10 +6326,13 @@ function ilRefreshSelectionControls(item) {
     layerControls.classList.add('il-active');
     const scale = item.dataset.scale || '100';
     const rotate = item.dataset.rotate || '0';
+    const shadow = item.dataset.shadow || '0';
     document.getElementById('ilScaleSlider').value = scale;
     document.getElementById('ilRotateSlider').value = rotate;
+    document.getElementById('ilShadowSlider').value = shadow;
     document.getElementById('ilScaleValue').textContent = scale + '%';
     document.getElementById('ilRotateValue').textContent = rotate + '°';
+    document.getElementById('ilShadowValue').textContent = shadow + '%';
   } else {
     layerControls.classList.remove('il-active');
   }
@@ -6325,7 +6389,9 @@ function ilAddPage() {
   canvasEl.style.transformOrigin = 'center';
   ilSetupCanvasPageEvents(canvasEl);
   ilViewportEl.appendChild(canvasEl);
-  ilPages.push({ el: canvasEl });
+  // bg: { type: 'none'|'solid'|'image', color, imageSrc } — 'none' means the plain white CSS
+  // default on .lookbook-canvas itself; see ilApplyPageBackground for how the other two render.
+  ilPages.push({ el: canvasEl, bg: { type: 'none' } });
   ilSwitchToPage(ilPages.length - 1);
   ilRenderPageThumbnails();
   return ilPages[ilPages.length - 1];
@@ -6341,6 +6407,39 @@ function ilDeletePage(index) {
   const newActive = Math.max(0, Math.min(ilActivePageIndex, ilPages.length - 1));
   ilSwitchToPage(newActive);
   ilRenderPageThumbnails();
+}
+
+// Page background (solid colour / uploaded image / none-i.e.-plain-white) — a property of the
+// PAGE, not of any one layer, so it lives on the ilPages[] entry itself (page.bg) rather than as a
+// canvas-item. Applied as a plain CSS background on the page's own .lookbook-canvas element, which
+// sits BEHIND every real .canvas-item (those are all position:absolute, stacking in DOM/z-index
+// order on top of whatever the canvas element's own background paints).
+function ilApplyPageBackground(page) {
+  const bg = page.bg || { type: 'none' };
+  if (bg.type === 'solid') {
+    page.el.style.backgroundImage = 'none';
+    page.el.style.backgroundColor = bg.color || '#ffffff';
+  } else if (bg.type === 'image' && bg.imageSrc) {
+    page.el.style.backgroundImage = `url("${bg.imageSrc}")`;
+    page.el.style.backgroundSize = 'cover';
+    page.el.style.backgroundPosition = 'center';
+    page.el.style.backgroundRepeat = 'no-repeat';
+    page.el.style.backgroundColor = '#ffffff';
+  } else {
+    // 'none' — clear every inline override so the plain white CSS default on .lookbook-canvas
+    // itself takes back over, rather than leaving a stale colour/image behind.
+    page.el.style.backgroundImage = '';
+    page.el.style.backgroundColor = '';
+    page.el.style.backgroundSize = '';
+    page.el.style.backgroundPosition = '';
+    page.el.style.backgroundRepeat = '';
+  }
+}
+
+function ilSetPageBackground(page, bg) {
+  page.bg = bg;
+  ilApplyPageBackground(page);
+  ilRenderSinglePageThumbnail(ilPages.indexOf(page));
 }
 
 function ilSwitchToPage(index) {
@@ -6367,7 +6466,7 @@ async function ilRenderSinglePageThumbnail(index) {
   if (!thumbEl || !thumbEl.classList.contains('lookbook-page-thumb')) return;
 
   try {
-    const out = await ilRasterizeCanvas(page.el, 120 / 1200);
+    const out = await ilRasterizeCanvas(page.el, 120 / 1200, page.bg);
     let img = thumbEl.querySelector('img');
     if (!img) {
       img = document.createElement('img');
@@ -6586,7 +6685,7 @@ function ilAttachHandles(item) {
   ilMakeItemResizable(item, resize);
 }
 
-function ilCreateImageItem({ src, x, y, w, h, hasPattern, hueRotate, scale, rotate, zIndex }) {
+function ilCreateImageItem({ src, x, y, w, h, hasPattern, hueRotate, scale, rotate, shadow, zIndex }) {
   const item = document.createElement('div');
   item.className = 'canvas-item';
   item.style.left = x + 'px';
@@ -6600,9 +6699,11 @@ function ilCreateImageItem({ src, x, y, w, h, hasPattern, hueRotate, scale, rota
     item.dataset.hasPattern = 'true';
     item.dataset.scale = scale || '100';
     item.dataset.rotate = rotate || '0';
+    item.dataset.shadow = shadow || '0';
     item.style.backgroundRepeat = 'repeat';
     item.style.backgroundSize = (scale || '100') + '%';
     if (rotate) item.style.transform = `rotate(${rotate}deg)`;
+    if (shadow && shadow !== '0') item.style.boxShadow = ilShadowCss(parseInt(shadow, 10));
   }
 
   if (hueRotate) {
@@ -6820,6 +6921,32 @@ document.getElementById('ilRotateSlider')?.addEventListener('input', e => {
   ilSelectedItem.dataset.rotate = deg;
   ilSelectedItem.style.transform = `rotate(${deg}deg)`;
   document.getElementById('ilRotateValue').textContent = deg + '°';
+});
+
+// Drop shadow, 0-100 intensity — one slider rather than a plain on/off toggle, so "a little lift"
+// and "strongly floating off the page" are both reachable without a second control. The same
+// blur/offset/alpha numbers drive both the live CSS box-shadow here and the canvas shadow* used
+// when exporting (ilRasterizeCanvas), so what's on screen matches the PNG/PDF.
+function ilShadowParams(intensity) {
+  intensity = Math.max(0, Math.min(100, intensity || 0));
+  return {
+    blur: 6 + intensity * 0.3,
+    offsetY: 2 + intensity * 0.12,
+    alpha: 0.12 + intensity * 0.003
+  };
+}
+function ilShadowCss(intensity) {
+  if (!intensity) return 'none';
+  const { blur, offsetY, alpha } = ilShadowParams(intensity);
+  return `0 ${offsetY}px ${blur}px rgba(0,0,0,${alpha})`;
+}
+
+document.getElementById('ilShadowSlider')?.addEventListener('input', e => {
+  if (!ilSelectedItem || ilSelectedItem.dataset.hasPattern !== 'true') return;
+  const val = e.target.value;
+  ilSelectedItem.dataset.shadow = val;
+  ilSelectedItem.style.boxShadow = ilShadowCss(parseInt(val, 10));
+  document.getElementById('ilShadowValue').textContent = val + '%';
 });
 
 // Curated title/body font pairings — picking a pairing and then marking
@@ -7133,6 +7260,66 @@ function ilRenderPatternStrip() {
   });
 }
 
+// "page background" popover — reads/writes the ACTIVE page's own bg (see ilApplyPageBackground),
+// so switching pages while the popover is closed always shows the right thing next time it opens;
+// re-synced on every open rather than kept live, since nothing else needs to watch it continuously.
+function ilSyncPageBgPopover() {
+  const page = ilPages[ilActivePageIndex];
+  const colorInput = document.getElementById('ilPageBgColorInput');
+  if (!page || !colorInput) return;
+  colorInput.value = (page.bg && page.bg.type === 'solid' && page.bg.color) || '#ffffff';
+}
+
+const ilPageBgBtn = document.getElementById('ilPageBgBtn');
+const ilPageBgPopover = document.getElementById('ilPageBgPopover');
+
+ilPageBgBtn?.addEventListener('click', e => {
+  e.stopPropagation();
+  const willOpen = ilPageBgPopover.hasAttribute('hidden');
+  if (willOpen) ilSyncPageBgPopover();
+  ilPageBgPopover.toggleAttribute('hidden', !willOpen);
+});
+
+// Any click outside the popover (or its own toggle button) closes it — the same convention the
+// suite shell's own project switcher popover already uses.
+document.addEventListener('click', e => {
+  if (ilPageBgPopover && !ilPageBgPopover.hasAttribute('hidden') &&
+      !ilPageBgPopover.contains(e.target) && e.target !== ilPageBgBtn) {
+    ilPageBgPopover.setAttribute('hidden', '');
+  }
+});
+ilPageBgPopover?.addEventListener('click', e => e.stopPropagation());
+
+document.getElementById('ilPageBgColorInput')?.addEventListener('input', e => {
+  const page = ilPages[ilActivePageIndex];
+  if (!page) return;
+  ilSetPageBackground(page, { type: 'solid', color: e.target.value });
+});
+
+document.getElementById('ilPageBgImageBtn')?.addEventListener('click', () => {
+  document.getElementById('ilPageBgImageFile')?.click();
+});
+
+document.getElementById('ilPageBgImageFile')?.addEventListener('change', e => {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = ''; // allow picking the same file again later
+  if (!file) return;
+  const page = ilPages[ilActivePageIndex];
+  if (!page) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    ilSetPageBackground(page, { type: 'image', imageSrc: ev.target.result });
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('ilPageBgClearBtn')?.addEventListener('click', () => {
+  const page = ilPages[ilActivePageIndex];
+  if (!page) return;
+  ilSetPageBackground(page, { type: 'none' });
+  ilSyncPageBgPopover();
+});
+
 // The whole canvas can be zoomed for a better fit on smaller screens (an
 // iPad, say) without changing the underlying page — it's a pure CSS scale,
 // so item positions/sizes (and export/thumbnail rendering, which reads
@@ -7340,7 +7527,7 @@ function ilDrawTiledPattern(ctx, img, w, h, scalePercent) {
 // tiled patterns honouring their own scale, text honouring its wrapping)
 // into one flat canvas for export, since none of this exists as real DOM
 // once it needs to become a PNG or a PDF page.
-async function ilRasterizeCanvas(canvasEl, scaleFactor) {
+async function ilRasterizeCanvas(canvasEl, scaleFactor, bg) {
   // Every page is a fixed 1200x850 .lookbook-canvas, so a hidden (inactive)
   // page can still be rasterised for a thumbnail without switching it into
   // view first — offsetWidth/Height just read 0 while display:none.
@@ -7352,8 +7539,26 @@ async function ilRasterizeCanvas(canvasEl, scaleFactor) {
   out.height = h * scaleFactor;
   const ctx = out.getContext('2d');
   ctx.scale(scaleFactor, scaleFactor);
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, w, h);
+
+  // Mirrors ilApplyPageBackground's three states exactly, so the export always matches what's on
+  // screen: a solid colour fill, a cover-fit uploaded image (white underneath, same as the live
+  // CSS background-color fallback for any transparent part of that image), or plain white.
+  if (bg && bg.type === 'solid') {
+    ctx.fillStyle = bg.color || '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+  } else if (bg && bg.type === 'image' && bg.imageSrc) {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+    try {
+      const bgImg = await ilLoadImage(bg.imageSrc);
+      ilDrawCoverImage(ctx, bgImg, 0, 0, w, h);
+    } catch (err) {
+      console.error('lookbook export: failed to load page background image', err);
+    }
+  } else {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+  }
 
   const items = [...canvasEl.querySelectorAll('.canvas-item')]
     .sort((a, b) => (parseInt(a.style.zIndex) || 0) - (parseInt(b.style.zIndex) || 0));
@@ -7432,7 +7637,24 @@ async function ilRasterizeCanvas(canvasEl, scaleFactor) {
           if (item.dataset.hasPattern === 'true') {
             const hue = parseFloat(item.dataset.hueRotate || 0);
             if (hue) ctx.filter = `hue-rotate(${hue}deg)`;
+            // Matches the live CSS box-shadow this item gets from the shadow slider (see
+            // ilShadowParams) — set on the context before the fillRect inside ilDrawTiledPattern so
+            // it casts around the same rotated rect the live box-shadow would, then cleared right
+            // after so it can't leak onto anything drawn next (ctx.save()/restore() around this
+            // whole per-item block would reset it anyway; cleared explicitly too for the same
+            // belt-and-suspenders reason ctx.filter is reset right below instead of just relying on
+            // restore()).
+            const shadowIntensity = parseInt(item.dataset.shadow || '0', 10);
+            if (shadowIntensity) {
+              const { blur, offsetY, alpha } = ilShadowParams(shadowIntensity);
+              ctx.shadowColor = `rgba(0,0,0,${alpha})`;
+              ctx.shadowBlur = blur;
+              ctx.shadowOffsetY = offsetY;
+            }
             ilDrawTiledPattern(ctx, img, iw, ih, parseFloat(item.dataset.scale || 100));
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
             ctx.filter = 'none';
           } else {
             ilDrawCoverImage(ctx, img, 0, 0, iw, ih);
@@ -7452,7 +7674,7 @@ async function ilRasterizeCanvas(canvasEl, scaleFactor) {
 document.getElementById('ilExportPngBtn')?.addEventListener('click', async () => {
   const canvasEl = ilActiveCanvas();
   if (!canvasEl) return;
-  const out = await ilRasterizeCanvas(canvasEl);
+  const out = await ilRasterizeCanvas(canvasEl, undefined, ilPages[ilActivePageIndex] && ilPages[ilActivePageIndex].bg);
   downloadCanvasPNG(out, 'interactive_lookbook_page' + (ilActivePageIndex + 1) + '.png');
 });
 
@@ -7466,7 +7688,7 @@ document.getElementById('ilExportPngBtn')?.addEventListener('click', async () =>
 window.__scGetLookbookPageCanvas = async function () {
   const canvasEl = ilActiveCanvas();
   if (!canvasEl) return null;
-  const out = await ilRasterizeCanvas(canvasEl);
+  const out = await ilRasterizeCanvas(canvasEl, undefined, ilPages[ilActivePageIndex] && ilPages[ilActivePageIndex].bg);
   return { canvas: out, name: 'Lookbook page ' + (ilActivePageIndex + 1) };
 };
 
@@ -7487,7 +7709,7 @@ document.getElementById('ilExportPdfBtn')?.addEventListener('click', async () =>
     ilPages.forEach((p, idx) => { p.el.style.display = idx === i ? 'block' : 'none'; });
     void ilPages[i].el.offsetHeight;
 
-    const out = await ilRasterizeCanvas(ilPages[i].el);
+    const out = await ilRasterizeCanvas(ilPages[i].el, undefined, ilPages[i].bg);
     const pageW = out.width / 2;
     const pageH = out.height / 2;
     const orientation = pageW >= pageH ? 'landscape' : 'portrait';
@@ -7821,6 +8043,7 @@ function ilSerializeLookbookItem(item) {
     hasPattern: item.dataset.hasPattern === 'true',
     scale: item.dataset.scale || '100',
     rotate: item.dataset.rotate || '0',
+    shadow: item.dataset.shadow || '0',
     hueRotate: item.dataset.hueRotate || '0'
   });
 }
@@ -7892,9 +8115,15 @@ function serializeProject() {
     selectedQuickProducts: [...document.querySelectorAll('.mock-card.selected')].map(c => c.dataset.product),
 
     lookbook: {
-      pages: ilPages.map(p => [...p.el.querySelectorAll('.canvas-item')]
-        .sort((a, b) => (parseInt(a.style.zIndex) || 0) - (parseInt(b.style.zIndex) || 0))
-        .map(ilSerializeLookbookItem))
+      // Each page is now { items, bg } rather than a bare item array, so a page's background
+      // (solid colour / uploaded image) survives save/load — see ilRestoreLookbookItem's caller
+      // below for the matching legacy-array fallback that keeps an older .mstudio file loading.
+      pages: ilPages.map(p => ({
+        items: [...p.el.querySelectorAll('.canvas-item')]
+          .sort((a, b) => (parseInt(a.style.zIndex) || 0) - (parseInt(b.style.zIndex) || 0))
+          .map(ilSerializeLookbookItem),
+        bg: p.bg || { type: 'none' }
+      }))
     }
   };
 }
@@ -7932,6 +8161,7 @@ function ilRestoreLookbookItem(data) {
       hueRotate: parseFloat(data.hueRotate || 0),
       scale: data.scale,
       rotate: data.rotate,
+      shadow: data.shadow,
       zIndex: data.zIndex
     });
   }
@@ -8101,8 +8331,14 @@ async function restoreProject(data) {
 
   const pages = (data.lookbook && data.lookbook.pages) || [];
   let maxZ = 10;
-  pages.forEach(items => {
-    ilAddPage();
+  pages.forEach(pageData => {
+    // A page used to serialize as a bare item array; now it's { items, bg } (see
+    // serializeProject's own comment) — accept both so a project saved before this feature still
+    // loads exactly as it did, just with no background set (ilAddPage's own 'none' default).
+    const items = Array.isArray(pageData) ? pageData : (pageData.items || []);
+    const bg = Array.isArray(pageData) ? null : pageData.bg;
+    const page = ilAddPage();
+    if (bg) ilSetPageBackground(page, bg);
     items.forEach(itemData => {
       maxZ = Math.max(maxZ, ilRestoreLookbookItem(itemData));
     });
