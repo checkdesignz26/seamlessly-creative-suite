@@ -1,0 +1,7 @@
+# Creative Lookbook — standalone deployment (static assets only, no worker script, no bindings, no storage).
+# Separate Worker from the production suite ("seamlessly-creative-suite"): different name, different URL.
+name = "creative-lookbook-test"
+compatibility_date = "2024-09-23"
+
+[assets]
+directory = "./public"
