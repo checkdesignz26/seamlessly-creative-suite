@@ -53,3 +53,21 @@ Playground, send them, switch to Mock-up Studio, add them from the
 project, reload the page, confirm everything — the shared project, and
 each studio's own save — survived from IndexedDB alone. Not yet
 deployed anywhere; see DEPLOY.md.
+
+## Collage Builder (Lookbook)
+
+A collage tool inside the Lookbook editor, reached from **Add → 🧩 collage builder**
+(the rail keeps its four tools). Freeform and layout collages, 16 grid templates
+(shared with Pattern Pages), auto layouts, editable grids, shape masks, borders,
+shadows, decorations, layering and reusable templates. A collage is saved as plain
+editable JSON inside the Lookbook project, never flattened.
+
+It is three shared files, so every Lookbook flavour (suite, standalone, the mini
+Lookbook in Mock-up Studio) runs the same engine:
+
+- `public/shared/collage-engine.js` — model, layout maths, DOM + canvas renderers
+- `public/shared/collage-editor.js` — touch/pen/mouse gestures
+- `public/shared/collage-panel.js` — the panel UI (talks to its host through a small `ctx`)
+
+The Lookbook-specific glue is the clearly commented "Collage Builder glue" block in
+`public/studios/mockup/index.html`. Tests: `tests/collage/README.md`.
