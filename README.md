@@ -53,3 +53,30 @@ Playground, send them, switch to Mock-up Studio, add them from the
 project, reload the page, confirm everything — the shared project, and
 each studio's own save — survived from IndexedDB alone. Not yet
 deployed anywhere; see DEPLOY.md.
+
+## Creative Lookbook (advanced Lookbook) — `/studios/lookbook/`
+
+Two Lookbook experiences, sharing code where sensible:
+
+- **Quick Lookbook** — the simple, working editor inside Mock-up Studio ("🎨 design lookbook").
+  Unchanged. It keeps its own inline copy of the editor and its own saved projects.
+- **Creative Lookbook** — its own workspace at `/studios/lookbook/`: start screen (new / open /
+  recent), the same left toolbar (Add · Arrange · Style · Export), multi-page editing, independent
+  uploads (patterns + images), its own saved projects (IndexedDB `creativeLookbookDB`), `.lookbook`
+  backup files, PNG / JPEG / multi-page PDF / ZIP export, and the **Collage Builder**.
+  It needs nothing else from the suite. The suite tab and project-asset hand-over come in a later phase.
+
+Shared code (`public/shared/`):
+
+- `collage-engine.js`, `collage-editor.js`, `collage-panel.js` — the Collage Builder (layouts,
+  freeform, grids, masks, shadows, decorations, templates). Layout ↔ freeform never loses an image.
+- `lookbook/lookbook-editor.js` — the Lookbook editing engine (pages, items, text, palettes, zoom,
+  tool panel, export). Talks to its host through `window.ScLookbookHost` (patterns, images,
+  onChange, projectName). Extracted by copying from Mock-up Studio; Mock-up keeps its own copy.
+- `lookbook/lookbook-ui.js` + `lookbook.css` + `lookbook-base.css` — markup and styling.
+- `lookbook/lookbook-store.js` — project storage.
+- `vendor/pdf-lib.min.js`, `vendor/jszip.min.js` — self-hosted, so the app works offline.
+
+Standalone deployment: `node tools/build-lookbook-standalone.mjs` copies exactly those files into
+`dist/lookbook-standalone/` (own `index.html`, own `wrangler.toml`) for a separate deployment.
+Details: `public/shared/lookbook/README.md`. Tests: `tests/lookbook/` and `tests/collage/`.

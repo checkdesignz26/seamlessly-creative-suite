@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Creative Lookbook</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Creative Lookbook — lay out pattern collections, mock-ups and collages into multi-page lookbooks. Part of Seamlessly Creative.">
+<meta name="theme-color" content="#d8e5e7">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Quicksand:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700;800&family=Bebas+Neue&display=swap">
+<!--
+  Creative Lookbook — standalone workspace.
+  Everything it needs lives under /shared/ (collage-*, lookbook/*, vendor/*) and this folder; it does NOT need
+  the suite shell, the suite project library or Mock-up Studio. Paths are relative (../../shared/) so the same
+  files work from /studios/lookbook/ today and, copied as-is (see tools/build-lookbook-standalone.mjs), as a
+  separately deployed app later.
+-->
+<link rel="stylesheet" href="../../shared/lookbook/lookbook-base.css">
+<link rel="stylesheet" href="../../shared/lookbook/lookbook.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body class="theme-ocean-atelier">
+
+<!-- Start screen: new / open / recent projects -->
+<main id="lbStart" class="lb-screen lb-start" aria-label="Creative Lookbook projects">
+  <div class="lb-start-card">
+    <p class="lb-brand">Seamlessly Creative</p>
+    <h1>creative lookbook</h1>
+    <p class="lb-tagline">lay out your patterns, mock-ups and collages as beautiful multi-page lookbooks.</p>
+
+    <div class="lb-start-actions">
+      <button type="button" class="orange" id="lbNewBtn">＋ new lookbook</button>
+      <button type="button" class="secondary" id="lbOpenBtn">open a .lookbook file…</button>
+    </div>
+
+    <h2 class="lb-section">your lookbooks</h2>
+    <div id="lbProjectList" class="lb-project-list" aria-live="polite"></div>
+
+    <p class="lb-footnote" id="lbStorageNote">Lookbooks are saved on this device, in this browser. Safari and other browsers can clear site data, so keep a backup: open a lookbook, then Export → “save a backup (.lookbook)”.</p>
+  </div>
+</main>
+
+<!-- Workspace: the shared Lookbook editor -->
+<div id="lbWorkspace" class="lb-screen lb-workspace" hidden>
+  <div id="lbEditorRoot"></div>
+</div>
+
+<!-- no accept= on purpose: iPadOS greys out files with extensions it does not know (.lookbook); the content is validated instead -->
+<input type="file" id="lbFileOpen" hidden>
+<input type="file" id="lbFilePatterns" accept="image/png,image/jpeg,image/webp,image/*" multiple hidden>
+<input type="file" id="lbFileImages" accept="image/png,image/jpeg,image/webp,image/*" multiple hidden>
+
+<!-- self-hosted libraries (work offline) -->
+<script src="../../shared/vendor/pdf-lib.min.js"></script>
+<script src="../../shared/vendor/jszip.min.js"></script>
+<!-- collage builder -->
+<script src="../../shared/collage-engine.js"></script>
+<script src="../../shared/collage-editor.js"></script>
+<script src="../../shared/collage-panel.js"></script>
+<!-- lookbook: storage, markup, then the editor engine (needs the markup to exist) -->
+<script src="../../shared/lookbook/lookbook-store.js"></script>
+<script src="../../shared/lookbook/lookbook-ui.js"></script>
+<script>ScLookbookUI.mount(document.getElementById('lbEditorRoot'));</script>
+<script src="../../shared/lookbook/lookbook-editor.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

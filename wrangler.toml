@@ -16,3 +16,7 @@ compatibility_date = "2024-09-23"
 
 [assets]
 directory = "./public"
+
+# Lets Cloudflare Workers Builds create branch previews (`wrangler preview`).
+# Empty on purpose: assets and settings above apply to previews too.
+[previews]

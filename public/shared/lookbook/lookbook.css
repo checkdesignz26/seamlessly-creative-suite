@@ -1,0 +1,706 @@
+/* Extracted from Mock-up Studio's Lookbook editor (collage-builder branch) for the Creative Lookbook workspace.
+   Mock-up Studio keeps its own inline copy; see public/shared/lookbook/README.md. */
+/* interactive lookbook editor */
+
+.lookbook-editor-card {
+  width: min(1440px, 98vw);
+  /* Plain vh first as a fallback for anything that doesn't understand dvh (that whole
+     declaration is simply invalid and skipped by the parser, leaving this one in effect).
+     On real mobile Safari, vh is defined against the LARGEST possible viewport — as if the
+     address bar were already collapsed — not the actually-visible one, so a card sized against
+     94vh can render taller than what's really on screen and push its own last child (the page
+     filmstrip) off the bottom edge, exactly as reported. dvh tracks the real, current viewport
+     and is what actually fixes it (supported iOS/iPadOS 15.4+). */
+  height: min(920px, 94vh);
+  height: min(920px, 94dvh);
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.lookbook-editor-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.lookbook-editor-topbar h2 {
+  margin: 0;
+  font-family: 'Caveat', cursive;
+  font-size: 24px;
+  color: var(--soft);
+  flex-shrink: 0;
+}
+
+/* The topbar now only holds session/canvas-level controls (fit/zoom/pages/close) — few enough
+   that they fit on one line at any width this editor runs at, so (unlike the old, much longer
+   horizontal toolbar this replaces) no horizontal-scroll escape hatch is needed here. */
+.lookbook-topbar-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+}
+
+.lookbook-topbar-controls .secondary {
+  padding: 5px 12px;
+  font-size: 12px;
+}
+
+.lookbook-topbar-controls label {
+  white-space: nowrap;
+}
+
+.lookbook-topbar-controls input[type="range"] {
+  width: 110px;
+}
+
+.lookbook-row-label {
+  font-size: 12px;
+  color: var(--muted);
+  flex: 0 0 auto;
+}
+
+/* ---- left-hand tool rail + expandable panel (replaces the old horizontally-scrolling toolbar
+   row and the old fixed-height contextual-controls bar) ----------------------------------------- */
+
+.lookbook-editor-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.lookbook-tool-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  width: 64px;
+  flex: 0 0 auto;
+  padding: 10px 6px;
+  border-right: 1px solid var(--border);
+  background: rgba(0,0,0,0.18);
+  overflow-y: auto;
+}
+
+.lookbook-rail-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  min-height: 56px;
+  padding: 6px 2px;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.lookbook-rail-btn .lookbook-rail-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.lookbook-rail-btn .lookbook-rail-label {
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.lookbook-rail-btn.active {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #fff;
+}
+
+/* display:none by default (push mode / wide screens) — this is NOT just the closed state, it's
+   "never shown at all" outside the narrow-screen overlay mode, since in push mode the panel never
+   overlays the canvas and there's nothing for a backdrop to sit behind. The :not([hidden]) rule
+   inside the media query below is what actually makes it appear, and only there — a plain
+   .lookbook-tool-panel-backdrop[hidden]{display:none} rule at this (unconditional) specificity
+   would otherwise leave it covering the ENTIRE editor body, including the rail itself, blocking
+   clicks on every rail icon the moment any panel was first opened in push mode (a real bug caught
+   in testing). Tapping it closes the panel, same as tapping the already-active rail icon or the
+   panel's own collapse button, consistent with how the retired page-background popover closed on
+   an outside click. */
+.lookbook-tool-panel-backdrop {
+  display: none;
+}
+
+.lookbook-tool-panel {
+  width: 0;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid transparent;
+  background: var(--panel);
+  overflow: hidden;
+  /* Width (not display/hidden) is what drives open vs. collapsed — see .lookbook-tool-panel.open
+     below. Using plain `hidden` here instead would mean choosing between display:none (skips the
+     width transition entirely, so it vanishes instead of sliding shut) or overriding [hidden] to
+     keep display:flex (which defeats `hidden`'s whole purpose: assistive tech and tools like
+     Playwright's visibility checks rightly treat an element as still "shown" whenever its computed
+     display isn't none, even at width:0 — a real false-positive caught in testing). A dedicated
+     class makes the collapsed state both visually AND semantically correct at the same time. */
+  transition: width 0.2s ease;
+}
+
+.lookbook-tool-panel.open {
+  /* Narrowed from 272px — was comfortable but noticeably wider than it needed to be; 232px still
+     gives every control (full-width slider, colour input + button pair, font select) its own
+     uncramped row (see min-width just below for the floor that guarantees this). */
+  width: 232px;
+  border-right-color: var(--border);
+}
+
+.lookbook-tool-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.lookbook-tool-panel-collapse {
+  /* Bumped from 26px to 32px — a real, comfortable tap target (close to Apple's 44pt HIG guideline
+     for a secondary/already-visible control), and kept in the panel's own header rather than
+     anywhere that could scroll out of view, so it's reachable the instant the panel is open. */
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  width: 32px;
+  height: 32px;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.lookbook-tool-panel-body {
+  flex: 1;
+  /* Vertical scroll once content exceeds the panel's own height (e.g. Style with every block
+     expanded for a selected text item) — the header above stays fixed/reachable throughout. */
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* Keeps every control at a readable width even while the panel itself is still mid-transition
+     (width momentarily narrower than the open width) — avoids the same "flex squeezes everything
+     down instead of overflowing" issue the old horizontal bar had to guard against. */
+  min-width: 208px;
+}
+
+.lookbook-tool-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lookbook-tool-group[hidden] {
+  display: none;
+}
+
+.lookbook-tool-block {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(0,0,0,0.12);
+}
+
+.lookbook-tool-block[hidden] {
+  display: none;
+}
+
+.lookbook-tool-block h4 {
+  margin: 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.lookbook-tool-block label {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.lookbook-tool-block input[type="range"] {
+  width: 100%;
+}
+
+/* Every plain action button inside the rail panel (not just font-related ones) is full-width for
+   alignment consistency. Deliberately NOT forced to a single ellipsised line here — a longer label
+   like "+ add selected mock-ups" genuinely doesn't fit one line at this panel width, and truncating
+   it to "+ add selected mock-u…" loses real information (which is worse than a clean two-line wrap,
+   centred and readable, see line-height below). Scoped to .lookbook-tool-group so this doesn't
+   change how a .secondary button looks anywhere else in the app. */
+.lookbook-tool-group button.secondary,
+.lookbook-tool-block button.secondary,
+.lookbook-tool-group button.orange,
+.lookbook-tool-block button.orange {
+  width: 100%;
+  font-size: 13px;
+  line-height: 1.25;
+  padding: 9px 12px;
+  text-align: center;
+}
+
+/* The one place ellipsis IS the right call: two buttons sharing a row (see
+   .lookbook-font-mode-actions) have genuinely little width each — a mid-word wrap there reads as
+   broken, not just long, so a single clipped line is the better fallback. Their labels ("title",
+   "body") are short enough in practice that this almost never actually triggers. */
+.lookbook-font-mode-actions button.secondary {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lookbook-tool-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* Narrower than roughly iPad-portrait width: a 64px rail + 272px panel pushing the canvas would
+   leave too little width for comfortable editing, so the panel becomes a temporary overlay
+   instead (position:absolute, with the backdrop above) rather than permanently shrinking the
+   canvas — the canvas area's own width never changes in this mode, so there's nothing to
+   re-fit and no risk of the "unexpected scrolling" this was specifically asked to avoid. */
+@media (max-width: 980px) {
+  .lookbook-tool-panel {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 64px;
+    z-index: 30;
+    box-shadow: var(--shadow);
+  }
+  .lookbook-tool-panel-backdrop:not([hidden]) {
+    display: block;
+    position: absolute;
+    /* Starts after the rail (not inset:0) — a real bug caught in testing: a full-width backdrop
+       covered the rail itself, blocking every rail button the moment a panel was open in overlay
+       mode, so the only way to close or switch groups was tapping the backdrop or the panel's own
+       collapse button. The rail must stay clickable (to switch groups or collapse via its own
+       toggle) the whole time a panel is open. */
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 64px;
+    z-index: 25;
+    background: rgba(0,0,0,0.35);
+  }
+}
+
+.lookbook-canvas-area {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.lookbook-pattern-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.lookbook-pattern-strip .lookbook-pattern-swatch {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 2px solid rgba(0,0,0,0.4);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.55);
+  background-size: cover;
+  background-position: center;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.lookbook-palette-strip {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lookbook-palette-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+
+.lookbook-palette-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.7);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.3);
+  cursor: pointer;
+  flex: 0 0 auto;
+  padding: 0;
+}
+
+.lookbook-palette-swatch.active {
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.3), 0 0 0 3px var(--accent);
+}
+
+.lookbook-palette-hex {
+  font-size: 9px;
+  color: var(--muted);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.lookbook-palette-add {
+  background: transparent;
+  border: 2px dashed rgba(255,255,255,0.5);
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lookbook-viewport {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  /* Was 40px — most of the "unnecessary space above the page" this was reported against was this
+     padding alone (80px/120px lost on every axis before the page even starts). A real 20px gutter
+     is still enough to keep the page's own drop-shadow readable while giving ilComputeFitZoom (see
+     the JS below) a meaningfully larger box to fit the page into on a cramped iPad viewport. */
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    repeating-conic-gradient(rgba(255,255,255,0.04) 0% 25%, transparent 0% 50%) 0 0 / 26px 26px,
+    rgba(0,0,0,0.22);
+}
+
+.lookbook-page-thumbnails {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  overflow-x: auto;
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  background: rgba(0,0,0,0.16);
+}
+
+/* "hide pages" toggle (see ilToggleThumbnailsBtn) — collapses the filmstrip entirely rather than
+   just scrolling it out of view, so it stops taking up vertical space in the editor card. */
+.lookbook-page-thumbnails.il-thumbnails-hidden {
+  display: none;
+}
+
+/* Font-mode toggle inside the text layer controls — switches between the curated title/body
+   pairing group and a plain single-font picker (see ilFontPairGroup / ilFontSingleGroup) without
+   needing two separate rows, since the controls bar only ever scrolls horizontally, never wraps. */
+.lookbook-font-mode-toggle {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.25);
+  border: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+
+.lookbook-font-mode-btn {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.lookbook-font-mode-btn.active {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #fff;
+}
+
+/* Stacked, not a single unconstrained flex row — the select's natural width plus two button labels
+   ("use as title" / "use as body") never fit on one line in the rail panel's narrower column
+   without either overflowing or wrapping mid-word. A full-width select on its own row, with its
+   action(s) in a row of their own right below, keeps every piece aligned and legible at any panel
+   width this editor actually uses (including the 232px default and the still-narrower mid-
+   transition width — see .lookbook-tool-panel-body's own min-width). */
+.lookbook-font-mode-group {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.lookbook-font-mode-group select {
+  width: 100%;
+}
+
+.lookbook-font-mode-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+/* Single-font mode has only one action button — let it span the row rather than sit half-width
+   with an empty gap beside it. */
+.lookbook-font-mode-actions:has(> button:only-child) {
+  grid-template-columns: 1fr;
+}
+
+/* Needed because the plain class rule above sets display:flex unconditionally, which otherwise
+   outranks the browser's default [hidden]{display:none} rule and leaves a "hidden" group visible
+   anyway — this restores hidden actually meaning hidden. */
+.lookbook-font-mode-group[hidden] {
+  display: none;
+}
+
+.lookbook-page-thumb {
+  position: relative;
+  width: 120px;
+  height: 85px;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  border: 2px solid rgba(0,0,0,0.4);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.4);
+  overflow: hidden;
+  cursor: pointer;
+  background: #fff;
+}
+
+.lookbook-page-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.lookbook-page-thumb.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px #fff, 0 0 0 3px var(--accent);
+}
+
+.lookbook-page-thumb .thumb-label {
+  position: absolute;
+  bottom: 3px;
+  right: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0,0,0,0.6);
+  padding: 1px 5px;
+  border-radius: 5px;
+}
+
+.lookbook-page-thumb .thumb-delete {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #d33;
+  color: #fff;
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+  border: 2px solid #fff;
+  cursor: pointer;
+  display: none;
+}
+
+.lookbook-page-thumb:hover .thumb-delete {
+  display: block;
+}
+
+.lookbook-page-thumb-add {
+  width: 120px;
+  height: 85px;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  border: 2px dashed rgba(255,255,255,0.3);
+  background: transparent;
+  color: var(--muted);
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.lookbook-canvas {
+  position: relative;
+  width: 1200px;
+  height: 850px;
+  flex: 0 0 auto;
+  background: #ffffff;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+
+.canvas-item {
+  position: absolute;
+  box-sizing: border-box;
+  cursor: grab;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  user-select: none;
+  touch-action: none;
+}
+
+.canvas-item.selected {
+  border-color: var(--accent);
+}
+
+/* Collage Builder item (shared engine: /shared/collage-*.js). No border so the collage's own box
+   is exactly the exported box; selection is shown with an outline instead. */
+.canvas-item.collage-item {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  outline: 2px solid transparent;
+}
+
+.canvas-item.collage-item.selected { outline-color: var(--accent); }
+
+.canvas-item.collage-item:has(.sccl-root.sccl-editing) { outline-style: dashed; cursor: default; }
+
+.collage-host { position: absolute; inset: 0; }
+
+/* Above the photos, but BELOW the collage editor's own piece handles (z 100000 inside the item), so a
+   photo sitting in the collage's corner can still be resized by its own corner handle. */
+.canvas-item.collage-item .item-resize-handle,
+.canvas-item.collage-item .item-delete-handle { z-index: 99999; }
+
+.canvas-item.text-item {
+  background: transparent;
+  color: #222;
+  font-family: inherit;
+  font-size: 24px;
+  line-height: 1.3;
+  user-select: text;
+}
+
+/* The actual contenteditable lives in its own child so the delete/resize
+   handle buttons never end up as editable DOM content (that's what made
+   typing glitch out — the browser was treating the buttons as text). */
+.text-item-content {
+  width: 100%;
+  min-height: 100%;
+  padding: 6px 10px;
+  box-sizing: border-box;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  cursor: text;
+  outline: none;
+  user-select: text;
+}
+
+.canvas-item .item-resize-handle {
+  position: absolute;
+  right: -7px;
+  bottom: -7px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid #fff;
+  cursor: nwse-resize;
+  display: none;
+}
+
+.canvas-item .item-delete-handle {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #d33;
+  color: #fff;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+  cursor: pointer;
+  border: 2px solid #fff;
+  display: none;
+}
+
+.canvas-item.selected .item-resize-handle,
+.canvas-item.selected .item-delete-handle {
+  display: block;
+}
+
+/* A palette item is a group of colour dots that move/resize together as
+   one canvas-item — not fixed in place, not tied to the pattern it was
+   pulled from. Dots are sized as a percentage of the item's own height and
+   spaced with space-evenly, so resizing the group's box (the same resize
+   handle every other item uses) scales and re-spaces them for free, no
+   extra JS needed to keep the live view in sync. */
+.canvas-item.palette-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  background: rgba(255,255,255,0.92);
+  border-radius: 16px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.22);
+}
+
+.palette-item .palette-swatch-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3%;
+  height: 100%;
+  flex: 0 0 auto;
+}
+
+.palette-item .palette-dot {
+  height: 50%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.9), 0 2px 6px rgba(0,0,0,0.25);
+  flex: 0 0 auto;
+}
+
+.palette-item .palette-hex {
+  font-size: 10px;
+  color: #333;
+  font-family: 'Quicksand', sans-serif;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
