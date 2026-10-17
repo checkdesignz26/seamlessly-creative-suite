@@ -1049,7 +1049,7 @@ input[type=range] {
   overflow: hidden;
 }
 
-.lookbook-editor-toolbar {
+.lookbook-editor-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1059,7 +1059,7 @@ input[type=range] {
   flex-shrink: 0;
 }
 
-.lookbook-editor-toolbar h2 {
+.lookbook-editor-topbar h2 {
   margin: 0;
   font-family: 'Caveat', cursive;
   font-size: 24px;
@@ -1067,86 +1067,249 @@ input[type=range] {
   flex-shrink: 0;
 }
 
-/* Scrolls sideways instead of wrapping onto a second line (the previous
-   behaviour on an iPad-width screen — see the screenshot this was reported
-   against): a wrapped second row of buttons permanently eats as much
-   vertical height as the whole rest of the toolbar, which is exactly the
-   "unnecessary vertical space" an iPad has the least room to spare. */
-.lookbook-editor-actions {
+/* The topbar now only holds session/canvas-level controls (fit/zoom/pages/close) — few enough
+   that they fit on one line at any width this editor runs at, so (unlike the old, much longer
+   horizontal toolbar this replaces) no horizontal-scroll escape hatch is needed here. */
+.lookbook-topbar-controls {
   display: flex;
-  gap: 6px;
   align-items: center;
+  gap: 10px;
   flex-wrap: nowrap;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  min-width: 0;
-  flex: 1 1 auto;
-  padding-bottom: 2px;
-}
-
-.lookbook-editor-actions > * {
   flex-shrink: 0;
 }
 
-/* "page background" button + its popover (see ilPageBgBtn/ilPageBgPopover) — an absolutely
-   positioned dropdown rather than a permanent row, so a page-level setting that's reached rarely
-   doesn't cost any of the vertical space the rest of this editor works hard to stay within. */
-.lookbook-bg-popover-wrap {
-  position: relative;
-  flex-shrink: 0;
+.lookbook-topbar-controls .secondary {
+  padding: 5px 12px;
+  font-size: 12px;
 }
 
-.lookbook-bg-popover {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 200px;
-  padding: 12px;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  box-shadow: var(--shadow);
+.lookbook-topbar-controls label {
+  white-space: nowrap;
 }
 
-.lookbook-bg-popover[hidden] {
-  display: none;
-}
-
-.lookbook-bg-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.lookbook-bg-row input[type="color"] {
-  width: 44px;
-  height: 28px;
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: none;
-  cursor: pointer;
-}
-
-.lookbook-editor-patterns {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 16px;
-  border-bottom: 1px solid var(--border);
-  flex-wrap: wrap;
-  flex-shrink: 0;
+.lookbook-topbar-controls input[type="range"] {
+  width: 110px;
 }
 
 .lookbook-row-label {
   font-size: 12px;
   color: var(--muted);
   flex: 0 0 auto;
+}
+
+/* ---- left-hand tool rail + expandable panel (replaces the old horizontally-scrolling toolbar
+   row and the old fixed-height contextual-controls bar) ----------------------------------------- */
+
+.lookbook-editor-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.lookbook-tool-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  width: 64px;
+  flex: 0 0 auto;
+  padding: 10px 6px;
+  border-right: 1px solid var(--border);
+  background: rgba(0,0,0,0.18);
+  overflow-y: auto;
+}
+
+.lookbook-rail-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  min-height: 56px;
+  padding: 6px 2px;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.lookbook-rail-btn .lookbook-rail-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.lookbook-rail-btn .lookbook-rail-label {
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.lookbook-rail-btn.active {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #fff;
+}
+
+/* display:none by default (push mode / wide screens) — this is NOT just the closed state, it's
+   "never shown at all" outside the narrow-screen overlay mode, since in push mode the panel never
+   overlays the canvas and there's nothing for a backdrop to sit behind. The :not([hidden]) rule
+   inside the media query below is what actually makes it appear, and only there — a plain
+   .lookbook-tool-panel-backdrop[hidden]{display:none} rule at this (unconditional) specificity
+   would otherwise leave it covering the ENTIRE editor body, including the rail itself, blocking
+   clicks on every rail icon the moment any panel was first opened in push mode (a real bug caught
+   in testing). Tapping it closes the panel, same as tapping the already-active rail icon or the
+   panel's own collapse button, consistent with how the retired page-background popover closed on
+   an outside click. */
+.lookbook-tool-panel-backdrop {
+  display: none;
+}
+
+.lookbook-tool-panel {
+  width: 0;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid transparent;
+  background: var(--panel);
+  overflow: hidden;
+  /* Width (not display/hidden) is what drives open vs. collapsed — see .lookbook-tool-panel.open
+     below. Using plain `hidden` here instead would mean choosing between display:none (skips the
+     width transition entirely, so it vanishes instead of sliding shut) or overriding [hidden] to
+     keep display:flex (which defeats `hidden`'s whole purpose: assistive tech and tools like
+     Playwright's visibility checks rightly treat an element as still "shown" whenever its computed
+     display isn't none, even at width:0 — a real false-positive caught in testing). A dedicated
+     class makes the collapsed state both visually AND semantically correct at the same time. */
+  transition: width 0.2s ease;
+}
+
+.lookbook-tool-panel.open {
+  width: 272px;
+  border-right-color: var(--border);
+}
+
+.lookbook-tool-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.lookbook-tool-panel-collapse {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  width: 26px;
+  height: 26px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.lookbook-tool-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  /* Keeps every control at a readable width even while the panel itself is still mid-transition
+     (width momentarily narrower than 272px) — avoids the same "flex squeezes everything down
+     instead of overflowing" issue the old horizontal bar had to guard against. */
+  min-width: 244px;
+}
+
+.lookbook-tool-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lookbook-tool-group[hidden] {
+  display: none;
+}
+
+.lookbook-tool-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(0,0,0,0.12);
+}
+
+.lookbook-tool-block[hidden] {
+  display: none;
+}
+
+.lookbook-tool-block h4 {
+  margin: 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.lookbook-tool-block label {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.lookbook-tool-block input[type="range"] {
+  width: 100%;
+}
+
+.lookbook-tool-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* Narrower than roughly iPad-portrait width: a 64px rail + 272px panel pushing the canvas would
+   leave too little width for comfortable editing, so the panel becomes a temporary overlay
+   instead (position:absolute, with the backdrop above) rather than permanently shrinking the
+   canvas — the canvas area's own width never changes in this mode, so there's nothing to
+   re-fit and no risk of the "unexpected scrolling" this was specifically asked to avoid. */
+@media (max-width: 980px) {
+  .lookbook-tool-panel {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 64px;
+    z-index: 30;
+    box-shadow: var(--shadow);
+  }
+  .lookbook-tool-panel-backdrop:not([hidden]) {
+    display: block;
+    position: absolute;
+    /* Starts after the rail (not inset:0) — a real bug caught in testing: a full-width backdrop
+       covered the rail itself, blocking every rail button the moment a panel was open in overlay
+       mode, so the only way to close or switch groups was tapping the backdrop or the panel's own
+       collapse button. The rail must stay clickable (to switch groups or collapse via its own
+       toggle) the whole time a panel is open. */
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 64px;
+    z-index: 25;
+    background: rgba(0,0,0,0.35);
+  }
+}
+
+.lookbook-canvas-area {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .lookbook-pattern-strip {
@@ -1156,9 +1319,9 @@ input[type=range] {
   flex-wrap: wrap;
 }
 
-.lookbook-editor-patterns .lookbook-pattern-swatch {
-  width: 30px;
-  height: 30px;
+.lookbook-pattern-strip .lookbook-pattern-swatch {
+  width: 36px;
+  height: 36px;
   border-radius: 8px;
   border: 2px solid rgba(0,0,0,0.4);
   box-shadow: 0 0 0 1px rgba(255,255,255,0.55);
@@ -1166,28 +1329,6 @@ input[type=range] {
   background-position: center;
   cursor: pointer;
   flex: 0 0 auto;
-}
-
-.lookbook-zoom-control {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: auto;
-  flex: 0 0 auto;
-}
-
-/* "fit page" button lives right next to the zoom slider it's an alternative to — see ilFitPageBtn. */
-.lookbook-zoom-control .secondary {
-  padding: 5px 12px;
-  font-size: 12px;
-}
-
-.lookbook-zoom-control label {
-  white-space: nowrap;
-}
-
-.lookbook-zoom-control input[type="range"] {
-  width: 120px;
 }
 
 .lookbook-palette-strip {
@@ -1238,72 +1379,9 @@ input[type=range] {
   justify-content: center;
 }
 
-/* Both control panels stay permanently mounted at a fixed height and are
-   only ever toggled by opacity/visibility (never display/height). Selecting
-   a different kind of layer used to swap which panel had display:none,
-   which changed the toolbar's height and shifted the canvas out from under
-   an in-progress click — turning a single click, or the second click of a
-   double-click, into a click on whatever had scrolled into place instead.
-   A constant-height wrapper makes that reflow impossible. */
-.lookbook-editor-controls-wrapper {
-  position: relative;
-  height: 52px;
-  flex-shrink: 0;
-  border-bottom: 1px solid var(--border);
-  background: rgba(0,0,0,0.16);
-}
-
-.lookbook-editor-layer-controls {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 8px 16px;
-  /* Never wrap: on a narrower screen (an iPad, say) a wrapped second line
-     would land below this box's fixed height and, since that height can
-     never change (see the wrapper's own comment), be clipped out of view
-     with no scrollbar or other sign it existed — which is exactly what
-     made the colour swatches seem to vanish. Scrolling sideways keeps
-     every control reachable no matter how much a text item's panel grows. */
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-
-.lookbook-editor-layer-controls.il-active {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-}
-
-/* Without this, flex's default shrink-to-fit would squeeze every control
-   (sliders, swatches, the font dropdown) smaller instead of actually
-   overflowing — which is what makes the scrollbar above appear at all. */
-.lookbook-editor-layer-controls > * {
-  flex-shrink: 0;
-}
-
-.lookbook-editor-layer-controls label {
-  font-size: 12px;
-  color: var(--muted);
-  margin: 0;
-}
-
-.lookbook-editor-layer-controls input[type="range"] {
-  width: 160px;
-}
-
-.lookbook-editor-layer-controls select {
-  width: auto;
-}
-
 .lookbook-viewport {
   flex: 1;
+  min-height: 0;
   overflow: auto;
   /* Was 40px — most of the "unnecessary space above the page" this was reported against was this
      padding alone (80px/120px lost on every axis before the page even starts). A real 20px gutter
@@ -2342,80 +2420,124 @@ input[type=text] {
 <!-- INTERACTIVE LOOKBOOK EDITOR: free-form drag/drop/layering canvas -->
 <aside class="preview-overlay hidden" id="interactiveLookbookOverlay">
   <div class="lookbook-editor-card">
-    <div class="lookbook-editor-toolbar">
+    <div class="lookbook-editor-topbar">
       <h2>design your lookbook</h2>
-      <div class="lookbook-editor-actions">
-        <button class="secondary" id="ilAddSelectedBtn" type="button">+ add selected mock-ups</button>
-        <button class="secondary" id="ilAddTextBtn" type="button">+ add text</button>
-        <button class="secondary" id="ilAddPaletteBtn" type="button" title="uses the selected pattern's colours, or the page's patterns if nothing's selected">+ add colour palette</button>
-        <button class="secondary" id="ilDeleteItemBtn" type="button" disabled>delete selected</button>
-        <button class="secondary" id="ilExportPngBtn" type="button">export page as PNG</button>
-        <button class="orange" id="ilExportPdfBtn" type="button">export all pages as PDF</button>
-        <div class="lookbook-bg-popover-wrap">
-          <button class="secondary" id="ilPageBgBtn" type="button">page background</button>
-          <div id="ilPageBgPopover" class="lookbook-bg-popover" hidden>
-            <div class="lookbook-bg-row">
-              <span class="lookbook-row-label">solid colour</span>
-              <input type="color" id="ilPageBgColorInput" value="#ffffff">
-            </div>
-            <div class="lookbook-bg-row">
-              <button type="button" class="secondary" id="ilPageBgImageBtn">upload image…</button>
-              <input type="file" id="ilPageBgImageFile" accept="image/*" hidden>
-            </div>
-            <button type="button" class="secondary" id="ilPageBgClearBtn">clear (white)</button>
-          </div>
-        </div>
+      <div class="lookbook-topbar-controls">
+        <button type="button" class="secondary" id="ilFitPageBtn" title="fit the whole page to the window">fit page</button>
+        <label class="lookbook-row-label">zoom <span id="ilZoomValue">100%</span></label>
+        <input type="range" id="ilZoomSlider" min="40" max="200" value="100">
         <button class="secondary" id="ilToggleThumbnailsBtn" type="button">hide pages</button>
         <button class="secondary" id="ilCloseBtn" type="button">close</button>
       </div>
     </div>
 
+    <div class="lookbook-editor-body">
+      <div class="lookbook-tool-rail" id="ilToolRail">
+        <button type="button" class="lookbook-rail-btn" id="ilRailAddBtn" data-group="add" title="Add" aria-label="Add tools">
+          <span class="lookbook-rail-icon" aria-hidden="true">➕</span><span class="lookbook-rail-label">Add</span>
+        </button>
+        <button type="button" class="lookbook-rail-btn" id="ilRailArrangeBtn" data-group="arrange" title="Arrange" aria-label="Arrange tools">
+          <span class="lookbook-rail-icon" aria-hidden="true">🔧</span><span class="lookbook-rail-label">Arrange</span>
+        </button>
+        <button type="button" class="lookbook-rail-btn" id="ilRailStyleBtn" data-group="style" title="Style" aria-label="Style tools">
+          <span class="lookbook-rail-icon" aria-hidden="true">🎨</span><span class="lookbook-rail-label">Style</span>
+        </button>
+        <button type="button" class="lookbook-rail-btn" id="ilRailExportBtn" data-group="export" title="Export" aria-label="Export tools">
+          <span class="lookbook-rail-icon" aria-hidden="true">📤</span><span class="lookbook-rail-label">Export</span>
+        </button>
+      </div>
 
-    <div class="lookbook-editor-patterns">
-      <span class="lookbook-row-label">add a pattern swatch:</span>
-      <div class="lookbook-pattern-strip" id="ilPatternStrip"></div>
-      <div class="lookbook-zoom-control">
-        <button type="button" class="secondary" id="ilFitPageBtn" title="fit the whole page to the window">fit page</button>
-        <label class="lookbook-row-label">zoom <span id="ilZoomValue">100%</span></label>
-        <input type="range" id="ilZoomSlider" min="40" max="200" value="100">
+      <div class="lookbook-tool-panel-backdrop" id="ilToolPanelBackdrop" hidden></div>
+
+      <div class="lookbook-tool-panel" id="ilToolPanel" aria-hidden="true">
+        <div class="lookbook-tool-panel-header">
+          <span id="ilToolPanelTitle">Add</span>
+          <button type="button" class="lookbook-tool-panel-collapse" id="ilToolPanelCollapseBtn" title="Collapse panel" aria-label="Collapse panel">‹</button>
+        </div>
+        <div class="lookbook-tool-panel-body">
+
+          <section id="ilGroupAdd" class="lookbook-tool-group">
+            <button class="secondary" id="ilAddSelectedBtn" type="button">+ add selected mock-ups</button>
+
+            <div class="lookbook-tool-block">
+              <h4>add a pattern swatch</h4>
+              <div class="lookbook-pattern-strip" id="ilPatternStrip"></div>
+            </div>
+
+            <button class="secondary" id="ilAddPaletteBtn" type="button" title="uses the selected pattern's colours, or the page's patterns if nothing's selected">+ add colour palette</button>
+            <button class="secondary" id="ilAddTextBtn" type="button">+ add text</button>
+          </section>
+
+          <section id="ilGroupArrange" class="lookbook-tool-group" hidden>
+            <button class="secondary" id="ilDeleteItemBtn" type="button" disabled>delete selected</button>
+
+            <div id="ilLayerControls" class="lookbook-tool-block" hidden>
+              <h4>rotation &amp; resizing</h4>
+              <label>pattern scale <span id="ilScaleValue">100%</span></label>
+              <input type="range" id="ilScaleSlider" min="20" max="400" value="100">
+              <label>rotate <span id="ilRotateValue">0°</span></label>
+              <input type="range" id="ilRotateSlider" min="0" max="360" value="0">
+            </div>
+
+            <p class="lookbook-tool-hint" id="ilArrangeHint">select a pattern swatch on the page to scale or rotate it.</p>
+          </section>
+
+          <section id="ilGroupStyle" class="lookbook-tool-group" hidden>
+            <div class="lookbook-tool-block">
+              <h4>page background</h4>
+              <div class="lookbook-bg-row">
+                <span class="lookbook-row-label">solid colour</span>
+                <input type="color" id="ilPageBgColorInput" value="#ffffff">
+              </div>
+              <div class="lookbook-bg-row">
+                <button type="button" class="secondary" id="ilPageBgImageBtn">upload image…</button>
+                <input type="file" id="ilPageBgImageFile" accept="image/*" hidden>
+              </div>
+              <button type="button" class="secondary" id="ilPageBgClearBtn">clear (white)</button>
+            </div>
+
+            <div id="ilShadowGroup" class="lookbook-tool-block" hidden>
+              <h4>drop shadow</h4>
+              <label>shadow <span id="ilShadowValue">0%</span></label>
+              <input type="range" id="ilShadowSlider" min="0" max="100" value="0">
+            </div>
+
+            <div id="ilTextControls" class="lookbook-tool-block" hidden>
+              <h4>text style</h4>
+              <div class="lookbook-font-mode-toggle">
+                <button type="button" class="lookbook-font-mode-btn active" id="ilFontModePairBtn">font pairing</button>
+                <button type="button" class="lookbook-font-mode-btn" id="ilFontModeSingleBtn">single font</button>
+              </div>
+              <div id="ilFontPairGroup" class="lookbook-font-mode-group">
+                <select id="ilFontPairSelect"></select>
+                <button type="button" class="secondary" id="ilApplyTitleFontBtn">use as title</button>
+                <button type="button" class="secondary" id="ilApplyBodyFontBtn">use as body</button>
+              </div>
+              <div id="ilFontSingleGroup" class="lookbook-font-mode-group" hidden>
+                <select id="ilFontSingleSelect"></select>
+                <button type="button" class="secondary" id="ilApplySingleFontBtn">apply font</button>
+              </div>
+              <label>size <span id="ilFontSizeValue">24px</span></label>
+              <input type="range" id="ilFontSizeSlider" min="10" max="96" value="24">
+              <label>colour</label>
+              <div class="lookbook-palette-strip" id="ilPaletteStrip"></div>
+              <input type="color" id="ilCustomColorInput" style="position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; border:none; padding:0;">
+            </div>
+          </section>
+
+          <section id="ilGroupExport" class="lookbook-tool-group" hidden>
+            <button class="secondary" id="ilExportPngBtn" type="button">export page as PNG</button>
+            <button class="orange" id="ilExportPdfBtn" type="button">export all pages as PDF</button>
+          </section>
+
+        </div>
+      </div>
+
+      <div class="lookbook-canvas-area">
+        <div class="lookbook-viewport" id="lookbookViewport"></div>
+        <div class="lookbook-page-thumbnails" id="ilPageThumbnails"></div>
       </div>
     </div>
-
-    <div class="lookbook-editor-controls-wrapper" id="ilControlsWrapper">
-      <div id="ilLayerControls" class="lookbook-editor-layer-controls">
-        <label>pattern scale <span id="ilScaleValue">100%</span></label>
-        <input type="range" id="ilScaleSlider" min="20" max="400" value="100">
-        <label>rotate <span id="ilRotateValue">0°</span></label>
-        <input type="range" id="ilRotateSlider" min="0" max="360" value="0">
-        <label>shadow <span id="ilShadowValue">0%</span></label>
-        <input type="range" id="ilShadowSlider" min="0" max="100" value="0">
-      </div>
-
-      <div id="ilTextControls" class="lookbook-editor-layer-controls">
-        <div class="lookbook-font-mode-toggle">
-          <button type="button" class="lookbook-font-mode-btn active" id="ilFontModePairBtn">font pairing</button>
-          <button type="button" class="lookbook-font-mode-btn" id="ilFontModeSingleBtn">single font</button>
-        </div>
-        <div id="ilFontPairGroup" class="lookbook-font-mode-group">
-          <select id="ilFontPairSelect"></select>
-          <button type="button" class="secondary" id="ilApplyTitleFontBtn">use as title</button>
-          <button type="button" class="secondary" id="ilApplyBodyFontBtn">use as body</button>
-        </div>
-        <div id="ilFontSingleGroup" class="lookbook-font-mode-group" hidden>
-          <select id="ilFontSingleSelect"></select>
-          <button type="button" class="secondary" id="ilApplySingleFontBtn">apply font</button>
-        </div>
-        <label>size <span id="ilFontSizeValue">24px</span></label>
-        <input type="range" id="ilFontSizeSlider" min="10" max="96" value="24">
-        <label>colour</label>
-        <div class="lookbook-palette-strip" id="ilPaletteStrip"></div>
-        <input type="color" id="ilCustomColorInput" style="position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; border:none; padding:0;">
-      </div>
-    </div>
-
-    <div class="lookbook-viewport" id="lookbookViewport"></div>
-
-    <div class="lookbook-page-thumbnails" id="ilPageThumbnails"></div>
   </div>
 </aside>
 
@@ -6310,20 +6432,27 @@ function ilSelectItem(item) {
   const deleteBtn = document.getElementById('ilDeleteItemBtn');
   if (deleteBtn) deleteBtn.disabled = false;
 
-  // Deferred a tick: the control panels are opacity/visibility-toggled
-  // now (see .lookbook-editor-controls-wrapper), so this no longer moves
-  // anything — but keeping it off the same synchronous turn as the
-  // mousedown that likely triggered this selection is cheap insurance
-  // against ever reintroducing a mid-click reflow here.
+  // Deferred a tick: cheap insurance against a mid-click reflow, same reasoning as before this
+  // moved into the side panel — now that the controls live in a fixed-width side panel rather
+  // than a bar above the canvas, a content change here can't shift the canvas any more, but there's
+  // no cost to keeping this off the same synchronous turn as the mousedown that triggered it.
   setTimeout(() => ilRefreshSelectionControls(item), 0);
 }
 
 function ilRefreshSelectionControls(item) {
   if (ilSelectedItem !== item) return;
 
+  // Plain `hidden` toggling (not the old opacity/visibility class) — see the removed
+  // .lookbook-editor-controls-wrapper CSS comment for why that was needed before and why it isn't
+  // any more now these controls live in the side panel instead of a bar above the canvas.
   const layerControls = document.getElementById('ilLayerControls');
-  if (item.dataset.hasPattern === 'true') {
-    layerControls.classList.add('il-active');
+  const shadowGroup = document.getElementById('ilShadowGroup');
+  const arrangeHint = document.getElementById('ilArrangeHint');
+  const isPattern = item.dataset.hasPattern === 'true';
+  layerControls.hidden = !isPattern;
+  if (shadowGroup) shadowGroup.hidden = !isPattern;
+  if (arrangeHint) arrangeHint.hidden = isPattern;
+  if (isPattern) {
     const scale = item.dataset.scale || '100';
     const rotate = item.dataset.rotate || '0';
     const shadow = item.dataset.shadow || '0';
@@ -6333,13 +6462,12 @@ function ilRefreshSelectionControls(item) {
     document.getElementById('ilScaleValue').textContent = scale + '%';
     document.getElementById('ilRotateValue').textContent = rotate + '°';
     document.getElementById('ilShadowValue').textContent = shadow + '%';
-  } else {
-    layerControls.classList.remove('il-active');
   }
 
   const textControls = document.getElementById('ilTextControls');
-  if (item.classList.contains('text-item')) {
-    textControls.classList.add('il-active');
+  const isText = item.classList.contains('text-item');
+  textControls.hidden = !isText;
+  if (isText) {
     const size = item.dataset.fontSize || '24';
     const pairSelect = document.getElementById('ilFontPairSelect');
     if (pairSelect) pairSelect.value = ilFindMatchingPairIndex(item.dataset.font || "'Quicksand', sans-serif");
@@ -6348,8 +6476,6 @@ function ilRefreshSelectionControls(item) {
     document.getElementById('ilFontSizeSlider').value = size;
     document.getElementById('ilFontSizeValue').textContent = size + 'px';
     ilRenderPaletteStrip(item.style.color);
-  } else {
-    textControls.classList.remove('il-active');
   }
 }
 
@@ -6358,8 +6484,14 @@ function ilDeselectAll() {
   ilSelectedItem = null;
   const deleteBtn = document.getElementById('ilDeleteItemBtn');
   if (deleteBtn) deleteBtn.disabled = true;
-  document.getElementById('ilLayerControls')?.classList.remove('il-active');
-  document.getElementById('ilTextControls')?.classList.remove('il-active');
+  const layerControls = document.getElementById('ilLayerControls');
+  if (layerControls) layerControls.hidden = true;
+  const shadowGroup = document.getElementById('ilShadowGroup');
+  if (shadowGroup) shadowGroup.hidden = true;
+  const arrangeHint = document.getElementById('ilArrangeHint');
+  if (arrangeHint) arrangeHint.hidden = false;
+  const textControls = document.getElementById('ilTextControls');
+  if (textControls) textControls.hidden = true;
 }
 
 // Multiple pages: each page is its own .lookbook-canvas element inside the
@@ -6453,6 +6585,10 @@ function ilSwitchToPage(index) {
   // The page just switched to is already visible, so refreshing just its
   // own thumbnail (to reflect any edits since it was last shown) is free.
   ilRenderSinglePageThumbnail(index);
+  // Keeps the Style panel's page-background colour input correct for whichever page is now
+  // active, even if the panel isn't currently open (a no-op then, since it just sets an input's
+  // value) — see ilSyncPageBgPopover's own comment.
+  if (typeof ilSyncPageBgPopover === 'function') ilSyncPageBgPopover();
 }
 
 // Paging through the lookbook by a visual filmstrip instead of plain
@@ -7284,35 +7420,18 @@ function ilRenderPatternStrip() {
   });
 }
 
-// "page background" popover — reads/writes the ACTIVE page's own bg (see ilApplyPageBackground),
-// so switching pages while the popover is closed always shows the right thing next time it opens;
-// re-synced on every open rather than kept live, since nothing else needs to watch it continuously.
+// Page background controls now live directly in the Style panel (the standalone popover they used
+// to be in was retired — the Style panel already opens on demand via the tool rail, which made the
+// popover one extra nested layer the left-panel redesign was specifically meant to avoid). Reads/
+// writes the ACTIVE page's own bg (see ilApplyPageBackground) — re-synced whenever the Style group
+// is switched to or the active page changes, so it never goes stale (see ilSetToolGroup/
+// ilSwitchToPage below).
 function ilSyncPageBgPopover() {
   const page = ilPages[ilActivePageIndex];
   const colorInput = document.getElementById('ilPageBgColorInput');
   if (!page || !colorInput) return;
   colorInput.value = (page.bg && page.bg.type === 'solid' && page.bg.color) || '#ffffff';
 }
-
-const ilPageBgBtn = document.getElementById('ilPageBgBtn');
-const ilPageBgPopover = document.getElementById('ilPageBgPopover');
-
-ilPageBgBtn?.addEventListener('click', e => {
-  e.stopPropagation();
-  const willOpen = ilPageBgPopover.hasAttribute('hidden');
-  if (willOpen) ilSyncPageBgPopover();
-  ilPageBgPopover.toggleAttribute('hidden', !willOpen);
-});
-
-// Any click outside the popover (or its own toggle button) closes it — the same convention the
-// suite shell's own project switcher popover already uses.
-document.addEventListener('click', e => {
-  if (ilPageBgPopover && !ilPageBgPopover.hasAttribute('hidden') &&
-      !ilPageBgPopover.contains(e.target) && e.target !== ilPageBgBtn) {
-    ilPageBgPopover.setAttribute('hidden', '');
-  }
-});
-ilPageBgPopover?.addEventListener('click', e => e.stopPropagation());
 
 document.getElementById('ilPageBgColorInput')?.addEventListener('input', e => {
   const page = ilPages[ilActivePageIndex];
@@ -7440,8 +7559,90 @@ function ilHandleViewportResize() {
     ilFitPage();
   }, 120);
 }
-window.addEventListener('resize', ilHandleViewportResize);
-window.addEventListener('orientationchange', ilHandleViewportResize);
+// A ResizeObserver on the viewport itself is a strict superset of the old window
+// resize/orientationchange listeners it replaces: it still catches a genuine window resize or
+// device rotation (those always change the viewport's own box too), and it ALSO fires whenever the
+// left tool panel's expand/collapse width-transition changes the viewport's size — which a
+// window-level listener would never see at all, since the window itself hasn't resized, only the
+// space the viewport gets inside it. ResizeObserver fires repeatedly *during* a CSS width
+// transition; ilHandleViewportResize's existing 120ms debounce already collapses that into a single
+// recompute right after the panel finishes animating, so "Automatically recalculate Fit Page when
+// the panel expands or collapses" falls out of this for free, no extra timing code needed.
+if (typeof ResizeObserver !== 'undefined' && ilViewportEl) {
+  new ResizeObserver(() => ilHandleViewportResize()).observe(ilViewportEl);
+} else {
+  window.addEventListener('resize', ilHandleViewportResize);
+  window.addEventListener('orientationchange', ilHandleViewportResize);
+}
+
+// ---- Left-hand tool rail: Add / Arrange / Style / Export -------------------------------------
+// Starts collapsed (maximum canvas space on open, per the brief); last-open group and whether the
+// panel was left open persist in localStorage, mirroring the existing il-thumbnails-hidden pattern.
+const IL_TOOL_GROUPS = ['add', 'arrange', 'style', 'export'];
+const IL_TOOL_GROUP_TITLES = { add: 'Add', arrange: 'Arrange', style: 'Style', export: 'Export' };
+const IL_TOOL_PANEL_OPEN_KEY = 'il-tool-panel-open';
+const IL_TOOL_PANEL_GROUP_KEY = 'il-tool-panel-group';
+let ilToolGroup = null; // null = collapsed
+
+function ilToolPanelEls() {
+  return {
+    rail: document.getElementById('ilToolRail'),
+    panel: document.getElementById('ilToolPanel'),
+    backdrop: document.getElementById('ilToolPanelBackdrop'),
+    title: document.getElementById('ilToolPanelTitle')
+  };
+}
+
+// Reused by every open/close/switch path below so the panel, its backdrop (overlay mode only —
+// see the max-width:980px media query), the rail's own active highlight, and localStorage always
+// agree with each other.
+function ilApplyToolPanelState() {
+  const { rail, panel, backdrop, title } = ilToolPanelEls();
+  if (!panel) return;
+  const isOpen = ilToolGroup !== null;
+  panel.classList.toggle('open', isOpen);
+  panel.setAttribute('aria-hidden', String(!isOpen));
+  if (backdrop) backdrop.hidden = !isOpen;
+  if (title && ilToolGroup) title.textContent = IL_TOOL_GROUP_TITLES[ilToolGroup];
+  if (rail) {
+    rail.querySelectorAll('.lookbook-rail-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.group === ilToolGroup);
+    });
+  }
+  IL_TOOL_GROUPS.forEach(group => {
+    const section = document.getElementById('ilGroup' + group.charAt(0).toUpperCase() + group.slice(1));
+    if (section) section.hidden = group !== ilToolGroup;
+  });
+  if (ilToolGroup === 'style') ilSyncPageBgPopover();
+}
+
+function ilSetToolGroup(group) {
+  ilToolGroup = group;
+  try {
+    localStorage.setItem(IL_TOOL_PANEL_OPEN_KEY, '1');
+    localStorage.setItem(IL_TOOL_PANEL_GROUP_KEY, group);
+  } catch (e) {}
+  ilApplyToolPanelState();
+}
+
+function ilCollapseToolPanel() {
+  ilToolGroup = null;
+  try { localStorage.setItem(IL_TOOL_PANEL_OPEN_KEY, '0'); } catch (e) {}
+  ilApplyToolPanelState();
+}
+
+document.getElementById('ilToolRail')?.addEventListener('click', e => {
+  const btn = e.target.closest('.lookbook-rail-btn');
+  if (!btn) return;
+  const group = btn.dataset.group;
+  // Tapping the already-open group collapses the panel (toggle); any other tap switches straight
+  // to that group without needing a separate close-then-reopen step.
+  if (ilToolGroup === group) ilCollapseToolPanel();
+  else ilSetToolGroup(group);
+});
+
+document.getElementById('ilToolPanelCollapseBtn')?.addEventListener('click', ilCollapseToolPanel);
+document.getElementById('ilToolPanelBackdrop')?.addEventListener('click', ilCollapseToolPanel);
 
 function ilNextFrame() {
   return new Promise(resolve => requestAnimationFrame(resolve));
@@ -7464,6 +7665,20 @@ async function ilOpenEditor() {
   lookbookOverlay?.classList.add('hidden');
   document.getElementById('interactiveLookbookOverlay')?.classList.remove('hidden');
   ilRenderPatternStrip();
+
+  // Restore whatever panel state the user last left (open on a given group, or collapsed) —
+  // "starts collapsed" is only the very-first-ever-use default (no localStorage key yet), not a
+  // reset on every reopen. Must happen BEFORE the fit computation below: the panel's width is part
+  // of how much space the viewport actually has.
+  let savedGroup = null;
+  try {
+    if (localStorage.getItem(IL_TOOL_PANEL_OPEN_KEY) === '1') {
+      const g = localStorage.getItem(IL_TOOL_PANEL_GROUP_KEY);
+      savedGroup = IL_TOOL_GROUPS.includes(g) ? g : 'add';
+    }
+  } catch (e) {}
+  ilToolGroup = savedGroup;
+  ilApplyToolPanelState();
 
   // Fit BEFORE populating: ilAddPage() (called from ilPopulateFromSelection below, for a
   // first-ever open) stamps each new page with whatever ilZoom is current at creation time, so
