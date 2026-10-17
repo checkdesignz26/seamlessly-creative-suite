@@ -431,8 +431,12 @@ html.in-suite .suite-only{display:block!important}
 .col-scroll{flex:1 1 auto;display:flex;gap:8px;overflow-x:auto;padding:2px;-webkit-overflow-scrolling:touch}
 .col-card{position:relative;flex:0 0 auto;width:110px;border:2px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden;cursor:pointer}
 .col-card.on{border-color:#c47ae0;box-shadow:0 0 0 2px rgba(196,122,224,.35)}
-.col-card img{display:block;width:100%;height:64px;object-fit:cover;background:#fff}
+.col-card img{display:block;width:100%;height:54px;object-fit:cover;background:#fff}
 .col-name{display:block;font-size:12px;font-weight:700;padding:3px 24px 4px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.col-strip.collapsed{left:92px;right:auto;bottom:46px;padding:4px;border-radius:14px}
+.col-card{touch-action:pan-x;-webkit-user-select:none;user-select:none}
+.col-card.drag{z-index:5;opacity:.9;box-shadow:0 8px 22px rgba(0,0,0,.4);transition:none}
+.col-name-input{display:block;width:calc(100% - 4px);box-sizing:border-box;margin:2px;font:inherit;font-size:12px;font-weight:700;padding:2px 4px;border:1px solid #c47ae0;border-radius:6px;background:#fff;color:#222}
 .col-more{position:absolute;right:0;bottom:0;width:28px;height:26px;border:0;background:transparent;color:var(--text);font-size:18px;font-weight:800;cursor:pointer}
 .tb-menu{position:fixed;z-index:160;min-width:250px;max-width:min(360px,calc(100vw - 16px));overflow:auto;background:var(--sideBg);color:var(--text);border:1px solid var(--line);border-radius:16px;padding:8px;box-shadow:0 18px 50px rgba(0,0,0,.38);-webkit-overflow-scrolling:touch}
 .tb-item{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:10px 12px;border:0;border-radius:10px;background:transparent;color:var(--text);font:inherit;font-size:15px;font-weight:800;text-align:left;cursor:pointer}
@@ -1115,7 +1119,7 @@ html.in-suite .suite-only{display:block!important}
       <div class="tb-row tb-main" id="tbMain">
         <button id="projectsBtn" class="tool-btn primary tb-fix" title="Your projects and folders">📁 Projects</button>
         <button id="projNameChip" class="tb-name" aria-haspopup="menu" aria-expanded="false" title="Project menu: New, Save, Download, Import, Earlier saves"><span id="projNameTxt">📄 …</span><span class="tb-caret">▾</span></button>
-        <button id="colBtn" class="tool-btn tb-fix" title="Pattern collection: keep several patterns in this project and switch between them">🗂 Patterns</button>
+        <button id="patNameChip" class="tb-name" style="display:none" title="Current pattern — tap to rename it">🧩 …</button>
         <span id="saveStatusPill" class="tb-status" data-ovp="4" data-ovl="" title="Autosave status">Saved</span>
         <div class="toolbar-spacer"></div>
         <button id="undoBtn" class="tool-btn" data-ovp="2" data-ovl="↩️ Undo">↩️ Undo</button>
@@ -1241,7 +1245,7 @@ html.in-suite .suite-only{display:block!important}
 </div>
     <div id="backupsPanel" style="display:none;position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:90;background:var(--sideBg);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:0 18px 50px rgba(0,0,0,.35);font-size:13.5px;max-width:min(560px,calc(100vw - 24px));max-height:70vh;overflow:auto;"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;font-weight:800;margin-bottom:6px;">🕘 Earlier saves<button id="backupsClose" class="btn mini">Close</button></div><div id="backupsList"></div><div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line);"><button id="newBlankBtn" class="btn mini" style="width:100%;">➕ New Project</button><div class="hint">Your current project is saved first, then a fresh one opens. Find every project under 📁 Projects.</div></div></div>
     <div id="restoreBanner" style="display:none;"><span id="restoreBannerText">📂 Autosaved session found from </span><span id="restoreBannerTime"></span> <button id="restoreAcceptBtn" class="btn mini primary">Restore</button><button id="restoreDeclineBtn" class="btn mini">Start Fresh</button><button id="restoreOkBtn" class="btn mini primary" style="display:none;">OK</button></div>
-    <div id="canvasViewportOuter" class="canvas-viewport-outer"><div id="canvasWrap" class="canvas-wrap"><div id="viewPopover" class="sym-pop"><div class="section-title">🧭 Canvas / View</div><div class="row" style="margin-bottom:10px;align-items:center;gap:8px;"><div id="viewRotVal" class="pill" style="flex:1;text-align:center;">Rotation 0°</div><button id="viewRotResetBtn" class="tool-btn" style="flex:1" title="Turn the canvas back upright">Reset to 0°</button></div><button id="viewRotLockBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">🔒 Lock rotation: On</button><button id="viewSharpBtn" class="tool-btn" style="width:100%;margin-bottom:10px;" title="How crisp the picture on screen is. Sharper uses more of the iPad memory.">🔍 Sharpness: Normal</button><button id="viewGuidesBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">📐 Guides: Off</button><button id="viewCursorBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">⭕ Brush cursor: On</button><button id="viewResetBtn" class="tool-btn" style="width:100%;margin-bottom:10px;" title="0°, centred and fitted">🔍 Reset view (0°, fit)</button><button id="symToggle" class="tool-btn" style="width:100%;margin-bottom:10px;">🦋 Symmetry Off</button><div class="row" style="margin-bottom:10px;"><button id="tilingBtn" class="tool-btn active" style="flex:1">Tiling On</button><div id="layoutPill" class="pill">📍 Grid Mode</div></div><button id="themeToggle" class="tool-btn" style="width:100%;margin-bottom:10px;">☀️ Light Mode</button><button id="clearDrawing" class="btn mini danger" style="width:100%;margin-bottom:10px;">Clear Drawing &amp; Motifs</button><button id="clearAllDrawing" class="btn mini danger" style="width:100%;margin-bottom:10px;">Clear All Layers &amp; Motifs</button><label class="row" style="gap:8px;align-items:center;margin:6px 0;font-size:13px;"><input type="checkbox" id="dblDupChk" checked> Double-tap a selected item to duplicate it (a motif opens for editing instead)</label><button id="viewCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="zoomPopover" class="sym-pop"><div class="section-title">🔍 View <span id="zoomPopPct" class="small"></span></div><div class="zoom-row"><button id="zoomOutBtn" class="tool-btn" aria-label="Zoom out">−</button><button id="zoomInBtn" class="tool-btn" aria-label="Zoom in">+</button></div><button id="zoom100Btn" class="tool-btn" style="width:100%;margin-bottom:8px;">100% — actual size</button><button id="zoomFitBtn" class="tool-btn" style="width:100%;margin-bottom:8px;">Fit to View</button><button id="zoomRotResetBtn" class="tool-btn" style="width:100%;margin-bottom:8px;">↺ Reset rotation to 0°</button><button id="zoomResetBtn" class="tool-btn primary" style="width:100%;margin-bottom:8px;">Reset View (0°, centre, fit)</button><button id="updateAppBtn" class="tool-btn" style="width:100%;margin-bottom:8px;" title="Fetch the newest version of the app">⟳ Get latest version <span style="opacity:.6;font-weight:600">(you have v289)</span></button><div class="hint" style="margin-bottom:8px;">These always work, even if the canvas has scrolled out of sight.</div><button id="zoomCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="hiPopover" class="sym-pop"><div class="section-title">🖼️ High-resolution card (PNG)</div><div class="hint" style="margin-bottom:8px;">Redraws your whole card sharply at the size you pick, with brushes, pictures and the background. Just the card, no repeat edges. </div><div class="hint" style="margin-bottom:4px;">A normal greeting card is <b>5 × 7 in</b> (a smaller one is 4.25 × 5.5 in). Pick the long side of your card in inches:</div><div class="row" style="margin-bottom:8px;"><button class="tool-btn hi-preset" data-in="5.5">5.5 in</button><button class="tool-btn hi-preset" data-in="7">7 in</button><button class="tool-btn hi-preset" data-in="10">10 in</button></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>Long side</label><input id="hiInInput" type="number" min="1" max="30" step="0.1" value="10" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><span>in</span></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>Quality</label><select id="hiDpi" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><option value="300">300 dpi (print)</option><option value="600">600 dpi (extra sharp)</option><option value="200">200 dpi (smaller file)</option><option value="150">150 dpi (screen / email)</option></select><span></span></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>or pixels</label><input id="hiLongInput" type="number" min="200" max="8000" step="1" value="3000" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><span>px</span></div><div id="hiInfo" class="hint" style="margin-bottom:8px;"></div><label class="hint" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;"><input id="hiTransparent" type="checkbox"> Transparent background (instead of white)</label><button id="hiSaveBtn" class="tool-btn primary" style="width:100%;margin-bottom:8px;min-height:44px;">⬇️ Save PNG</button><button id="hiCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="svgPopover" class="sym-pop"><div class="section-title">🖋️ Export SVG</div><div class="hint" style="margin-bottom:8px;">Vector strokes and fills only. Pictures (placed motifs, background image) are not vector, so they are left out.</div><div class="row" style="margin-bottom:8px;"><button class="tool-btn svg-preset" data-size="780">780</button><button class="tool-btn svg-preset" data-size="1800">1800</button><button class="tool-btn svg-preset" data-size="3600">3600</button></div><div class="slider-row" style="grid-template-columns:64px 1fr 30px;"><label>Size</label><input id="svgSizeInput" type="number" min="64" max="20000" step="1" value="3600" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><span>px</span></div><div class="hint" style="margin-bottom:8px;">Width and height of the square file. 3600 × 3600 is the usual pattern size. The artwork scales exactly.</div><button id="svgSaveBtn" class="tool-btn primary" style="width:100%;margin-bottom:8px;min-height:44px;">⬇️ Save SVG</button><button id="svgCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="recolourPopover" class="sym-pop"><div class="section-title">🎨 Recolour Parts</div><div class="hint" style="margin-bottom:8px;">Motif: <b id="recolourName"></b>. Each row is one colour used in the motif. Pick a new colour for any of them.</div><div id="recolourRows"></div><button id="recolourApplyBtn" class="tool-btn primary" style="width:100%;margin:8px 0;min-height:44px;">Apply to this motif</button><button id="recolourNewBtn" class="tool-btn" style="width:100%;margin-bottom:8px;min-height:44px;">Save as new colourway</button><div class="row"><button id="recolourResetBtn" class="btn mini" style="flex:1">Reset</button><button id="recolourCloseBtn" class="btn mini" style="flex:1">✕ Close</button></div></div><div id="symPopover" class="sym-pop"><div class="section-title">🦋 Symmetry</div><div class="grid"><button class="sym-btn btn active" data-sym="off">Off</button><button class="sym-btn btn" data-sym="vertical">Vertical</button><button class="sym-btn btn" data-sym="horizontal">Horizontal</button><button class="sym-btn btn" data-sym="quad">Quad</button><button class="sym-btn btn" data-sym="diamond">Diamond</button></div><div class="slider-row"><label>Axis X</label><input id="symX" type="range" min="0" max="1800" value="900"><span id="symXVal">50%</span></div><div class="slider-row"><label>Axis Y</label><input id="symY" type="range" min="0" max="1800" value="900"><span id="symYVal">50%</span></div><div class="slider-row"><label>Angle</label><input id="symAng" type="range" min="-90" max="90" step="1" value="0"><span id="symAngVal">0°</span></div><div class="row"><button id="symAngReset" class="btn mini">0° Straight</button><button id="symAng45" class="btn mini">45°</button></div><div class="row" style="margin-top:6px;"><button id="symLenWhole" class="btn mini active" style="flex:1">Line: whole canvas</button><button id="symLenShort" class="btn mini" style="flex:1">Line: short</button></div><div class="slider-row" id="symLenRow" style="display:none"><label>Length</label><input id="symLen" type="range" min="100" max="1800" step="10" value="500"><span id="symLenVal">500</span></div><div class="row" style="margin-top:6px;"><button id="symCentre" class="btn mini">Centre Axis</button><button id="symClose" class="btn mini">Done</button></div><div class="hint">Move the mirror point to make flowers, leaves and playful asymmetric symmetry.</div></div><canvas id="fabricCanvas" aria-hidden="true"></canvas><canvas id="canvas" width="1800" height="1800"></canvas><div id="tileOutline" aria-hidden="true"><svg id="tileDiamond" viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;left:0;top:0;width:100%;height:100%;display:none;overflow:visible"><polygon points="50,0 100,50 50,100 0,50" fill="none" stroke="rgba(214,70,150,.9)" stroke-width="2.5" vector-effect="non-scaling-stroke"/></svg></div><div id="traceBox" aria-hidden="true"></div><div id="replayGuide" aria-hidden="true"><div class="rgBox"><span></span></div></div><div id="selectionBox" class="selection-box"><button id="motifEditChip" class="btn mini primary" style="display:none">✏️ Edit Motif</button><div id="resizeHandle" class="handle"></div><div id="rotateHandle" class="rotHandle"></div></div><div id="pivotMarker" style="display:none;position:absolute;width:18px;height:18px;margin:-9px 0 0 -9px;border:2px solid var(--pink);border-radius:50%;background:rgba(255,255,255,.85);pointer-events:none;z-index:5;"><div style="position:absolute;left:50%;top:-6px;bottom:-6px;width:2px;margin-left:-1px;background:var(--pink)"></div><div style="position:absolute;top:50%;left:-6px;right:-6px;height:2px;margin-top:-1px;background:var(--pink)"></div></div><div id="paintBBoxOverlay" class="selection-box" style="display:none;"><div id="paintResizeHandle" class="handle" title="Drag to resize. Tap to make 25% bigger."></div><div id="paintRotateHandle" class="rotHandle" title="Drag to rotate. Tap to turn 45 degrees."></div><input id="strokeColourHandle" class="sel-colour strokeColourHandle" type="color" value="#000000" title="Tap to change colour"></div><div id="groupBox" class="selection-box" style="display:none;"><div class="gh" data-h="nw" style="left:0%;top:0%;cursor:nwse-resize"></div><div class="gh" data-h="n" style="left:50%;top:0%;cursor:ns-resize"></div><div class="gh" data-h="ne" style="left:100%;top:0%;cursor:nesw-resize"></div><div class="gh" data-h="e" style="left:100%;top:50%;cursor:ew-resize"></div><div class="gh" data-h="se" style="left:100%;top:100%;cursor:nwse-resize"></div><div class="gh" data-h="s" style="left:50%;top:100%;cursor:ns-resize"></div><div class="gh" data-h="sw" style="left:0%;top:100%;cursor:nesw-resize"></div><div class="gh" data-h="w" style="left:0%;top:50%;cursor:ew-resize"></div><div id="grpRotHandle" class="rotHandle" title="Drag to turn. Tap to turn 45 degrees."></div></div><div id="symAxis" class="sym-axis locked"></div><div id="rotateChip" class="rotate-chip">Canvas 0°</div><div id="pathNodeOverlay"></div></div></div>
+    <div id="canvasViewportOuter" class="canvas-viewport-outer"><div id="canvasWrap" class="canvas-wrap"><div id="viewPopover" class="sym-pop"><div class="section-title">🧭 Canvas / View</div><div class="row" style="margin-bottom:10px;align-items:center;gap:8px;"><div id="viewRotVal" class="pill" style="flex:1;text-align:center;">Rotation 0°</div><button id="viewRotResetBtn" class="tool-btn" style="flex:1" title="Turn the canvas back upright">Reset to 0°</button></div><button id="viewRotLockBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">🔒 Lock rotation: On</button><button id="viewSharpBtn" class="tool-btn" style="width:100%;margin-bottom:10px;" title="How crisp the picture on screen is. Sharper uses more of the iPad memory.">🔍 Sharpness: Normal</button><button id="viewGuidesBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">📐 Guides: Off</button><button id="viewCursorBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">⭕ Brush cursor: On</button><button id="viewResetBtn" class="tool-btn" style="width:100%;margin-bottom:10px;" title="0°, centred and fitted">🔍 Reset view (0°, fit)</button><button id="symToggle" class="tool-btn" style="width:100%;margin-bottom:10px;">🦋 Symmetry Off</button><div class="row" style="margin-bottom:10px;"><button id="tilingBtn" class="tool-btn active" style="flex:1">Tiling On</button><div id="layoutPill" class="pill">📍 Grid Mode</div></div><button id="themeToggle" class="tool-btn" style="width:100%;margin-bottom:10px;">☀️ Light Mode</button><button id="clearDrawing" class="btn mini danger" style="width:100%;margin-bottom:10px;">Clear Drawing &amp; Motifs</button><button id="clearAllDrawing" class="btn mini danger" style="width:100%;margin-bottom:10px;">Clear All Layers &amp; Motifs</button><label class="row" style="gap:8px;align-items:center;margin:6px 0;font-size:13px;"><input type="checkbox" id="dblDupChk" checked> Double-tap a selected item to duplicate it (a motif opens for editing instead)</label><button id="viewCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="zoomPopover" class="sym-pop"><div class="section-title">🔍 View <span id="zoomPopPct" class="small"></span></div><div class="zoom-row"><button id="zoomOutBtn" class="tool-btn" aria-label="Zoom out">−</button><button id="zoomInBtn" class="tool-btn" aria-label="Zoom in">+</button></div><button id="zoom100Btn" class="tool-btn" style="width:100%;margin-bottom:8px;">100% — actual size</button><button id="zoomFitBtn" class="tool-btn" style="width:100%;margin-bottom:8px;">Fit to View</button><button id="zoomRotResetBtn" class="tool-btn" style="width:100%;margin-bottom:8px;">↺ Reset rotation to 0°</button><button id="zoomResetBtn" class="tool-btn primary" style="width:100%;margin-bottom:8px;">Reset View (0°, centre, fit)</button><button id="updateAppBtn" class="tool-btn" style="width:100%;margin-bottom:8px;" title="Fetch the newest version of the app">⟳ Get latest version <span style="opacity:.6;font-weight:600">(you have v290)</span></button><div class="hint" style="margin-bottom:8px;">These always work, even if the canvas has scrolled out of sight.</div><button id="zoomCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="hiPopover" class="sym-pop"><div class="section-title">🖼️ High-resolution card (PNG)</div><div class="hint" style="margin-bottom:8px;">Redraws your whole card sharply at the size you pick, with brushes, pictures and the background. Just the card, no repeat edges. </div><div class="hint" style="margin-bottom:4px;">A normal greeting card is <b>5 × 7 in</b> (a smaller one is 4.25 × 5.5 in). Pick the long side of your card in inches:</div><div class="row" style="margin-bottom:8px;"><button class="tool-btn hi-preset" data-in="5.5">5.5 in</button><button class="tool-btn hi-preset" data-in="7">7 in</button><button class="tool-btn hi-preset" data-in="10">10 in</button></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>Long side</label><input id="hiInInput" type="number" min="1" max="30" step="0.1" value="10" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><span>in</span></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>Quality</label><select id="hiDpi" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><option value="300">300 dpi (print)</option><option value="600">600 dpi (extra sharp)</option><option value="200">200 dpi (smaller file)</option><option value="150">150 dpi (screen / email)</option></select><span></span></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>or pixels</label><input id="hiLongInput" type="number" min="200" max="8000" step="1" value="3000" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><span>px</span></div><div id="hiInfo" class="hint" style="margin-bottom:8px;"></div><label class="hint" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;"><input id="hiTransparent" type="checkbox"> Transparent background (instead of white)</label><button id="hiSaveBtn" class="tool-btn primary" style="width:100%;margin-bottom:8px;min-height:44px;">⬇️ Save PNG</button><button id="hiCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="svgPopover" class="sym-pop"><div class="section-title">🖋️ Export SVG</div><div class="hint" style="margin-bottom:8px;">Vector strokes and fills only. Pictures (placed motifs, background image) are not vector, so they are left out.</div><div class="row" style="margin-bottom:8px;"><button class="tool-btn svg-preset" data-size="780">780</button><button class="tool-btn svg-preset" data-size="1800">1800</button><button class="tool-btn svg-preset" data-size="3600">3600</button></div><div class="slider-row" style="grid-template-columns:64px 1fr 30px;"><label>Size</label><input id="svgSizeInput" type="number" min="64" max="20000" step="1" value="3600" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><span>px</span></div><div class="hint" style="margin-bottom:8px;">Width and height of the square file. 3600 × 3600 is the usual pattern size. The artwork scales exactly.</div><button id="svgSaveBtn" class="tool-btn primary" style="width:100%;margin-bottom:8px;min-height:44px;">⬇️ Save SVG</button><button id="svgCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="recolourPopover" class="sym-pop"><div class="section-title">🎨 Recolour Parts</div><div class="hint" style="margin-bottom:8px;">Motif: <b id="recolourName"></b>. Each row is one colour used in the motif. Pick a new colour for any of them.</div><div id="recolourRows"></div><button id="recolourApplyBtn" class="tool-btn primary" style="width:100%;margin:8px 0;min-height:44px;">Apply to this motif</button><button id="recolourNewBtn" class="tool-btn" style="width:100%;margin-bottom:8px;min-height:44px;">Save as new colourway</button><div class="row"><button id="recolourResetBtn" class="btn mini" style="flex:1">Reset</button><button id="recolourCloseBtn" class="btn mini" style="flex:1">✕ Close</button></div></div><div id="symPopover" class="sym-pop"><div class="section-title">🦋 Symmetry</div><div class="grid"><button class="sym-btn btn active" data-sym="off">Off</button><button class="sym-btn btn" data-sym="vertical">Vertical</button><button class="sym-btn btn" data-sym="horizontal">Horizontal</button><button class="sym-btn btn" data-sym="quad">Quad</button><button class="sym-btn btn" data-sym="diamond">Diamond</button></div><div class="slider-row"><label>Axis X</label><input id="symX" type="range" min="0" max="1800" value="900"><span id="symXVal">50%</span></div><div class="slider-row"><label>Axis Y</label><input id="symY" type="range" min="0" max="1800" value="900"><span id="symYVal">50%</span></div><div class="slider-row"><label>Angle</label><input id="symAng" type="range" min="-90" max="90" step="1" value="0"><span id="symAngVal">0°</span></div><div class="row"><button id="symAngReset" class="btn mini">0° Straight</button><button id="symAng45" class="btn mini">45°</button></div><div class="row" style="margin-top:6px;"><button id="symLenWhole" class="btn mini active" style="flex:1">Line: whole canvas</button><button id="symLenShort" class="btn mini" style="flex:1">Line: short</button></div><div class="slider-row" id="symLenRow" style="display:none"><label>Length</label><input id="symLen" type="range" min="100" max="1800" step="10" value="500"><span id="symLenVal">500</span></div><div class="row" style="margin-top:6px;"><button id="symCentre" class="btn mini">Centre Axis</button><button id="symClose" class="btn mini">Done</button></div><div class="hint">Move the mirror point to make flowers, leaves and playful asymmetric symmetry.</div></div><canvas id="fabricCanvas" aria-hidden="true"></canvas><canvas id="canvas" width="1800" height="1800"></canvas><div id="tileOutline" aria-hidden="true"><svg id="tileDiamond" viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;left:0;top:0;width:100%;height:100%;display:none;overflow:visible"><polygon points="50,0 100,50 50,100 0,50" fill="none" stroke="rgba(214,70,150,.9)" stroke-width="2.5" vector-effect="non-scaling-stroke"/></svg></div><div id="traceBox" aria-hidden="true"></div><div id="replayGuide" aria-hidden="true"><div class="rgBox"><span></span></div></div><div id="selectionBox" class="selection-box"><button id="motifEditChip" class="btn mini primary" style="display:none">✏️ Edit Motif</button><div id="resizeHandle" class="handle"></div><div id="rotateHandle" class="rotHandle"></div></div><div id="pivotMarker" style="display:none;position:absolute;width:18px;height:18px;margin:-9px 0 0 -9px;border:2px solid var(--pink);border-radius:50%;background:rgba(255,255,255,.85);pointer-events:none;z-index:5;"><div style="position:absolute;left:50%;top:-6px;bottom:-6px;width:2px;margin-left:-1px;background:var(--pink)"></div><div style="position:absolute;top:50%;left:-6px;right:-6px;height:2px;margin-top:-1px;background:var(--pink)"></div></div><div id="paintBBoxOverlay" class="selection-box" style="display:none;"><div id="paintResizeHandle" class="handle" title="Drag to resize. Tap to make 25% bigger."></div><div id="paintRotateHandle" class="rotHandle" title="Drag to rotate. Tap to turn 45 degrees."></div><input id="strokeColourHandle" class="sel-colour strokeColourHandle" type="color" value="#000000" title="Tap to change colour"></div><div id="groupBox" class="selection-box" style="display:none;"><div class="gh" data-h="nw" style="left:0%;top:0%;cursor:nwse-resize"></div><div class="gh" data-h="n" style="left:50%;top:0%;cursor:ns-resize"></div><div class="gh" data-h="ne" style="left:100%;top:0%;cursor:nesw-resize"></div><div class="gh" data-h="e" style="left:100%;top:50%;cursor:ew-resize"></div><div class="gh" data-h="se" style="left:100%;top:100%;cursor:nwse-resize"></div><div class="gh" data-h="s" style="left:50%;top:100%;cursor:ns-resize"></div><div class="gh" data-h="sw" style="left:0%;top:100%;cursor:nesw-resize"></div><div class="gh" data-h="w" style="left:0%;top:50%;cursor:ew-resize"></div><div id="grpRotHandle" class="rotHandle" title="Drag to turn. Tap to turn 45 degrees."></div></div><div id="symAxis" class="sym-axis locked"></div><div id="rotateChip" class="rotate-chip">Canvas 0°</div><div id="pathNodeOverlay"></div></div></div>
     <div id="status" class="status">✨ Apple Pencil draws | one finger protected | two fingers pan/pinch/rotate | two-finger tap Undo | three-finger tap Redo | Capture Motif saves drawing ✨</div>
   </main>
   <div id="dockR" class="dock"></div>
@@ -10468,7 +10472,7 @@ $('svgSaveBtn').onclick=async()=>{
   svgSize=v;try{localStorage.setItem('sp-svgSize',String(v));}catch(e){}
   try{
     const svg=buildSvgExport(svgSize),blob=new Blob([svg],{type:'image/svg+xml'});
-    saveFileBlob(blob,'pattern-sketch-tile-'+svgSize+'.svg');
+    saveFileBlob(blob,exportBase()+'-'+svgSize+'.svg');
     $('svgPopover').classList.remove('open');
     const skipped=placed.filter(p=>p.img).length+((bgImg&&bgShown)?1:0);
     setStatus('🖋️ SVG saved at '+Math.round(svgSize*TW/TILE)+' × '+Math.round(svgSize*TH/TILE)+' px (vector only)'+(skipped?' — '+skipped+' picture'+(skipped===1?'':'s')+' (motif / background image) left out because they are not vector.':'.'));
@@ -10589,7 +10593,7 @@ async function exportTileSharp(k){
     const blob=await new Promise(r=>c.toBlob(r,'image/png'));
     if(!blob)throw new Error('the browser could not make an image this big');
     c.width=c.height=1;
-    saveFileBlob(blob,'pattern-sketch-tile-'+px+'.png');
+    saveFileBlob(blob,exportBase()+'-'+px+'px.png');
     setStatus('📸 Saved the tile at '+px+' px (crisp lines; Liquify paint is enlarged, so it stays as soft as it was painted).');
   }catch(err){console.error(err);setStatus('⚠️ Could not make the sharper tile: '+(err&&err.message||err)+'. Try a smaller size.');}
 }
@@ -10609,7 +10613,7 @@ $('hiSaveBtn').onclick=async()=>{
     if(!blob)throw new Error('the browser could not make an image this big');
     const fin=await pngWithDpi(blob,hiDpi);
     c.width=c.height=1;
-    saveFileBlob(fin,'pattern-sketch-card-'+d[0]+'x'+d[1]+'.png');
+    saveFileBlob(fin,exportBase()+'-card-'+d[0]+'x'+d[1]+'.png');
     $('hiPopover').classList.remove('open');
     setStatus('🖼️ Saved '+d[0]+' × '+d[1]+' px card ('+(d[0]/hiDpi).toFixed(2)+' × '+(d[1]/hiDpi).toFixed(2)+' in at '+hiDpi+' dpi).');
   }catch(err){console.error(err);setStatus('⚠️ Could not make the hi-res card: '+(err&&err.message||err)+'. Try a smaller size.');}
@@ -10901,7 +10905,7 @@ $('exportBtn').onclick=async()=>{try{await txReady();}catch(e){}updateComposite(
   // over its edges (same lattice as the on-screen repeat), so anything crossing an edge wraps round.
   const wrapOffs=[[0,0]];for(let ix=-1;ix<=1;ix++)for(let iy=-1;iy<=1;iy++){if(ix||iy)wrapOffs.push(tilePos(ix,iy));}
   wrapOffs.forEach(([ox,oy])=>o.drawImage(compositeCanvas,0,0,W,H,ox-CX,oy-CY,W,H));
-  placed.forEach(p=>{if(!p.img)return;wrapOffs.forEach(([ox,oy])=>{o.save();if(p.alpha!=null)o.globalAlpha=p.alpha;o.translate(p.x-CX+ox,p.y-CY+oy);o.rotate(p.r*Math.PI/180);o.scale(p.s*p.fx,p.s*p.fy);o.drawImage(p.img,-p.w/2,-p.h/2,p.w,p.h);o.restore();});});out.toBlob(b=>{if(b)SketchpadNative.saveBlob(b,'pattern-sketch-tile.png');},'image/png');};
+  placed.forEach(p=>{if(!p.img)return;wrapOffs.forEach(([ox,oy])=>{o.save();if(p.alpha!=null)o.globalAlpha=p.alpha;o.translate(p.x-CX+ox,p.y-CY+oy);o.rotate(p.r*Math.PI/180);o.scale(p.s*p.fx,p.s*p.fy);o.drawImage(p.img,-p.w/2,-p.h/2,p.w,p.h);o.restore();});});out.toBlob(b=>{if(b)SketchpadNative.saveBlob(b,exportBase()+'.png');},'image/png');};
 window.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='z'){e.shiftKey?redo():undo();}});
 function syncThemeToggleUI(){const light=document.body.classList.contains('theme-light');$('themeToggle').textContent=light?'🌙 Dark Mode':'☀️ Light Mode';}
 $('themeToggle').onclick=()=>{const light=document.body.classList.toggle('theme-light');try{localStorage.setItem('pkmTheme',light?'light':'dark');}catch(e){}syncThemeToggleUI();};
@@ -11042,7 +11046,7 @@ function buildDocObject(){
   };
   // A collection keeps the OPEN pattern in the normal top-level fields (so older projects, older app versions and every save path keep working);
   // the other patterns ride along as stored states.
-  if(coll&&coll.list.length>1){
+  if(coll&&coll.list.length>=1){
     d.patterns=coll.list.map(q=>({id:q.id,name:q.name,thumb:q.thumb||null,tl:q.tl||null,state:q.id===coll.activeId?null:q.state}));
     d.activePatternId=coll.activeId;
   }
@@ -11191,7 +11195,8 @@ function resetForLoad(){
 }
 function syncProjectName(){
   const c=$('projNameChip');if(!c)return;
-  const tx=$('projNameTxt');if(tx)tx.textContent=activeProject?'📄 '+activeProject.name+((coll&&coll.list.length>1)?' › '+((coll.list.find(q=>q.id===coll.activeId)||{}).name||''):''):'📄 No project open';
+  const tx=$('projNameTxt');if(tx)tx.textContent=activeProject?'📄 '+activeProject.name:'📄 No project open';
+  try{const pc=$('patNameChip'),q=colActive();if(pc){pc.style.display=(activeProject&&q)?'':'none';pc.textContent='🧩 '+(q?q.name:'');pc.title='Current pattern “'+(q?q.name:'')+'” — tap to rename it';pc.onclick=()=>{const a=colActive();if(a)colRename(a.id);};}}catch(e){}
   c.title=activeProject?activeProject.name+' — project menu':'';
   try{document.title=(activeProject?activeProject.name+' — ':'')+'Pattern Sketch';}catch(e){}
 }
@@ -11201,6 +11206,7 @@ function finishLoad(meta,doc){
   history=[];hIndex=-1;pushHist();viewReset();redraw();updateBaseScale();
   activeProject=meta;projDirty=false;lastScore=docScore(doc);lastBackupAt=Date.now();lastThumbAt=0;
   try{localStorage.setItem('sp-activeProject',meta.id);}catch(e){}
+  try{collEnsure();colStripRender();}catch(e){}
   syncProjectName();setSaveStatus('saved',meta.updatedAt||doc.savedAt);
   autosaveBlocked=false;
   try{if(window.SPTimelapse)SPTimelapse.onProjectLoaded(meta,doc);}catch(e){}
@@ -11301,7 +11307,16 @@ async function duplicateProject(id){
   if(activeProject&&activeProject.id===id){if(!(await flushBeforeSwitch()))return;}
   const [m,doc,metas]=await Promise.all([dbGet(PROJ_STORE,id),dbGet(PDOC_STORE,id),dbAll(PROJ_STORE)]);
   if(!m||!doc)return;
-  try{const nm=await createProjectRecord({name:uniqueName(m.name+' copy',metas),folderId:m.folderId,doc:JSON.parse(JSON.stringify(doc))});try{if(window.SPTimelapse)await SPTimelapse.copyFor(id,nm.id);}catch(e){}}
+  try{const nm=await createProjectRecord({name:uniqueName(m.name+' copy',metas),folderId:m.folderId,doc:JSON.parse(JSON.stringify(doc))});
+    try{if(window.SPTimelapse)await SPTimelapse.copyFor(id,nm.id);}catch(e){}
+    // every pattern of the copy gets its own timelapse recording too, so nothing is shared with the original project
+    try{const nd=await dbGet(PDOC_STORE,nm.id);
+      if(nd&&Array.isArray(nd.patterns)){
+        for(const q of nd.patterns){const old=q.tl;if(!old)continue;
+          const nt=old===id?nm.id:(String(old).startsWith(id+'~')?nm.id+String(old).slice(String(id).length):null);if(!nt)continue;
+          q.tl=nt;if(nt!==nm.id){try{if(window.SPTimelapse)await SPTimelapse.copyFor(old,nt);}catch(e){}}}
+        await dbPut(PDOC_STORE,nd,nm.id);}
+    }catch(e){console.warn('[project] pattern remap failed',e);}}
   catch(e){await projAsk({title:'⚠️ Couldn’t duplicate',message:'Storage refused the copy (it may be full).',ok:'OK',cancel:null});return;}
   setStatus('⧉ Duplicated “'+m.name+'” — the copy is fully independent.');
   renderProjects();
@@ -11316,7 +11331,8 @@ async function moveProject(id){
 async function trashProject(id){
   const m=await dbGet(PROJ_STORE,id);if(!m)return;
   const isActive=activeProject&&activeProject.id===id;
-  const r=await projAsk({title:'🗑️ Move to Trash?',message:'“'+m.name+'” will go to the Trash folder. You can restore it from there any time until you empty the Trash.'+(isActive?' It is the project you have open — it will be saved first.':''),ok:'Move to Trash',danger:true});
+  let nPat=1;try{const d0=await dbGet(PDOC_STORE,id);if(d0&&Array.isArray(d0.patterns))nPat=d0.patterns.length;}catch(e){}
+  const r=await projAsk({title:'🗑️ Move to Trash?',message:'“'+m.name+'”'+(nPat>1?' and all '+nPat+' of its patterns':'')+' will go to the Trash folder. You can restore it from there any time until you empty the Trash.'+(isActive?' It is the project you have open — it will be saved first.':''),ok:'Move to Trash',danger:true});
   if(!r)return;
   if(isActive){if(!(await flushBeforeSwitch()))return;}
   await updateMeta(id,{trashed:true,trashedAt:Date.now()});
@@ -11335,8 +11351,11 @@ async function restoreProject(id){
   setStatus('↩️ Restored “'+m.name+'”.');renderProjects();
 }
 async function deleteForever(ids,label){
-  const r=await projAsk({title:'Delete permanently?',message:label+' will be deleted for good. This cannot be undone.',ok:'Delete forever',danger:true});
+  let pats=0;const tlKeys=[];
+  for(const id of ids){try{const d0=await dbGet(PDOC_STORE,id);if(d0&&Array.isArray(d0.patterns)){pats+=d0.patterns.length;d0.patterns.forEach(q=>{if(q.tl&&q.tl!==id)tlKeys.push(q.tl);});}else pats+=1;}catch(e){pats+=1;}}
+  const r=await projAsk({title:'Delete permanently?',message:label+' will be deleted for good, including '+(pats>1?'all '+pats+' patterns inside '+(ids.length>1?'them':'it'):'its pattern')+'. This cannot be undone.',ok:'Delete forever',danger:true});
   if(!r)return;
+  for(const k of tlKeys){try{if(window.SPTimelapse)await SPTimelapse.deleteFor(k);}catch(e){}}
   for(const id of ids){
     try{
       const keys=((await idbReq(PDOC_STORE,'readonly',st=>st.getAllKeys()))||[]).filter(k=>k===id||String(k).startsWith('bak:'+id+':'));
@@ -11788,15 +11807,17 @@ async function applyDocObject(doc,opts){
   }catch(e){console.warn('[sketchpad] restore failed',e);return false;}
 }
 
-// ============================ Pattern collection (v289) ============================
+// ============================ Pattern collection (v290) ============================
 // A project can hold several patterns (like a stack). The OPEN pattern lives in the normal app state (strokes, layers, undo history ...);
 // the others are stored as plain states in `coll` and swapped in through the same loader that opens a project. Each pattern keeps its own
 // layers, tile size/repeat, background, undo history (for the session) and timelapse. Shared across the collection: motifs, brushes, fonts, palettes.
 const PAT_KEYS=['tileW','tileH','tilePhys','repeatPreview','strokesJSON','layersJSON','activeLayerId','placedJSON','groupsJSON','bgSrc','bgOpacity','bgShown','tracesJSON','traceLocked','traceSource','layout','activeTemplate'];
-const patHist=new Map();let patBusy=false,patStripOpen=false,patThumbSig='';
+const patHist=new Map();let patBusy=false,patThumbSig='';
+function colOpen(){let v=null;try{v=localStorage.getItem('sp-colStrip');}catch(e){}if(v==='1')return true;if(v==='0')return false;return !!(coll&&coll.list.length>1);} // the designer's choice sticks; by default the strip is open once there is more than one pattern
+function colSetOpen(v){try{localStorage.setItem('sp-colStrip',v?'1':'0');}catch(e){}patThumbSig='';colStripRender();}
 const colUid=()=>crypto.randomUUID();
-document.addEventListener('DOMContentLoaded',()=>{try{const b=$('colBtn');if(b)b.onclick=colOpenStrip;}catch(e){}});
-try{const b=$('colBtn');if(b)b.onclick=colOpenStrip;}catch(e){}
+function exportBase(){const q=(typeof coll!=='undefined'&&coll)?colActive():null,n=q?q.name:(activeProject?activeProject.name:'pattern');return String(n||'pattern').replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'-')||'pattern';}
+
 function colState(d){const o={};PAT_KEYS.forEach(k=>{if(d[k]!==undefined)o[k]=d[k];});return o;}
 function colActive(){return coll&&coll.list.find(q=>q.id===coll.activeId);}
 function collEnsure(){
@@ -11807,11 +11828,11 @@ function collEnsure(){
 }
 function collRestore(doc){
   patHist.clear();
-  if(!doc||!Array.isArray(doc.patterns)||doc.patterns.length<2){coll=null;patStripOpen=false;colStripRender();return;}
+  if(!doc||!Array.isArray(doc.patterns)||doc.patterns.length<1){coll=null;colStripRender();return;}
   const list=doc.patterns.filter(q=>q&&q.id&&(q.state||q.id===doc.activePatternId)).map(q=>({id:q.id,name:String(q.name||'Pattern'),thumb:q.thumb||null,state:q.id===doc.activePatternId?null:q.state,tl:q.tl||null}));
-  if(!list.some(q=>q.id===doc.activePatternId)){coll=null;patStripOpen=false;colStripRender();return;}
+  if(!list.some(q=>q.id===doc.activePatternId)){coll=null;colStripRender();return;}
   coll={list,activeId:doc.activePatternId};
-  patStripOpen=list.length>1;colStripRender();
+  colStripRender();
 }
 function tlKey(){const q=colActive();return(q&&q.tl)?q.tl:(activeProject?activeProject.id:null);}
 // Deep copy of a pattern state with fresh layer ids, so nothing (not even a cache) is shared with the original.
@@ -11824,20 +11845,24 @@ function colClone(st){
   o.strokesJSON=JSON.stringify(ss);
   return o;
 }
-function colUniqueName(base){let n=base,i=2;while(coll.list.some(q=>q.name===n))n=base+' '+(i++);return n;}
-async function colSwitch(id){
+function colUniqueName(base){let n=base,i=2;while(coll.list.some(q=>q.name===n))n=base+' '+String(i++).padStart(2,'0');return n;}
+// "Marbled Original" -> "Marbled Original 02" -> "Marbled Original 03" ... (unique, readable; patterns are tracked by id, never by name)
+function colNextName(name){const b=String(name||'Pattern').replace(/ \d{2,3}$/,'');let n=2;const nm=()=>b+' '+String(n).padStart(2,'0');while(coll.list.some(q=>q.name===nm()))n++;return nm();}
+async function colSwitch(id,sopts){
+  sopts=sopts||{};
   if(!coll||patBusy)return false;
   if(id===coll.activeId)return true;
   const target=coll.list.find(q=>q.id===id);if(!target||!target.state)return false;
   if(editingMotifId){setStatus('🗂 Finish editing the motif first, then switch patterns.');return false;}
   patBusy=true;
-  const cur=colActive();
+  const cur=colActive(),wasWarp=(typeof warpOn!=='undefined')&&warpOn;
   try{
     commitPendingEdits();clearTimeout(autosaveTimer);
     const live=buildDocObject();
     cur.state=colState(live);cur.thumb=makeThumb()||cur.thumb;
     patHist.set(cur.id,{history,hIndex});
     const doc=Object.assign({},live,target.state);delete doc.patterns;delete doc.activePatternId;
+    const keepView={zoom,panX,panY,rot,tw:TW,th:TH};
     autosaveBlocked=true;projDirty=false;
     resetForLoad();
     coll.activeId=id;const tState=target.state;target.state=null;
@@ -11847,10 +11872,13 @@ async function colSwitch(id){
     renderLayersList();
     const h=patHist.get(id);
     if(h&&h.history&&h.history.length&&h.hIndex>=0){history=h.history;hIndex=h.hIndex;}else{history=[];hIndex=-1;pushHist();}
-    viewReset();redraw();updateBaseScale();
+    if(keepView.tw===TW&&keepView.th===TH){zoom=keepView.zoom;panX=keepView.panX;panY=keepView.panY;rot=keepView.rot;try{applyTransform();}catch(e){}}else viewReset();
+    redraw();updateBaseScale();
     autosaveBlocked=false;syncProjectName();
     try{if(window.SPTimelapse)await SPTimelapse.onProjectLoaded(activeProject,null);}catch(e){}
-    try{if(!drawLock&&mode==='draw'&&strokes.length){$('editModeBtn').click();}}catch(e){}
+    // Liquify stays open across a pattern switch (it needs Draw mode); otherwise open the pattern ready to select, like opening a project
+    if(wasWarp){try{warpOn=false;warpSet(true);}catch(e){}}
+    else{try{if(!drawLock&&mode==='draw'&&strokes.length){$('editModeBtn').click();}}catch(e){}}
     scheduleAutosave();patThumbSig='';
     return true;
   }catch(e){console.warn('[sketchpad] pattern switch failed',e);setStatus('⚠️ Could not switch pattern: '+(e&&e.message||e));return false;}
@@ -11861,11 +11889,10 @@ async function colDuplicate(){
   if(patBusy)return;
   collEnsure();commitPendingEdits();
   const cur=colActive(),live=buildDocObject(),id=colUid();
-  const base=cur.name.replace(/ · variation \d+$/,'');let n=1;while(coll.list.some(q=>q.name===base+' · variation '+n))n++;
-  const entry={id,name:base+' · variation '+n,thumb:makeThumb()||cur.thumb,state:colClone(colState(live)),tl:activeProject.id+'~'+id};
+  const entry={id,name:colNextName(cur.name),thumb:makeThumb()||cur.thumb,state:colClone(colState(live)),tl:activeProject.id+'~'+id};
   coll.list.splice(coll.list.indexOf(cur)+1,0,entry);
-  patStripOpen=true;
-  if(await colSwitch(id))setStatus('⧉ “'+entry.name+'” is a copy of “'+cur.name+'”. Change it freely — the original is untouched. Use ↺ Revert Liquify to take a liquified copy back to its lines.');
+  try{localStorage.setItem('sp-colStrip','1');}catch(e){}
+  if(await colSwitch(id))setStatus('⧉ “'+entry.name+'” is a exact copy of “'+cur.name+'”. Change it freely — the original is untouched.');
 }
 async function colNew(){
   if(!activeProject){setStatus('🗂 Open a project first.');return;}
@@ -11873,8 +11900,8 @@ async function colNew(){
   collEnsure();commitPendingEdits();
   const live=buildDocObject(),dl=defaultLayers(),st=colState(live),id=colUid();
   Object.assign(st,{strokesJSON:'[]',layersJSON:JSON.stringify(dl.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:true,locked:false,opacity:100,blend:'source-over',alphaLock:false,blur:0,clip:false}))),activeLayerId:dl[dl.length-1].id,placedJSON:'[]',groupsJSON:'{}',bgSrc:null,tracesJSON:'[]',traceSource:null,activeTemplate:null});
-  const entry={id,name:colUniqueName('Pattern '+(coll.list.length+1)),thumb:null,state:st,tl:activeProject.id+'~'+id};
-  coll.list.push(entry);patStripOpen=true;
+  const entry={id,name:colUniqueName('Pattern '+String(coll.list.length+1).padStart(2,'0')),thumb:null,state:st,tl:activeProject.id+'~'+id};
+  coll.list.push(entry);try{localStorage.setItem('sp-colStrip','1');}catch(e){}
   if(await colSwitch(id))setStatus('➕ New blank pattern “'+entry.name+'” — same tile size and layout as the last one.');
 }
 async function colRename(id){
@@ -11882,6 +11909,36 @@ async function colRename(id){
   const r=await projAsk({title:'✏️ Rename pattern',fields:[{key:'name',label:'Name',type:'text',value:q.name}],ok:'Rename'});
   if(!r)return;const nm=String(r.name||'').trim().slice(0,60);if(!nm)return;
   q.name=nm;syncProjectName();colStripRender();scheduleAutosave();
+}
+function colMoveTo(id,idx){
+  const i=coll.list.findIndex(x=>x.id===id);if(i<0)return;idx=Math.max(0,Math.min(coll.list.length-1,idx));if(idx===i)return;
+  const [q]=coll.list.splice(i,1);coll.list.splice(idx,0,q);colStripRender();scheduleAutosave();
+}
+// ---- Liquify variations ----
+function liquifyPresent(arr){return arr.some(q=>(q.brushId==='smudge'&&q.settings&&q.settings.liquify)||q.lqOrig);}
+// the pattern as it was before Liquify: Liquify paint moves removed, Liquify-bent shapes put back (everything else — layers, colours, other edits — stays)
+function stripLiquifyJSON(js){
+  const arr=JSON.parse(js||'[]'),out=[];
+  arr.forEach(q=>{
+    if(q.brushId==='smudge'&&q.settings&&q.settings.liquify)return;
+    if(q.lqOrig){const o=q.lqOrig;q.points=o.points?o.points.map(a=>({...a})):q.points;q.nodes=o.nodes?o.nodes.map(a=>({...a})):null;if(o.shape)q.shape=o.shape;q.closed=o.closed;if(o.cornerAuto)q.cornerAuto=true;else delete q.cornerAuto;delete q.lqOrig;}
+    out.push(q);
+  });
+  return JSON.stringify(out);
+}
+// Duplicate & Revert: keep this (liquified) pattern exactly as it is, and add a NEW pattern that is its pre-Liquify design; switch to it and keep Liquify open.
+async function colDupRevert(){
+  if(!activeProject||patBusy)return;
+  if(!liquifyPresent(strokes)){setStatus('🌀 Nothing to revert to yet: this pattern has no Liquify on it. Liquify it first — or use Duplicate Pattern for an exact copy.');return;}
+  collEnsure();commitPendingEdits();
+  const cur=colActive(),live=buildDocObject(),id=colUid();
+  const st=colClone(colState(live));st.strokesJSON=stripLiquifyJSON(st.strokesJSON);
+  const entry={id,name:colNextName(cur.name),thumb:null,state:st,tl:activeProject.id+'~'+id};
+  coll.list.splice(coll.list.indexOf(cur)+1,0,entry);
+  try{localStorage.setItem('sp-colStrip','1');}catch(e){}
+  if(await colSwitch(id)){
+    setStatus('⧉↺ “'+cur.name+'” is saved exactly as you left it. “'+entry.name+'” is its design from before Liquify — liquify it differently.');
+  }
 }
 function colMove(id,dir){
   const i=coll.list.findIndex(x=>x.id===id),j=i+dir;if(i<0||j<0||j>=coll.list.length)return;
@@ -11929,8 +11986,7 @@ function colCardMenu(anchor,id){
   tbMenu(anchor,[
     {head:q.name},
     {label:'✏️ Rename…',run:()=>colRename(id)},
-    {label:'⧉ Duplicate pattern',sub:'keeps this one untouched',run:async()=>{if(await colSwitch(id))colDuplicate();}},
-    {label:'↺ Revert Liquify',sub:'all layers of this pattern',run:()=>colRevertPattern(id)},
+    {label:'⧉ Duplicate pattern',sub:'exact copy',run:async()=>{if(await colSwitch(id))colDuplicate();}},
     {label:'📸 Export this pattern (PNG tile)',run:async()=>{if(await colSwitch(id))pressLegacy('exportBtn')();}},
     {sep:1},
     {label:'◀ Move earlier',disabled:i<=0,run:()=>colMove(id,-1)},
@@ -11946,39 +12002,82 @@ function colHeaderMenu(anchor){
     {label:'⧉ Duplicate this pattern',run:colDuplicate},
     {label:'📦 Export collection (ZIP of tiles)…',run:colExportAll},
     {sep:1},
-    {label:'Hide this strip',run:()=>{patStripOpen=false;colStripRender();}},
+    {label:'▾ Collapse the strip',run:()=>colSetOpen(false)},
   ]);
 }
-function colOpenStrip(){if(!activeProject){setStatus('🗂 Open a project first.');return;}collEnsure();patStripOpen=!patStripOpen||!coll;colStripRender();if(patStripOpen)setStatus('🗂 Pattern collection: tap ＋ for a new pattern, or ⋯ on a card to duplicate, rename, reorder or delete it.');}
+function colOpenStrip(){if(!activeProject){setStatus('🗂 Open a project first.');return;}collEnsure();colSetOpen(!colOpen());}
+// small inline rename (double-tap a pattern's name): Enter / tap away saves, Escape cancels
+function colInlineRename(nameEl,q){
+  const inp=document.createElement('input');inp.type='text';inp.className='col-name-input';inp.value=q.name;inp.maxLength=60;
+  nameEl.replaceWith(inp);let done=false;
+  const fin=save=>{if(done)return;done=true;const v=inp.value.trim();if(save&&v&&v!==q.name){q.name=v;syncProjectName();scheduleAutosave();}colStripRender();};
+  inp.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();fin(true);}else if(e.key==='Escape')fin(false);});
+  inp.addEventListener('blur',()=>fin(true));inp.addEventListener('click',e=>e.stopPropagation());inp.addEventListener('pointerdown',e=>e.stopPropagation());
+  inp.focus();inp.select();
+}
+// press and hold a card, then slide it to a new place
+let colDragging=false;
+document.addEventListener('touchmove',e=>{if(colDragging)e.preventDefault();},{passive:false});
+function colDragInit(card,q,scroll){
+  let timer=0,sx=0,sy=0,pid=null;
+  const end=commit=>{
+    clearTimeout(timer);timer=0;
+    if(!colDragging){return;}
+    const r=card.getBoundingClientRect(),cx=r.left+r.width/2;
+    const others=[...scroll.querySelectorAll('.col-card')].filter(c=>c!==card);
+    const idx=others.filter(c=>{const b=c.getBoundingClientRect();return b.left+b.width/2<cx;}).length;
+    colDragging=false;card.classList.remove('drag');card.style.transform='';
+    if(commit)colMoveTo(q.id,idx);else colStripRender();
+  };
+  card.addEventListener('pointerdown',e=>{
+    if(e.target.closest('.col-more')||e.target.tagName==='INPUT')return;
+    sx=e.clientX;sy=e.clientY;pid=e.pointerId;
+    timer=setTimeout(()=>{timer=0;colDragging=true;card.classList.add('drag');try{card.setPointerCapture(pid);}catch(_){}try{navigator.vibrate&&navigator.vibrate(10);}catch(_){}},330);
+  });
+  card.addEventListener('pointermove',e=>{
+    if(timer&&Math.hypot(e.clientX-sx,e.clientY-sy)>8){clearTimeout(timer);timer=0;}
+    if(colDragging){e.preventDefault();card.style.transform='translateX('+(e.clientX-sx)+'px) scale(1.06)';}
+  });
+  card.addEventListener('pointerup',()=>{const was=colDragging;end(true);if(was)card._swallow=true;});
+  card.addEventListener('pointercancel',()=>end(false));
+}
 function colStripRender(){
-  try{const cb=$('colBtn');if(cb)cb.classList.toggle('active',!!(patStripOpen&&coll&&activeProject));}catch(e){}
   let el=$('colStrip');
-  if(!el){
-    el=document.createElement('div');el.id='colStrip';el.className='col-strip';document.body.appendChild(el);
+  if(!el){el=document.createElement('div');el.id='colStrip';el.className='col-strip';document.body.appendChild(el);}
+  const has=activeProject&&coll;
+  if(!has){el.style.display='none';return;}
+  el.style.display='flex';el.innerHTML='';
+  const open=colOpen();
+  el.classList.toggle('collapsed',!open);
+  if(!open){
+    const pill=document.createElement('button');pill.type='button';pill.className='col-head';
+    const q=colActive();pill.textContent='🗂 Patterns · '+coll.list.length+' ▴';pill.title='Show the pattern strip ('+(q?q.name:'')+')';
+    pill.onclick=e=>{e.stopPropagation();colSetOpen(true);};el.appendChild(pill);return;
   }
-  const show=patStripOpen&&activeProject&&coll;
-  el.style.display=show?'flex':'none';if(!show)return;
-  el.innerHTML='';
   const head=document.createElement('button');head.type='button';head.className='col-head';head.textContent='🗂 Collection ▾';head.title='Collection menu';
   head.onclick=e=>{e.stopPropagation();colHeaderMenu(head);};el.appendChild(head);
   const scroll=document.createElement('div');scroll.className='col-scroll';el.appendChild(scroll);
   coll.list.forEach(q=>{
     const act=q.id===coll.activeId;
     const card=document.createElement('div');card.className='col-card'+(act?' on':'');card.dataset.id=q.id;
-    const im=document.createElement('img');im.alt='';if(q.thumb)im.src=q.thumb;card.appendChild(im);
-    const nm=document.createElement('span');nm.className='col-name';nm.textContent=q.name;card.appendChild(nm);
+    const im=document.createElement('img');im.alt='';im.draggable=false;if(q.thumb)im.src=q.thumb;card.appendChild(im);
+    const nm=document.createElement('span');nm.className='col-name';nm.textContent=q.name;nm.title='Double-tap to rename';card.appendChild(nm);
+    let lastTap=0;
+    nm.addEventListener('click',e=>{const now=Date.now();if(now-lastTap<380){e.stopPropagation();lastTap=0;colInlineRename(nm,q);}else lastTap=now;});
     const mb=document.createElement('button');mb.type='button';mb.className='col-more';mb.textContent='⋯';mb.title='Pattern menu';
     mb.onclick=e=>{e.stopPropagation();colCardMenu(mb,q.id);};card.appendChild(mb);
-    card.onclick=()=>{if(!act)colSwitch(q.id);else colCardMenu(mb,q.id);};
+    card.onclick=e=>{if(card._swallow){card._swallow=false;return;}if(!act)colSwitch(q.id);};
+    colDragInit(card,q,scroll);
     scroll.appendChild(card);
   });
   const add=document.createElement('button');add.type='button';add.className='col-add';add.textContent='＋';add.title='New blank pattern';add.onclick=e=>{e.stopPropagation();colNew();};el.appendChild(add);
-  const x=document.createElement('button');x.type='button';x.className='col-x';x.textContent='✕';x.title='Hide the collection strip';x.onclick=e=>{e.stopPropagation();patStripOpen=false;colStripRender();};el.appendChild(x);
+  const x=document.createElement('button');x.type='button';x.className='col-x';x.textContent='▾';x.title='Collapse the strip';x.onclick=e=>{e.stopPropagation();colSetOpen(false);};el.appendChild(x);
   const on=scroll.querySelector('.col-card.on');if(on){try{on.scrollIntoView({inline:'center',block:'nearest'});}catch(e){}}
 }
-// keep the open pattern's thumbnail fresh while the strip is showing
+// keep the open pattern's thumbnail fresh while the strip is showing (only after a change, never while drawing or liquifying)
 setInterval(()=>{try{
-  if(!patStripOpen||!coll||patBusy||!activeProject||document.hidden)return;
+  if(!colOpen()||!coll||patBusy||!activeProject||document.hidden||colDragging)return;
+  if(typeof warpDrag!=='undefined'&&warpDrag)return;
   const sig=history.length+':'+hIndex+':'+coll.activeId;if(sig===patThumbSig)return;patThumbSig=sig;
   const q=colActive(),t=makeThumb();if(!q||!t)return;q.thumb=t;
   const im=document.querySelector('#colStrip .col-card.on img');if(im)im.src=t;
@@ -12318,7 +12417,7 @@ async function runBenchmark(){
   }catch(e){out.push('Stopped early: '+(e&&e.message||e));}
   finally{zoom=save.zoom;panX=save.panX;panY=save.panY;rot=save.rot;activeLayerId=save.aid;try{getActiveLayer();syncAwake();applyTransform();compositeDirty=true;redraw();renderLayersList();}catch(e){}}
   const text=out.join('\n');
-  try{const h=JSON.parse(localStorage.getItem('sp-bench')||'[]');h.push({t:Date.now(),v:'v289',text});localStorage.setItem('sp-bench',JSON.stringify(h.slice(-6)));}catch(e){}
+  try{const h=JSON.parse(localStorage.getItem('sp-bench')||'[]');h.push({t:Date.now(),v:'v290',text});localStorage.setItem('sp-bench',JSON.stringify(h.slice(-6)));}catch(e){}
   return text;
 }
 window.__sketchpadBench=()=>runBenchmark();
@@ -12326,7 +12425,7 @@ async function showBenchmark(){
   const ok=await projAsk({title:'⏱ Speed test',message:'This times the project you have open, without changing it. Takes about 10 seconds. Please do not touch the screen until it finishes.',ok:'Start',cancel:'Cancel'});
   if(!ok)return;
   const text=await runBenchmark();
-  const r=await projAsk({title:'⏱ Speed test results',message:text+'\n\nApp v289. Send me a screenshot of this.',ok:'OK',cancel:null,extra:[{label:'Copy',value:'copy'}]});
+  const r=await projAsk({title:'⏱ Speed test results',message:text+'\n\nApp v290. Send me a screenshot of this.',ok:'OK',cancel:null,extra:[{label:'Copy',value:'copy'}]});
   if(r&&r.__extra==='copy'){try{await navigator.clipboard.writeText(text);setStatus('Copied.');}catch(e){}}
 }
 function tlLine(){
@@ -12750,7 +12849,7 @@ try{warpR=Math.min(400,Math.max(10,+localStorage.getItem('sp-warpR')||80));warpS
   const ring=document.createElement('div');ring.id='warpRing';ring.style.cssText='position:absolute;display:none;pointer-events:none;z-index:8;border:2px dashed #8f6bd8;border-radius:50%;box-sizing:border-box;background:rgba(143,107,216,.08)';
   wrap.appendChild(ring);
   const bar=document.createElement('div');bar.id='warpBar';bar.className='float-panel';bar.style.display='none';bar.style.width='300px';
-  bar.innerHTML='<div class="float-panel-handle" id="warpBarHandle"><span>🌀 Liquify</span><span class="float-panel-handle-actions"><button id="warpDoneBtn" class="btn mini primary float-panel-done">✓ Done</button><span class="float-panel-grip" title="Drag to move">⠿</span></span></div><div style="display:flex;flex-direction:column;gap:8px"><span id="warpSpace" style="display:flex;gap:6px"><button class="btn mini" data-ws="paint" type="button" title="Moves the actual paint, so colours smear and swirl into each other like marbling">Paint</button><button class="btn mini" data-ws="vector" type="button" title="Bends the vector lines and shapes, keeping them sharp and editable">Lines</button></span><span id="warpModes" style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn mini active" data-wm="push" type="button" title="Push strokes along your drag">Push</button><button class="btn mini" data-wm="pinch" type="button" title="Hold or drag: pulls strokes toward the centre">Pinch</button><button class="btn mini" data-wm="bloat" type="button" title="Hold or drag: pushes strokes away from the centre">Bloat</button><button class="btn mini" data-wm="twirl" type="button" title="Hold or drag: swirls strokes around the centre of the brush">Twirl</button></span><span id="warpDir" style="display:none;gap:3px"><button class="btn mini" data-wd="R" type="button" title="Swirl clockwise">↻ Clockwise</button><button class="btn mini" data-wd="L" type="button" title="Swirl anticlockwise">↺ Anticlockwise</button></span><span id="warpDir" style="display:none;gap:6px"><button class="btn mini" data-wd="R" type="button" title="Swirl clockwise">↻ Clockwise</button><button class="btn mini" data-wd="L" type="button" title="Swirl anticlockwise">↺ Anticlockwise</button></span><label style="justify-content:space-between">Size <input id="warpSize" type="range" min="10" max="400" step="1"></label><label style="justify-content:space-between">Strength <input id="warpStrength" type="range" min="10" max="100" step="1"></label><span style="display:flex;gap:6px"><button class="btn mini" id="warpDupBtn" type="button" style="flex:1" title="Make a copy of this whole pattern inside the project (its own layers and undo), so you can liquify the copy and keep the original untouched">⧉ Duplicate Pattern</button><button class="btn mini" id="warpRevertBtn" type="button" style="flex:1" title="Remove all Liquify from this layer and bring its lines/shapes back exactly as they were before. To reset every layer of a pattern use the pattern ⋯ menu in the collection strip.">↺ Revert Liquify</button></span><span id="warpHint" class="hint" style="text-align:center">Drag on the canvas to push strokes on the active layer.</span><span id="warpTile" class="hint" style="text-align:center;font-weight:700"></span></div>';
+  bar.innerHTML='<div class="float-panel-handle" id="warpBarHandle"><span>🌀 Liquify</span><span class="float-panel-handle-actions"><button id="warpDoneBtn" class="btn mini primary float-panel-done">✓ Done</button><span class="float-panel-grip" title="Drag to move">⠿</span></span></div><div style="display:flex;flex-direction:column;gap:8px"><span id="warpSpace" style="display:flex;gap:6px"><button class="btn mini" data-ws="paint" type="button" title="Moves the actual paint, so colours smear and swirl into each other like marbling">Paint</button><button class="btn mini" data-ws="vector" type="button" title="Bends the vector lines and shapes, keeping them sharp and editable">Lines</button></span><span id="warpModes" style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn mini active" data-wm="push" type="button" title="Push strokes along your drag">Push</button><button class="btn mini" data-wm="pinch" type="button" title="Hold or drag: pulls strokes toward the centre">Pinch</button><button class="btn mini" data-wm="bloat" type="button" title="Hold or drag: pushes strokes away from the centre">Bloat</button><button class="btn mini" data-wm="twirl" type="button" title="Hold or drag: swirls strokes around the centre of the brush">Twirl</button></span><span id="warpDir" style="display:none;gap:3px"><button class="btn mini" data-wd="R" type="button" title="Swirl clockwise">↻ Clockwise</button><button class="btn mini" data-wd="L" type="button" title="Swirl anticlockwise">↺ Anticlockwise</button></span><span id="warpDir" style="display:none;gap:6px"><button class="btn mini" data-wd="R" type="button" title="Swirl clockwise">↻ Clockwise</button><button class="btn mini" data-wd="L" type="button" title="Swirl anticlockwise">↺ Anticlockwise</button></span><label style="justify-content:space-between">Size <input id="warpSize" type="range" min="10" max="400" step="1"></label><label style="justify-content:space-between">Strength <input id="warpStrength" type="range" min="10" max="100" step="1"></label><span style="display:flex;flex-direction:column;gap:6px"><button class="btn mini" id="warpDupRevBtn" type="button" title="Keep this pattern exactly as it is now, and start a NEW pattern from the design as it was before Liquify. Liquify stays open so you can make another variation.">⧉↺ Duplicate &amp; Revert</button><span style="display:flex;gap:6px"><button class="btn mini" id="warpDupBtn" type="button" style="flex:1" title="Copy this pattern exactly as it looks now into a new pattern">⧉ Duplicate Pattern</button><button class="btn mini" id="warpRevertBtn" type="button" style="flex:1" title="Take THIS pattern back to its design from before Liquify (Undo brings it back). Other patterns are not touched.">↺ Revert Liquify</button></span><span id="warpVarHint" class="hint" style="text-align:center">Duplicate &amp; Revert saves this look and starts a fresh pattern from the pre-Liquify design.</span></span><span id="warpHint" class="hint" style="text-align:center">Drag on the canvas to push strokes on the active layer.</span><span id="warpTile" class="hint" style="text-align:center;font-weight:700"></span></div>';
   document.body.appendChild(bar);
 }
 function warpRingAt(clientX,clientY,show){
@@ -12759,7 +12858,7 @@ function warpRingAt(clientX,clientY,show){
   ring.style.width=d+'px';ring.style.height=d+'px';ring.style.left=(clientX-r.left-d/2)+'px';ring.style.top=(clientY-r.top-d/2)+'px';ring.style.display='block';
 }
 function warpTileNote(){const e=$('warpTile');if(!e)return;if(warpOn&&showTiling&&LQ_BAD_LAYOUTS.includes(layout)){e.textContent='⚠️ Liquify does not wrap seamlessly in the '+layout+' layout yet. Switch to Grid, Half Drop or Half Brick.';return;}e.textContent=showTiling?'🔁 Repeat is on: your '+(warpPaint?'paint':'lines')+' wraps across the tile edges, so the pattern stays seamless.':'⚠️ Repeat is off: nothing wraps across the edges. Turn Tiling on (Grid) for a seamless pattern.';e.style.color=showTiling?'':'#b3402f';}
-setInterval(()=>{try{if(warpOn){warpTileNote();warpLayoutLock();}}catch(e){}},600);
+setInterval(()=>{try{if(warpOn){warpTileNote();warpLayoutLock();warpActionsSync();}}catch(e){}},600);
 const LQ_BAD_LAYOUTS=['diamond','ogee','tossed'];
 // Liquify can only wrap across square / half-shifted tile edges, so the layouts that work differently are greyed out while it is open.
 function warpLayoutLock(){
@@ -12770,6 +12869,7 @@ function warpLayoutLock(){
 }
 function warpSyncUI(){
   try{warpLayoutLock();}catch(e){}
+  try{warpActionsSync();}catch(e){}
   {const wb=$('warpBar'),was=wb.style.display==='block';wb.style.display=warpOn?'block':'none';if(warpOn&&!was){const vr=viewportOuter.getBoundingClientRect();positionFloatPanel('warpBar',vr.left+16,vr.top+16);}}
   $('tbWarpBtn').classList.toggle('active',warpOn);
   $('warpSize').value=warpR;$('warpStrength').value=Math.round(warpStr*100);
@@ -13011,7 +13111,9 @@ function liquifyRevertLayers(layerList,label){
   setStatus('↺ Liquify reverted on '+label+(paint?' ('+paint+' paint move'+(paint===1?'':'s')+' removed)':'')+(lines?' ('+lines+' shape'+(lines===1?'':'s')+' restored)':'')+'. Undo brings the distortion back.');
   return true;
 }
-$('warpRevertBtn').onclick=()=>{const layer=getActiveLayer();if(layer)liquifyRevertLayers([layer],'“'+layer.name+'”');};
+$('warpRevertBtn').onclick=()=>{const q=colActive();liquifyRevertLayers(layers,'“'+(q?q.name:'this pattern')+'”');};
+$('warpDupRevBtn').onclick=()=>{colDupRevert();};
+function warpActionsSync(){try{const has=liquifyPresent(strokes);['warpRevertBtn','warpDupRevBtn'].forEach(id=>{const b=$(id);if(!b)return;b.disabled=!has;b.style.opacity=has?'':'.45';});const h=$('warpVarHint');if(h)h.textContent=has?'Duplicate & Revert saves this look and starts a fresh pattern from the pre-Liquify design.':'Liquify something first — then Duplicate & Revert and Revert become available.';}catch(e){}}
 makeFloatPanelDraggable('warpBar','warpBarHandle');
 const wsSync=()=>document.querySelectorAll('#warpSpace [data-ws]').forEach(x=>x.classList.toggle('active',(x.dataset.ws==='paint')===warpPaint));
 document.querySelectorAll('#warpSpace [data-ws]').forEach(b=>b.onclick=()=>{warpPaint=b.dataset.ws==='paint';try{localStorage.setItem('sp-warpPaint',warpPaint?'1':'0');}catch(e){}wsSync();setStatus(warpPaint?'🌀 Liquify Paint: moves the paint itself, so colours smear and swirl together like marbling.':'🌀 Liquify Lines: bends vector lines and shapes and keeps them editable.');});
@@ -13946,7 +14048,7 @@ window.__sketchpadTips=()=>[...motifTipCache.entries()].map(([k,v])=>{const d=v.
 window.__sketchpadDescribe=(a,b)=>describeChange(a,b);
 window.__sketchpadPush=()=>{rebuildAllLayers();pushHist();redraw();};
 window.__sketchpadBlurTest={filterOK:()=>blurFilterOK(),force:v=>{_blurFilterOK=v;},semi:()=>{updateComposite();const d=compositeCtx.getImageData(0,0,W,H).data;let semi=0,solid=0;for(let i=3;i<d.length;i+=4){if(d[i]>8&&d[i]<200)semi++;else if(d[i]>=200)solid++;}return [semi,solid];},hi:async n=>{const c=await buildHiRes(n,true);const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let semi=0;for(let i=3;i<d.length;i+=4)if(d[i]>8&&d[i]<200)semi++;return semi;}};
-window.__sketchpadCollection={get:()=>coll,history:()=>({n:history.length,i:hIndex}),colNew,colDuplicate,colSwitch,colMove,colDelete,colRename,colRevertPattern,colExportAll,buildDocObject,applyDocObject,liquifyRevertLayers:()=>liquifyRevertLayers(layers,'test')};
+window.__sketchpadCollection={get:()=>coll,history:()=>({n:history.length,i:hIndex}),colNew,colDuplicate,colDupRevert,colMoveTo,liquifyPresent:()=>liquifyPresent(strokes),colSwitch,colMove,colDelete,colRename,colRevertPattern,colExportAll,buildDocObject,applyDocObject,liquifyRevertLayers:()=>liquifyRevertLayers(layers,'test')};
 window.__sketchpadInternals=()=>({layers,strokes,rebuildAllLayers,pixTotal,segVerBump:()=>{segVer++;compositeDirty=true;redraw();}});
 window.__sketchpadLayerInfo=()=>{updateDisplayComposite();updateComposite();
   const cmp=document.createElement('canvas');cmp.width=W/4;cmp.height=H/4;const c=cmp.getContext('2d');
