@@ -748,3 +748,16 @@
 
 .il-grid3 button, .il-grid2 button { min-width: 0; width: 100%; box-sizing: border-box; padding-left: 2px; padding-right: 2px; }
 .il-grid3 > *, .il-grid2 > * { min-width: 0; }
+
+/* ---------- asset tray: a slim, collapsible shelf under the page ---------- */
+.il-tray { flex: 0 0 auto; margin: 6px 0 0; padding: 6px 10px 8px; border: 1px solid var(--border); border-radius: 16px; background: rgba(255,255,255,0.5); }
+.il-tray:empty { display: none; }
+.il-tray-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.il-tray-toggle { min-height: 40px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border); background: rgba(255,255,255,0.7); font: inherit; font-weight: 600; cursor: pointer; color: inherit; }
+.il-tray-chips { display: flex; gap: 6px; flex-wrap: wrap; flex: 1 1 auto; }
+.il-chip.active { background: var(--accent); color: #fff; border-color: transparent; }
+.il-tray-refresh { min-height: 40px; padding: 6px 12px; }
+.il-tray-shelf { display: flex; gap: 8px; margin-top: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+.il-tray .il-tray-thumb { flex: 0 0 auto; width: 64px; height: 64px; padding: 0; border: 2px solid rgba(0,0,0,0.08); border-radius: 12px; background-size: cover !important; background-position: center !important; background-repeat: no-repeat !important; background-color: rgba(255,255,255,0.8); box-shadow: none; cursor: pointer; }
+.il-tray .il-tray-thumb:active, .il-tray .il-tray-thumb:focus-visible { border-color: var(--accent, #e9967a); }
+.il-tray-empty, .il-tray-note { margin: 4px 2px; font-size: 12px; opacity: 0.75; }

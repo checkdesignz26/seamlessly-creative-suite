@@ -223,6 +223,7 @@
 
       <div class="lookbook-canvas-area">
         <div class="lookbook-viewport" id="lookbookViewport"></div>
+        <div class="il-tray" id="ilAssetTray" aria-label="asset tray"></div>
         <div class="lookbook-page-thumbnails" id="ilPageThumbnails"></div>
       </div>
     </div>

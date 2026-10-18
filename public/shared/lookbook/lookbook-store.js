@@ -54,7 +54,8 @@
     if (!project.createdAt) project.createdAt = now;
     var meta = {
       id: project.id, name: project.name || 'untitled lookbook', createdAt: project.createdAt, updatedAt: now,
-      pages: (project.lookbook && project.lookbook.pages ? project.lookbook.pages.length : 0), thumb: project.thumb || ''
+      pages: (project.lookbook && project.lookbook.pages ? project.lookbook.pages.length : 0), thumb: project.thumb || '',
+      suiteProjectId: project.suiteProjectId || ''   // set only when opened from the Seamlessly Creative suite
     };
     var data = {
       patterns: project.patterns || [], images: project.images || [], lookbook: project.lookbook || { pages: [] }
@@ -79,7 +80,7 @@
       if (!r[0] || !r[1]) return null;
       var d = r[1].data || {};
       return {
-        id: id, name: r[0].name, createdAt: r[0].createdAt, updatedAt: r[0].updatedAt, thumb: r[0].thumb || '',
+        id: id, name: r[0].name, createdAt: r[0].createdAt, updatedAt: r[0].updatedAt, thumb: r[0].thumb || '', suiteProjectId: r[0].suiteProjectId || '',
         patterns: d.patterns || [], images: d.images || [], lookbook: d.lookbook || { pages: [] }
       };
     });
@@ -92,7 +93,7 @@
   function duplicate(id) {
     return get(id).then(function (p) {
       if (!p) return null;
-      p.id = newId(); p.name = (p.name || 'untitled lookbook') + ' copy'; p.createdAt = 0;
+      p.id = newId(); p.suiteProjectId = ''; p.name = (p.name || 'untitled lookbook') + ' copy'; p.createdAt = 0;
       return put(p).then(function () { return p; });
     });
   }
