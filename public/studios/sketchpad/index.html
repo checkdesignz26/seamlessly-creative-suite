@@ -1328,7 +1328,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v309'; // keep in step with CACHE in sw.js
+const APP_V='v310'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -13529,7 +13529,7 @@ function warpPaintStep(d,x,y,dx,dy,mult){
   if(d.steps.length>=2400)return;
   let sm=mult&&Math.abs(mult-1)>0.02?Math.round(mult*100)/100:1; // a slow step covers the time of several, so the swirl keeps its speed
   if(warpIsTwirl())sm=Math.round(sm*1.3*100)/100; // twirl runs a little faster; the factor is stored in the step so replays match
-  try{BrushEngine.liquifyStep(d.layer.ctx,x,y,warpMode,warpStr*sm,warpR,dx,dy,1,d.wrap);if(d.layer.dctx!==d.layer.ctx)BrushEngine.liquifyStep(d.layer.dctx,x,y,warpMode,warpStr*sm,warpR,dx,dy,1,d.wrap);}catch(e){return;} // the sharp zoomed-in copy gets the same step, so nothing has to be replayed from scratch on pen-up
+  try{if(!d.sess){d.sess=[BrushEngine.liquifyBegin(d.layer.ctx,d.wrap)];if(d.layer.dctx!==d.layer.ctx)d.sess.push(BrushEngine.liquifyBegin(d.layer.dctx,d.wrap));}d.sess.forEach(q=>q.step(x,y,warpMode,warpStr*sm,warpR,dx,dy,1));}catch(e){return;} // the sharp zoomed-in copy gets the same step, so nothing has to be replayed from scratch on pen-up
   const st={x:Math.round(x*10)/10,y:Math.round(y*10)/10,m:warpMode,dx:Math.round(dx*100)/100,dy:Math.round(dy*100)/100,pressure:0.5};if(sm!==1)st.s=sm;d.steps.push(st);
   d.moved=true;compositeDirty=true;if(!d.raf)d.raf=requestAnimationFrame(()=>{d.raf=0;redraw();});
 }
@@ -13565,6 +13565,7 @@ function warpUp(){
   if(d.paint){
     if(d.raf){cancelAnimationFrame(d.raf);d.raf=0;}
     if(warpMode==='push'&&(d.ax||d.ay))warpPaintStep(d,d.last.x,d.last.y,d.ax,d.ay);
+    if(d.sess){d.sess.forEach(q=>{try{q.end();}catch(e){}});d.sess=null;} // the stroke is finished: let go of the stroke-start copy of the picture
     if(!d.steps.length)return;
     strokes.push({id:crypto.randomUUID(),brushId:'smudge',layerId:d.layer.id,color:'#000000',settings:{size:warpR*2,opacity:1,smoothing:0,pressureWidth:0,pressureOpacity:0,spacing:6,liquify:{mode:warpMode,strength:warpStr,size:warpR,wrap:d.wrap?1:0}},points:(function(){try{return BrushEngine.liquifyCompact(d.steps,warpR);}catch(e){return d.steps;}})()});
     // The steps were already applied live, so replaying them all again here only repeated the work (the lag and crash on pen-up).

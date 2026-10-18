@@ -1218,6 +1218,156 @@
     }
     lqSentinel(ctx);
   }
+  // ---- Liquify session: one resample, not one per step ----
+  // Warping the picture step by step (each step resamples pixels that an earlier step had already resampled) softens every colour boundary a
+  // little more with each step: after a few strokes a crisp edge is several pixels wide. A session keeps the picture as it was when the stroke
+  // began (I0) plus a displacement field D ("this pixel now shows what used to be at p + D(p)"). Every step only updates D inside the brush circle
+  // and redraws those pixels with ONE sample of I0, so the blur no longer builds up with the number of steps. Used for the live stroke and for the
+  // replay of saved strokes; very large or unusual (half-drop / brick) layouts fall back to the old step-by-step warp.
+  let _lqSOut = null, _lqSD = null, _lqSRow = null;
+  function liquifyBegin(ctx, wrap) {
+    const S = { ctx, wrap, init: false, fallback: false };
+    return {
+      step(x, y, mode, strength, radius, dx, dy, reps) {
+        if (!S.init) lqSessInit(S);
+        if (!S.fallback && (ctx.canvas.width !== S.cw || ctx.canvas.height !== S.ch)) S.fallback = true;
+        if (!S.fallback) { try { if (lqSessStep(S, x, y, mode, strength, radius, dx, dy, reps)) return; } catch (e) { S.fallback = true; } S.fallback = true; }
+        return liquifyStep(ctx, x, y, mode, strength, radius, dx, dy, reps, wrap);
+      },
+      end() { S.I0 = S.D = S.cur = S.curImg = null; }
+    };
+  }
+  function lqSessInit(S) {
+    S.init = true;
+    const ctx = S.ctx, cv = ctx.canvas, wrap = S.wrap;
+    S.cw = cv.width; S.ch = cv.height;
+    if (!ctx.getTransform) { S.fallback = true; return; }
+    const m = ctx.getTransform(); S.m = m; S.sc = Math.max(0.05, Math.abs(m.a));
+    try {
+      let ox = 0, oy = 0, dw = cv.width, dh = cv.height;
+      if (wrap) {
+        const tx = Math.round(m.a * wrap.x + m.e), ty = Math.round(m.d * wrap.y + m.f), tw = Math.round(m.a * wrap.w), th = Math.round(m.d * wrap.h);
+        const lat = wrap.lat.map(v => [Math.round(v[0] * m.a), Math.round(v[1] * m.d)]);
+        const near = (v, u) => Math.abs(v - Math.round(v / u) * u) <= 2;
+        if (!(tw >= 4 && th >= 4 && tx >= 0 && ty >= 0 && tx + tw <= cv.width && ty + th <= cv.height && lat.every(v => near(v[0], tw) && near(v[1], th)))) { S.fallback = true; return; }
+        if (!cv._lqNorm) lqNormalize(ctx, wrap, m);
+        ox = tx; oy = ty; dw = tw; dh = th; S.lat = lat;
+      }
+      if (dw * dh > 8e6) { S.fallback = true; return; }
+      const img = ctx.getImageData(ox, oy, dw, dh);
+      S.I0 = new Uint8ClampedArray(img.data); // the picture as it was when the stroke began
+      if (wrap) { S.cur = img.data; S.curImg = img; }
+      S.D = new Float32Array(dw * dh * 2);
+      S.ox = ox; S.oy = oy; S.dw = dw; S.dh = dh;
+    } catch (e) { S.fallback = true; }
+  }
+  function lqSessStep(S, x, y, mode, strength, radius, dx, dy, reps) {
+    const ctx = S.ctx, cv = ctx.canvas, m = S.m, sc = S.sc, wrap = S.wrap, dw = S.dw, dh = S.dh, I0 = S.I0, D = S.D;
+    const R = Math.max(2, radius * sc), R2 = R * R;
+    let cx = m.a * x + m.e - S.ox, cy = m.d * y + m.f - S.oy;
+    if (wrap) { cx = ((cx % dw) + dw) % dw; cy = ((cy % dh) + dh) % dh; }
+    let x0 = Math.floor(cx - R) - 1, y0 = Math.floor(cy - R) - 1, x1 = Math.ceil(cx + R) + 1, y1 = Math.ceil(cy + R) + 1;
+    if (!wrap) { x0 = Math.max(0, x0); y0 = Math.max(0, y0); x1 = Math.min(dw, x1); y1 = Math.min(dh, y1); }
+    const w = x1 - x0, h = y1 - y0;
+    if (w < 2 || h < 2) return true;
+    if (w * h > 4e6 || (wrap && (w > dw || h > dh))) return false;
+    const n4 = w * h * 4;
+    // where the new colours go: the tile cell itself when wrapping, else the pixels of the canvas under the brush
+    let dst, patch = null;
+    if (wrap) dst = S.cur; else { patch = ctx.getImageData(x0, y0, w, h); dst = patch.data; }
+    if (!_lqSD || _lqSD.length < w * h * 2) _lqSD = new Float32Array(w * h * 2);
+    if (!_lqSRow || _lqSRow.length < h * 2) _lqSRow = new Int32Array(h * 2);
+    const nD = _lqSD, rows = _lqSRow;
+    const W4 = dw * 4;
+    const ang = (mode === 'twirlR' ? 1 : mode === 'twirlL' ? -1 : 0) * 0.075 * strength;
+    const pf = mode === 'pinch' ? 1 : mode === 'bloat' ? -1 : 0;
+    let tbl = null; const TN = 192;
+    if (pf && reps > 1) {
+      tbl = new Float32Array(TN + 1);
+      for (let i = 0; i <= TN; i++) {
+        const r = Math.max(R * 0.002, i / TN * R); let q = r, rem = Math.min(reps, 400);
+        while (rem > 0) { const part = rem >= 1 ? 1 : rem; rem -= part; const dd = q * q; if (dd >= R2) break; const uu = 1 - dd / R2; q *= 1 + pf * uu * uu * strength * part * 0.042; }
+        tbl[i] = q / r;
+      }
+    }
+    const isPush = mode === 'push', pdx = dx * sc, pdy = dy * sc, bigAng = Math.abs(ang) > 0.3;
+    const md = (v, k) => ((v % k) + k) % k;
+    for (let py = 0; py < h; py++) {
+      rows[py * 2] = 1; rows[py * 2 + 1] = 0; // empty
+      const gy = y0 + py + 0.5 - cy, gy2 = gy * gy;
+      if (gy2 >= R2) continue;
+      const half = Math.sqrt(R2 - gy2);
+      const pxs = Math.max(0, Math.ceil(cx - half - x0 - 0.5)), pxe = Math.min(w - 1, Math.floor(cx + half - x0 - 0.5));
+      rows[py * 2] = pxs; rows[py * 2 + 1] = pxe;
+      const Y = y0 + py;
+      for (let px = pxs; px <= pxe; px++) {
+        const gx = x0 + px + 0.5 - cx, d2 = gx * gx + gy2;
+        const o4 = ((wrap ? md(Y, dh) : Y - y0) * (wrap ? dw : w) + (wrap ? md(x0 + px, dw) : px)) * 4;
+        if (d2 >= R2) { nD[(py * w + px) * 2] = NaN; continue; }
+        const u = 1 - d2 / R2, u2 = u * u, k = u2 * strength;
+        let sx, sy;
+        if (isPush) { sx = gx - pdx * k; sy = gy - pdy * k; }
+        else if (tbl) { const f = Math.sqrt(d2) / R * TN, i0 = f | 0, i1 = i0 < TN ? i0 + 1 : TN, k2 = tbl[i0] + (tbl[i1] - tbl[i0]) * (f - i0); sx = gx * k2; sy = gy * k2; }
+        else if (pf) {
+          let qx = gx, qy = gy, rem = reps > 1 ? Math.min(reps, 400) : 1;
+          while (rem > 0) { const part = rem >= 1 ? 1 : rem; rem -= part; const dd = qx * qx + qy * qy; if (dd >= R2) break; const uu = 1 - dd / R2; qx *= 1 + pf * uu * uu * strength * part * 0.042; qy *= 1 + pf * uu * uu * strength * part * 0.042; }
+          sx = qx; sy = qy;
+        }
+        else if (bigAng) { const a2 = ang * u2, c2 = Math.cos(a2), s2 = -Math.sin(a2); sx = gx * c2 - gy * s2; sy = gx * s2 + gy * c2; }
+        else { const a2 = ang * u2, c2 = 1 - a2 * a2 * 0.5, s2 = -(a2 - a2 * a2 * a2 / 6); sx = gx * c2 - gy * s2; sy = gx * s2 + gy * c2; }
+        // q: where this step takes the colour from (in the picture as it is now); D(q) says where that colour really lives in I0
+        const qx = sx + cx - 0.5, qy = sy + cy - 0.5;
+        let ix = Math.floor(qx), iy = Math.floor(qy), ux = qx - ix, uy = qy - iy, ddx = 0, ddy = 0;
+        {
+          let xa = ix, xb = ix + 1, ya = iy, yb = iy + 1, ok = true;
+          if (wrap) { xa = md(xa, dw); xb = md(xb, dw); ya = md(ya, dh); yb = md(yb, dh); }
+          else if (xa < 0 || ya < 0 || xb >= dw || yb >= dh) { // the edge of the canvas: treat what lies outside as "not moved"
+            ok = false;
+            const gxa = Math.min(dw - 1, Math.max(0, xa)), gxb = Math.min(dw - 1, Math.max(0, xb)), gya = Math.min(dh - 1, Math.max(0, ya)), gyb = Math.min(dh - 1, Math.max(0, yb));
+            const i00 = (gya * dw + gxa) * 2, i10 = (gya * dw + gxb) * 2, i01 = (gyb * dw + gxa) * 2, i11 = (gyb * dw + gxb) * 2;
+            const w00 = (1 - ux) * (1 - uy), w10 = ux * (1 - uy), w01 = (1 - ux) * uy, w11 = ux * uy;
+            ddx = D[i00] * w00 + D[i10] * w10 + D[i01] * w01 + D[i11] * w11; ddy = D[i00 + 1] * w00 + D[i10 + 1] * w10 + D[i01 + 1] * w01 + D[i11 + 1] * w11;
+          }
+          if (ok) {
+            const i00 = (ya * dw + xa) * 2, i10 = (ya * dw + xb) * 2, i01 = (yb * dw + xa) * 2, i11 = (yb * dw + xb) * 2;
+            const w00 = (1 - ux) * (1 - uy), w10 = ux * (1 - uy), w01 = (1 - ux) * uy, w11 = ux * uy;
+            ddx = D[i00] * w00 + D[i10] * w10 + D[i01] * w01 + D[i11] * w11; ddy = D[i00 + 1] * w00 + D[i10 + 1] * w10 + D[i01 + 1] * w01 + D[i11 + 1] * w11;
+          }
+        }
+        const tx = qx + ddx, ty = qy + ddy;
+        nD[(py * w + px) * 2] = tx - (x0 + px); nD[(py * w + px) * 2 + 1] = ty - Y;
+        // one bilinear sample of the ORIGINAL picture (premultiplied alpha, so transparent pixels do not darken the colours)
+        const fx = Math.floor(tx), fy = Math.floor(ty), vx = tx - fx, vy = ty - fy;
+        let r = 0, g = 0, b = 0, a = 0;
+        for (let t = 0; t < 4; t++) {
+          let sxi = fx + (t & 1), syi = fy + (t >> 1);
+          if (wrap) { sxi = md(sxi, dw); syi = md(syi, dh); } else if (sxi < 0 || syi < 0 || sxi >= dw || syi >= dh) continue;
+          const wt = ((t & 1) ? vx : 1 - vx) * ((t >> 1) ? vy : 1 - vy);
+          if (wt <= 0) continue;
+          const o = syi * W4 + sxi * 4, al = I0[o + 3] / 255 * wt;
+          r += I0[o] * al; g += I0[o + 1] * al; b += I0[o + 2] * al; a += al;
+        }
+        if (a > 0.002) { dst[o4] = r / a; dst[o4 + 1] = g / a; dst[o4 + 2] = b / a; dst[o4 + 3] = a * 255; } else { dst[o4] = dst[o4 + 1] = dst[o4 + 2] = dst[o4 + 3] = 0; }
+      }
+    }
+    // commit the new displacement for the pixels that were redrawn
+    for (let py = 0; py < h; py++) {
+      const a0 = rows[py * 2], a1 = rows[py * 2 + 1], Y = wrap ? md(y0 + py, dh) : y0 + py;
+      for (let px = a0; px <= a1; px++) {
+        const v = nD[(py * w + px) * 2]; if (v !== v) continue; // NaN: outside the circle
+        const di = (Y * dw + (wrap ? md(x0 + px, dw) : x0 + px)) * 2;
+        D[di] = v; D[di + 1] = nD[(py * w + px) * 2 + 1];
+      }
+    }
+    if (!wrap) { ctx.putImageData(patch, x0, y0); if (x0 === 0 && y0 === 0) lqSentinel(ctx); return true; }
+    // wrapping: only the tile cell holds the picture (the app repeats it on screen), so write the changed part of the cell back
+    const xa = md(x0, dw), ya = md(y0, dh);
+    const xr = xa + w <= dw ? [[xa, w]] : [[xa, dw - xa], [0, w - (dw - xa)]];
+    const yr = ya + h <= dh ? [[ya, h]] : [[ya, dh - ya], [0, h - (dh - ya)]];
+    for (const [rx, rw] of xr) for (const [ry, rh] of yr) ctx.putImageData(S.curImg, S.ox, S.oy, rx, ry, rw, rh);
+    lqSentinel(ctx);
+    return true;
+  }
   // A long hold (twirl / pinch / bloat) is stored as hundreds of tiny steps at almost the same spot, and a long push drag as hundreds
   // of tiny moves. Replaying all of them on every project open / layer rebuild is what made big projects unusable. Neighbouring steps
   // are merged here: for a hold the result is the same (rotation and scaling about one centre simply add up), for a push it is
@@ -1253,11 +1403,14 @@
     const size = lq.size || 80, base = lq.strength == null ? 0.8 : lq.strength;
     const pts = liquifyMerge(stroke.points || [], size);
     let wrap = null; if (lq.wrap !== 0 && BrushEngine_wrap.get) { try { wrap = BrushEngine_wrap.get(); } catch (e) { wrap = null; } }
-    for (let i = 0; i < pts.length; i++) {
-      const p = pts[i];
-      const m = p.m || lq.mode || 'push', sv = p.s || 1, hold = m === 'pinch' || m === 'bloat';
-      liquifyStep(ctx, p.x, p.y, m, hold ? base : base * sv, size, p.dx || 0, p.dy || 0, hold ? sv : 1, wrap);
-    }
+    const sess = liquifyBegin(ctx, wrap);
+    try {
+      for (let i = 0; i < pts.length; i++) {
+        const p = pts[i];
+        const m = p.m || lq.mode || 'push', sv = p.s || 1, hold = m === 'pinch' || m === 'bloat';
+        sess.step(p.x, p.y, m, hold ? base : base * sv, size, p.dx || 0, p.dy || 0, hold ? sv : 1);
+      }
+    } finally { sess.end(); }
   }
   function smudgeStroke(ctx, stroke) {
     const st = stroke.settings || {};
@@ -1488,6 +1641,6 @@
     getSettings, setSettings,
     touchRecent, getRecents,
     isFavorite, toggleFavorite, getFavorites,
-    underlay: null, skipSmudge: BrushEngine_skipSmudge, wrap: BrushEngine_wrap, liveEnd, makeSmudger, makeCloner, liquifyStep, liquifyCompact, liquifyGL: _lq, pressureFactor, stampDab, colorWithAlpha, resample, renderStroke, smoothPoints, seededRandom,
+    underlay: null, skipSmudge: BrushEngine_skipSmudge, wrap: BrushEngine_wrap, liveEnd, makeSmudger, makeCloner, liquifyStep, liquifyBegin, liquifyCompact, liquifyGL: _lq, pressureFactor, stampDab, colorWithAlpha, resample, renderStroke, smoothPoints, seededRandom,
   };
 })(window);
