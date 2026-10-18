@@ -1328,7 +1328,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v304'; // keep in step with CACHE in sw.js
+const APP_V='v305'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -3897,6 +3897,16 @@ function setStrokePanelOpen(on){
   syncStrokeSelectionUI();
 }
 function syncStrokeSelectionUI(){
+  // Selecting something jumps the active layer to the layer it lives on (only when the selection actually changed)
+  try{
+    let ids=[];if(multiSel&&multiSel.strokeIds&&multiSel.strokeIds.length)ids=multiSel.strokeIds;else if(selectedStrokeId)ids=[selectedStrokeId];
+    const key=ids.join(',');
+    if(key&&key!==syncStrokeSelectionUI._selKey){
+      const lids=new Set(ids.map(id=>{const q=strokes.find(x=>x.id===id);return q&&q.layerId;}).filter(Boolean));
+      if(lids.size===1){const lid=[...lids][0];if(lid!==activeLayerId&&layers.some(l=>l.id===lid&&!l.locked)){activeLayerId=lid;try{renderLayersList();}catch(e){}setStatus('Switched to the layer this is on.');}}
+    }
+    syncStrokeSelectionUI._selKey=key;
+  }catch(e){}
   { const sf=strokes.find(x=>x.id===selectedStrokeId); if(sf&&sf.fillOf&&strokes.some(x=>x.id===sf.fillOf))selectedStrokeId=sf.fillOf; if(sf&&sf.contourOf&&strokes.some(x=>x.id===sf.contourOf))selectedStrokeId=sf.contourOf; }
   try{txSyncPanel();}catch(e){}
   try{if(!window.__txSelBusy&&strokes.some(s=>s.guideHidden)||strokes.some(s=>s.text&&s.text.path&&s.text.path.hide)){window.__txSelBusy=true;try{txRefresh();}finally{window.__txSelBusy=false;}}}catch(e){window.__txSelBusy=false;}
