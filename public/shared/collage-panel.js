@@ -19,6 +19,9 @@
  *   emptyNotes          -> optional { mockups: 'text shown when that tab is empty' }
  *   onBack()            -> go back to the host's Add panel
  *   deleteCollage(ctl)  -> remove the collage item
+ *   createDecor(kind)   -> optional: add a decorative shape as a FREE page object (instead of inside the collage)
+ *   extractColours(slot)-> optional: Promise<[hex…]> colours of the slot's own image
+ *   applyColour(hex)    -> optional: apply a picked colour to whatever is selected on the page
  * controller: { model, editor, commit(final), host?, item }   (host = the element the collage is drawn into)
  */
 (function (global) {
@@ -65,6 +68,7 @@
       '.sccl-p details[open]>summary{margin-bottom:6px}' +
       '.sccl-p .sccl-userTpl{display:flex;gap:4px;align-items:center}' +
       '.sccl-p .sccl-userTpl .sccl-chip{flex:1}' +
+      '.sccl-p .sccl-sw{width:34px;height:34px;border-radius:50%;border:2px solid rgba(0,0,0,.35);box-shadow:0 0 0 1px rgba(255,255,255,.6);cursor:pointer;padding:0;flex:0 0 auto}' +
       '.sccl-p .sccl-x{flex:0 0 28px;padding:4px;min-height:28px;border-radius:50%;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer}';
     document.head.appendChild(st);
   }
@@ -248,7 +252,21 @@
     var resetGridBtn = btn('reset grid sizes', function () { withCollage(function (c) { c.model.layout.colWeights = null; c.model.layout.rowWeights = null; }); });
     var gridHint = el('p', { class: 'sccl-empty-note', text: 'tap “edit pieces”, then drag the purple handles between cells to resize columns and rows.' });
 
-    var layoutBlock = block('layout', [seg, tplGrid, autoRow, freeChips, gutterRange, padRange, radRange, resetGridBtn, gridHint]);
+    // How repeat patterns react when a frame (or the whole collage) is resized.
+    var scaleSeg = el('div', { class: 'sccl-seg' });
+    var scaleFrame = el('button', { type: 'button', text: 'scale with frame', on: { click: function () { setScaleMode('frame'); } } });
+    var scaleFixed = el('button', { type: 'button', text: 'keep pattern scale', on: { click: function () { setScaleMode('fixed'); } } });
+    scaleSeg.appendChild(scaleFrame); scaleSeg.appendChild(scaleFixed);
+    var scaleHint = el('p', { class: 'sccl-empty-note' });
+    function setScaleMode(mode) {
+      withCollage(function (c) {
+        var host = c.host || c.item.querySelector('.collage-host') || c.item;
+        SC.setScaleMode(c.model, mode, host.clientWidth, host.clientHeight);
+      });
+    }
+    var scaleBlock = el('div', null, [el('label', { text: 'when a frame is resized' }), scaleSeg, scaleHint]);
+
+    var layoutBlock = block('layout', [seg, tplGrid, autoRow, freeChips, gutterRange, padRange, radRange, resetGridBtn, gridHint, scaleBlock]);
 
     function withCollage(fn) {
       var c = ctl() || ctx.createCollage();
@@ -277,7 +295,43 @@
     var kindRepeat = el('button', { type: 'button', text: 'repeat', on: { click: function () { setSlot('kind', 'pattern'); } } });
     var kindSingle = el('button', { type: 'button', text: 'single image', on: { click: function () { setSlot('kind', 'image'); } } });
     kindSeg.appendChild(kindRepeat); kindSeg.appendChild(kindSingle);
-    var tileRange = range('pattern scale', 8, 100, 1, function () { var o = curObj(); return o && o.tile ? o.tile : 40; }, function (v, f) { var o = curObj(); if (o) { o.tile = v; done(f); } }, function (v) { return v + '%'; });
+    function slotWidth(o) {
+      var c = ctl(), r = c && c.editor.getResolved();
+      var it = r && r.items.filter(function (x) { return x.slot === o; })[0];
+      return it ? it.w : ((c && (c.host || c.item).clientWidth) || 400) / 2;
+    }
+    var tileRange = range('pattern scale', 8, 100, 1, function () {
+        var o = ctl() && curObj(); if (!o) return 40;
+        var c = ctl();
+        if (c.model.scaleMode === 'fixed' && o.tilePx > 0) return SC.clamp(Math.round(o.tilePx / slotWidth(o) * 100), 8, 100);
+        return o.tile || 40;
+      },
+      function (v, f) { var o = curObj(), c = ctl(); if (o && c) { SC.setPatternScale(c.model, o, v, slotWidth(o)); done(f); } }, function (v) { return v + '%'; });
+    var patXRange = range('pattern position ←→', -50, 50, 1, function () { var o = curObj(); return o ? Math.round(o.patX || 0) : 0; }, function (v, f) { var o = curObj(); if (o) { o.patX = v; done(f); } }, function (v) { return v + '%'; });
+    var patYRange = range('pattern position ↑↓', -50, 50, 1, function () { var o = curObj(); return o ? Math.round(o.patY || 0) : 0; }, function (v, f) { var o = curObj(); if (o) { o.patY = v; done(f); } }, function (v) { return v + '%'; });
+    var panBtn = btn('✋ move picture inside frame', function () {
+      var c = ctl(); if (!c) return;
+      c.editor.setPanMode(!c.editor.isPanMode()); sync();
+    }, 'min-height:44px');
+    var panHint = el('p', { class: 'sccl-empty-note', text: 'while this is on, dragging a picture slides it inside its frame (zoom in first for single photos). Tap again to go back to moving frames.' });
+    var resetPos = btn('reset picture position', function () { var o = curObj(); if (!o) return; o.patX = 0; o.patY = 0; o.offX = 0; o.offY = 0; done(true); sync(); });
+
+    // colours from the picture in this frame
+    var extractFor = null;   // slot id the shown colours belong to
+    var extractStrip = el('div', { class: 'sccl-chips', style: 'gap:8px' });
+    var extractNote = el('p', { class: 'sccl-empty-note', hidden: 'hidden' });
+    var extractBtn = btn('🎨 extract colours from this picture', async function () {
+      var o = curObj(); if (!o || !o.src || !ctx.extractColours) return;
+      extractFor = o.id; extractNote.hidden = false; extractNote.textContent = 'reading colours…'; extractStrip.innerHTML = '';
+      var cols = [];
+      try { cols = (await ctx.extractColours(o)) || []; } catch (e) { console.error(e); }
+      if (!cols.length) { extractNote.textContent = 'could not read colours from that picture.'; return; }
+      extractNote.textContent = 'tap a colour to apply it to the selected text or shape (or the page background if nothing is selected). They are also in every colour picker under Style.';
+      cols.forEach(function (hex) {
+        var sw = el('button', { type: 'button', class: 'sccl-sw', title: hex, style: 'background:' + hex, on: { click: function () { if (ctx.applyColour) ctx.applyColour(hex); } } });
+        extractStrip.appendChild(sw);
+      });
+    }, 'min-height:44px');
     var maskChips = el('div', { class: 'sccl-chips' });
     SC.MASKS.forEach(function (mk) {
       maskChips.appendChild(el('button', { type: 'button', class: 'sccl-chip', 'data-mask': mk, text: mk === 'rect' ? 'square' : mk, on: { click: function () { var o = curObj(); if (!o) return; o.mask = mk; done(true); sync(); } } }));
@@ -317,19 +371,20 @@
     });
     colorInput.addEventListener('change', function () { done(true); sync(); });
 
-    var photoBlock = block('selected photo', [kindSeg, fitSeg, zoomRange, tileRange, replaceBtn, el('label', { text: 'shape' }), maskChips, maskAll, borderRange, borderColorBtn, shadowRange].concat(photoLayers).concat([removePhotoBtn]));
+    var photoBlock = block('selected photo', [kindSeg, fitSeg, zoomRange, tileRange, patXRange, patYRange, panBtn, panHint, resetPos, extractBtn, extractNote, extractStrip, replaceBtn, el('label', { text: 'shape' }), maskChips, maskAll, borderRange, borderColorBtn, shadowRange].concat(photoLayers).concat([removePhotoBtn]));
     var decorBlock = block('selected decoration', [decorColorBtn, decorOpacity, decorShadow].concat(decorLayers).concat([btn('delete decoration', removeSelected)]));
 
     // decorations (details)
     var decorKinds = el('div', { class: 'sccl-chips' });
     SC.DECOR_KINDS.forEach(function (k) {
       decorKinds.appendChild(el('button', { type: 'button', class: 'sccl-chip', text: k, on: { click: function () {
+        if (ctx.createDecor) { ctx.createDecor(k); return; }   // free page-level shape
         var c = ctl() || ctx.createCollage();
         var d = SC.addDecor(c.model, k);
         c.editor.setEditing(true); c.editor.select({ type: 'decor', id: d.id }); c.commit(true); sync();
       } } }));
     });
-    var decorDetails = el('details', null, [el('summary', { text: 'decorations' }), decorKinds]);
+    var decorDetails = el('details', null, [el('summary', { text: ctx.createDecor ? 'decorative shapes (free on the page)' : 'decorations' }), decorKinds]);
 
     // templates (details)
     var tplList = el('div', { style: 'display:flex;flex-direction:column;gap:5px' });
@@ -388,9 +443,13 @@
       tplGrid.hidden = isFree; autoRow.hidden = isFree; gutterRange.hidden = isFree; padRange.hidden = isFree;
       resetGridBtn.hidden = isFree || !(c && kind === 'template'); gridHint.hidden = isFree || !(c && kind === 'template');
       freeChips.hidden = !isFree;
+      var fixedMode = !!(c && c.model.scaleMode === 'fixed');
+      scaleFrame.classList.toggle('on', !fixedMode); scaleFixed.classList.toggle('on', fixedMode);
+      scaleHint.textContent = fixedMode ? 'patterns keep their size: making a frame bigger shows more of the pattern, smaller crops it.' : 'patterns grow and shrink together with their frame.';
       [gutterRange, padRange, radRange].forEach(function (r) { r.__sync && r.__sync(); });
       editBtn.textContent = c && c.editor.isEditing() ? '✓ done editing pieces' : '✎ edit pieces';
 
+      if (extractFor && !(s && o && o.id === extractFor)) { extractFor = null; extractStrip.innerHTML = ''; extractNote.hidden = true; }
       var isSlot = !!(s && s.type === 'slot' && o), isDecor = !!(s && s.type === 'decor' && o);
       photoBlock.hidden = !isSlot; decorBlock.hidden = !isDecor;
       if (isSlot) {
@@ -398,10 +457,16 @@
         kindSeg.hidden = !o.src; kindRepeat.classList.toggle('on', pat); kindSingle.classList.toggle('on', !pat);
         fitSeg.hidden = pat || !o.src; fitFill.classList.toggle('on', o.fit !== 'contain'); fitFit.classList.toggle('on', o.fit === 'contain');
         zoomRange.hidden = pat || !o.src; tileRange.hidden = !pat;
+        patXRange.hidden = !pat; patYRange.hidden = !pat;
+        panBtn.hidden = !o.src; panHint.hidden = !o.src || !(c.editor.isPanMode && c.editor.isPanMode());
+        panBtn.textContent = c.editor.isPanMode() ? '✓ done moving picture' : '✋ move picture inside frame';
+        resetPos.hidden = !o.src;
+        extractBtn.hidden = !o.src || !ctx.extractColours;
+        if (extractBtn.hidden) { extractStrip.innerHTML = ''; extractNote.hidden = true; }
         var eff = o.mask || c.model.mask || 'rect';
         Array.prototype.forEach.call(maskChips.children, function (b) { b.classList.toggle('on', b.getAttribute('data-mask') === eff); });
         photoLayers.forEach(function (r) { r.hidden = !isFree; });
-        [zoomRange, tileRange, borderRange, shadowRange].forEach(function (r) { r.__sync && r.__sync(); });
+        [zoomRange, tileRange, patXRange, patYRange, borderRange, shadowRange].forEach(function (r) { r.__sync && r.__sync(); });
       }
       if (isDecor) [decorOpacity, decorShadow].forEach(function (r) { r.__sync && r.__sync(); });
       var hidden = c ? c.model.slots.filter(function (sl, i) {

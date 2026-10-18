@@ -79,6 +79,7 @@ function ilLoadImage(src) {
 }
 
 function ilSelectItem(item) {
+  if (window.ilMultiSel && window.ilMultiSel.size && !window.ilMultiSel.has(item)) window.ilClearMulti();
   document.querySelectorAll('.canvas-item.selected').forEach(el => el.classList.remove('selected'));
   item.classList.add('selected');
   ilSelectedItem = item;
@@ -137,10 +138,12 @@ function ilRefreshSelectionControls(item) {
     document.getElementById('ilFontSizeValue').textContent = size + 'px';
     ilRenderPaletteStrip(item.style.color);
   }
+  if (window.ilToolsOnSelect) window.ilToolsOnSelect(item);
 }
 
 function ilDeselectAll() {
   document.querySelectorAll('.canvas-item.selected').forEach(el => el.classList.remove('selected'));
+  if (window.ilClearMulti) window.ilClearMulti();
   ilSelectedItem = null;
   ilCollageOnSelectionChange();
   const deleteBtn = document.getElementById('ilDeleteItemBtn');
@@ -155,6 +158,7 @@ function ilDeselectAll() {
   if (textControls) textControls.hidden = true;
   const collageArrange = document.getElementById('ilCollageArrangeBlock');
   if (collageArrange) collageArrange.hidden = true;
+  if (window.ilToolsOnDeselect) window.ilToolsOnDeselect();
 }
 
 // Multiple pages: each page is its own .lookbook-canvas element inside the
@@ -356,6 +360,7 @@ function ilMakeItemDraggable(item) {
   let dragging = false;
   let moved = false;
   let startX = 0, startY = 0, origLeft = 0, origTop = 0;
+  let groupOrig = null;   // positions of every item of a multi-selection being dragged together
 
   function pointerDown(e) {
     // Let a focused text item keep normal text-cursor/selection behaviour
@@ -364,13 +369,22 @@ function ilMakeItemDraggable(item) {
       const textEl = item.querySelector('.text-item-content');
       if (textEl && document.activeElement === textEl) return;
     }
-    if (e.target.classList.contains('item-resize-handle') || e.target.classList.contains('item-delete-handle')) return;
+    if (e.target.classList.contains('item-resize-handle') || e.target.classList.contains('item-delete-handle') || e.target.classList.contains('item-rotate-handle')) return;
 
     e.preventDefault();
+    // Multi-select: shift / ctrl / cmd-click, or the "select several" toggle, adds or removes the item
+    // from the selection instead of starting a drag.
+    if (window.ilToggleMulti && (e.shiftKey || e.metaKey || e.ctrlKey || (window.ilIsMultiMode && window.ilIsMultiMode()))) {
+      window.ilToggleMulti(item);
+      return;
+    }
     ilSelectItem(item);
     dragging = true;
     moved = false;
     item.style.zIndex = ++ilZIndexCounter;
+    groupOrig = (window.ilMultiSel && window.ilMultiSel.size > 1 && window.ilMultiSel.has(item))
+      ? Array.from(window.ilMultiSel).map(el => ({ el, l: parseFloat(el.style.left) || 0, t: parseFloat(el.style.top) || 0 }))
+      : null;
 
     const point = e.touches ? e.touches[0] : e;
     startX = point.clientX;
@@ -391,13 +405,21 @@ function ilMakeItemDraggable(item) {
     const dx = (point.clientX - startX) / ilZoom;
     const dy = (point.clientY - startY) / ilZoom;
     if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
-    item.style.left = (origLeft + dx) + 'px';
-    item.style.top = (origTop + dy) + 'px';
+    // optional snapping (off unless the user turned it on) — see lookbook-tools.js
+    const pos = window.ilSnapPosition ? window.ilSnapPosition(item, origLeft + dx, origTop + dy) : { left: origLeft + dx, top: origTop + dy };
+    item.style.left = pos.left + 'px';
+    item.style.top = pos.top + 'px';
+    if (groupOrig) {
+      const ddx = pos.left - origLeft, ddy = pos.top - origTop;
+      groupOrig.forEach(g => { if (g.el !== item) { g.el.style.left = (g.l + ddx) + 'px'; g.el.style.top = (g.t + ddy) + 'px'; } });
+    }
   }
 
   function pointerUp() {
     const wasDragging = dragging && moved;
     dragging = false;
+    groupOrig = null;
+    if (window.ilClearGuides) window.ilClearGuides();
     document.removeEventListener('mousemove', pointerMove);
     document.removeEventListener('touchmove', pointerMove);
     document.removeEventListener('mouseup', pointerUp);
@@ -473,6 +495,7 @@ function ilAttachHandles(item) {
   del.textContent = '×';
   del.addEventListener('click', e => {
     e.stopPropagation();
+    if (window.ilMultiSel) window.ilMultiSel.delete(item);
     item.remove();
     if (ilSelectedItem === item) ilDeselectAll();
   });
@@ -654,6 +677,11 @@ function ilMountCollagePanel() {
     emptyNotes: (ilHost().collageEmptyNotes || undefined),
     getCollage: ilGetSelectedCollage,
     createCollage: ilNewCollage,
+    // decorations are free page objects, not pieces locked inside the collage
+    createDecor: kind => { if (window.ilAddShape) window.ilAddShape(kind === 'ring' ? 'circle' : kind); },
+    // colours of the picture actually used in the selected frame (no need to import it again as a swatch)
+    extractColours: slot => window.ilExtractColoursFromSrc ? window.ilExtractColoursFromSrc(slot.src) : Promise.resolve([]),
+    applyColour: hex => { if (window.ilApplyColour) window.ilApplyColour(hex); },
     getSources: ilCollageSources,
     onBack: () => ilSetToolGroup('add'),
     deleteCollage: ctl => {
@@ -820,6 +848,7 @@ function ilCreateTextItem(x, y, restore) {
   item.style.fontFamily = item.dataset.font;
   item.style.fontSize = item.dataset.fontSize + 'px';
   item.style.color = (restore && restore.color) || '#222222';
+  if (restore && restore.opacity !== undefined && restore.opacity !== '') item.style.opacity = String(restore.opacity);
 
   // The editable text lives in its own child node — never a direct
   // sibling of the delete/resize handles — so the browser never treats
@@ -885,7 +914,8 @@ document.getElementById('ilAddTextBtn')?.addEventListener('click', () => {
 
 document.getElementById('ilDeleteItemBtn')?.addEventListener('click', () => {
   if (ilSelectedItem) {
-    ilSelectedItem.remove();
+    const doomed = window.ilMultiSel && window.ilMultiSel.size > 1 ? Array.from(window.ilMultiSel) : [ilSelectedItem];
+    doomed.forEach(el => el.remove());
     ilDeselectAll();
     ilRenderSinglePageThumbnail(ilActivePageIndex);
   }
@@ -1103,51 +1133,13 @@ async function ilBuildPaletteFromCollection() {
 }
 
 function ilRenderPaletteStrip(activeColor) {
-  const strip = document.getElementById('ilPaletteStrip');
-  if (!strip) return;
-  strip.innerHTML = '';
-  ilCurrentPalette.forEach(color => {
-    const wrap = document.createElement('div');
-    wrap.className = 'lookbook-palette-item';
-
-    const sw = document.createElement('button');
-    sw.type = 'button';
-    sw.className = 'lookbook-palette-swatch' + (activeColor === color ? ' active' : '');
-    sw.style.background = color;
-    sw.title = color;
-    sw.addEventListener('click', () => {
-      if (!ilSelectedItem || !ilSelectedItem.classList.contains('text-item')) return;
-      ilSelectedItem.style.color = color;
-      ilRenderPaletteStrip(color);
-    });
-    wrap.appendChild(sw);
-
-    const hex = document.createElement('span');
-    hex.className = 'lookbook-palette-hex';
-    hex.textContent = color.toUpperCase();
-    wrap.appendChild(hex);
-
-    strip.appendChild(wrap);
+  // Text colour uses the same shared swatch component as shape fills/outlines and the page background
+  // (see lookbook-tools.js): the page's colours, any colours extracted from collage pictures, and a custom picker.
+  ilRenderColourStrip(document.getElementById('ilPaletteStrip'), activeColor, color => {
+    if (!ilSelectedItem || !ilSelectedItem.classList.contains('text-item')) return;
+    ilSelectedItem.style.color = color;
+    ilRenderSinglePageThumbnail(ilActivePageIndex);
   });
-
-  // Every extracted palette is a best guess — an eyedropper/custom colour
-  // picker (the browser's native colour input, which on iOS opens a picker
-  // with its own built-in eyedropper) covers whatever the auto-extraction
-  // didn't happen to pick up.
-  const addWrap = document.createElement('div');
-  addWrap.className = 'lookbook-palette-item';
-  const addBtn = document.createElement('button');
-  addBtn.type = 'button';
-  addBtn.className = 'lookbook-palette-swatch lookbook-palette-add';
-  addBtn.title = 'pick a custom colour';
-  addBtn.textContent = '+';
-  addBtn.addEventListener('click', () => document.getElementById('ilCustomColorInput')?.click());
-  addWrap.appendChild(addBtn);
-  const addLabel = document.createElement('span');
-  addLabel.className = 'lookbook-palette-hex';
-  addLabel.textContent = 'custom';
-  addWrap.appendChild(addLabel);
-  strip.appendChild(addWrap);
 }
 
 document.getElementById('ilCustomColorInput')?.addEventListener('input', e => {
@@ -1156,10 +1148,8 @@ document.getElementById('ilCustomColorInput')?.addEventListener('input', e => {
     ilCustomTextColors.push(color);
     ilCurrentPalette.push(color);
   }
-  if (ilSelectedItem && ilSelectedItem.classList.contains('text-item')) {
-    ilSelectedItem.style.color = color;
-  }
-  ilRenderPaletteStrip(color);
+  // whichever swatch strip asked for a custom colour gets it (text, shape fill, outline, page background)
+  if (window.ilCustomColourHandler) window.ilCustomColourHandler(color);
 });
 
 // Populate page 1 from whatever mock-ups/scenes are currently selected,
@@ -1224,7 +1214,11 @@ async function ilRenderImageStrip() {
   });
 }
 
-function ilRefreshHostStrips() { ilRenderPatternStrip(); ilRenderImageStrip(); if (ilCollagePanel) ilCollagePanel.reloadSources(); }
+function ilRefreshHostStrips() {
+  ilRenderPatternStrip(); ilRenderImageStrip(); if (ilCollagePanel) ilCollagePanel.reloadSources();
+  // new uploads add their colours to every colour picker (text, shapes, page background)
+  ilBuildPaletteFromCollection().then(() => { if (ilSelectedItem) ilRefreshSelectionControls(ilSelectedItem); if (window.ilRefreshColourStrips) window.ilRefreshColourStrips(); }).catch(() => {});
+}
 
 // Page background controls now live directly in the Style panel (the standalone popover they used
 // to be in was retired — the Style panel already opens on demand via the tool rail, which made the
@@ -1583,11 +1577,16 @@ async function ilRasterizeCanvas(canvasEl, scaleFactor, bg) {
     ctx.translate(x + iw / 2, y + ih / 2);
     ctx.rotate(rotate * Math.PI / 180);
     ctx.translate(-iw / 2, -ih / 2);
+    // item opacity (text and shapes have an opacity control; everything else is 1)
+    const itemOpacity = item.style.opacity === '' ? 1 : parseFloat(item.style.opacity);
+    if (isFinite(itemOpacity)) ctx.globalAlpha = Math.max(0, Math.min(1, itemOpacity));
 
     if (item.__collage && window.ScCollage) {
       // Same engine + same maths as the live DOM, so the export matches the screen. Editor
       // chrome (handles, dividers, empty-cell placeholders) is never drawn here.
       await window.ScCollage.drawCanvas(ctx, item.__collage.model, iw, ih, ilCollageLoadImage);
+    } else if (item.classList.contains('shape-item')) {
+      if (window.ilDrawShapeItem) window.ilDrawShapeItem(ctx, item, iw, ih);
     } else if (item.classList.contains('text-item')) {
       const textEl = item.querySelector('.text-item-content');
       if (textEl && textEl.dataset.placeholder !== 'true') {
@@ -1721,8 +1720,13 @@ function ilSerializeLookbookItem(item) {
       text: (textEl && textEl.dataset.placeholder !== 'true') ? textEl.textContent : '',
       font: item.dataset.font || "'Quicksand', sans-serif",
       fontSize: item.dataset.fontSize || '24',
-      color: item.style.color || '#222222'
+      color: item.style.color || '#222222',
+      opacity: item.style.opacity || ''
     });
+  }
+
+  if (item.classList.contains('shape-item') && window.ilSerializeShape) {
+    return Object.assign(base, window.ilSerializeShape(item));
   }
 
   if (item.classList.contains('palette-item')) {
@@ -1754,6 +1758,7 @@ function ilRestoreLookbookItem(data) {
       font: data.font,
       fontSize: data.fontSize,
       color: data.color,
+      opacity: data.opacity,
       width: data.width,
       height: data.height,
       zIndex: data.zIndex
@@ -1768,6 +1773,8 @@ function ilRestoreLookbookItem(data) {
         zIndex: data.zIndex
       });
     }
+  } else if (data.type === 'shape') {
+    if (window.ilRestoreShape) window.ilRestoreShape(data, x, y);
   } else if (data.type === 'palette') {
     ilCreatePaletteItem({
       colors: data.colors || [],

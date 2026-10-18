@@ -116,7 +116,7 @@
   function newSlot(src, extra) {
     var s = {
       id: uid('s'), src: src || null, kind: 'image', ar: 1, name: '',
-      fit: 'cover', zoom: 1, offX: 0, offY: 0, tile: 40,
+      fit: 'cover', zoom: 1, offX: 0, offY: 0, tile: 40, tilePx: 0, patX: 0, patY: 0,
       mask: null, border: { w: 0, color: '#ffffff' }, shadow: 0,
       z: 0, rot: 0, free: null, freeEdited: false
     };
@@ -130,7 +130,7 @@
       v: VERSION,
       mode: 'layout',
       layout: { kind: 'template', templateId: opts.templateId || 'quadrants', colWeights: null, rowWeights: null },
-      gutter: 2.5, pad: 3, radius: 0, mask: 'rect', autoPick: false,
+      gutter: 2.5, pad: 3, radius: 0, mask: 'rect', autoPick: false, scaleMode: 'frame',
       bg: { type: 'none', color: '#ffffff' },
       slots: [], decor: [], nextZ: 1
     };
@@ -150,6 +150,7 @@
     out.gutter = num(m.gutter, out.gutter); out.pad = num(m.pad, out.pad); out.radius = num(m.radius, 0);
     out.mask = MASKS.indexOf(m.mask) >= 0 ? m.mask : 'rect';
     out.autoPick = !!m.autoPick;
+    out.scaleMode = m.scaleMode === 'fixed' ? 'fixed' : 'frame';
     if (m.bg) out.bg = { type: m.bg.type === 'solid' ? 'solid' : 'none', color: m.bg.color || '#ffffff' };
     out.slots = (m.slots || []).map(function (s) { return newSlot(s.src, clone(s)); });
     out.slots.forEach(function (s) { if (!s.id) s.id = uid('s'); });
@@ -556,6 +557,38 @@
     return '<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible">' + inner + '</svg>';
   }
 
+  /* Pattern geometry for a repeat-pattern slot of width `w` px.
+     'frame' mode (default, the original behaviour): tile width is a % of the slot width, so the pattern
+     grows and shrinks with its frame.
+     'fixed' mode ("keep pattern scale"): tile width is an absolute size (slot.tilePx, in the collage's own px),
+     so resizing the frame only reveals or crops more of the pattern.
+     patX / patY nudge the pattern inside its frame, as a % of one tile (so a nudge scales with the pattern). */
+  function patternGeom(model, slot, w) {
+    var tw = (model && model.scaleMode === 'fixed' && slot.tilePx > 0) ? slot.tilePx : w * (slot.tile || 40) / 100;
+    tw = Math.max(4, tw);
+    return { tw: tw, ox: (slot.patX || 0) / 100 * tw, oy: (slot.patY || 0) / 100 * tw };
+  }
+
+  // Switch resize mode without any visual jump: the pattern keeps exactly the size it has right now.
+  function setScaleMode(model, mode, W, H) {
+    mode = mode === 'fixed' ? 'fixed' : 'frame';
+    var res = resolve(model, W, H);
+    res.items.forEach(function (it) {
+      var s = it.slot;
+      if (s.kind !== 'pattern') return;
+      var tw = patternGeom(model, s, it.w).tw;
+      if (mode === 'fixed') s.tilePx = Math.round(tw * 100) / 100;
+      else { s.tile = clamp(Math.round(tw / Math.max(1, it.w) * 1000) / 10, 8, 100); s.tilePx = 0; }
+    });
+    model.scaleMode = mode;
+  }
+
+  // The pattern-scale slider, in both modes, means "% of this frame's width right now".
+  function setPatternScale(model, slot, pct, slotW) {
+    slot.tile = clamp(pct, 8, 100);
+    slot.tilePx = model.scaleMode === 'fixed' ? Math.round(slotW * slot.tile) / 100 : 0;
+  }
+
   function ensureStyles() {
     if (document.getElementById('sccl-engine-css')) return;
     var st = document.createElement('style');
@@ -619,7 +652,8 @@
         if (!clip.__empty) { clip.innerHTML = '<div class="sccl-empty">+</div>'; clip.__empty = true; clip.__srcKey = null; }
       } else if (s.kind === 'pattern') {
         if (clip.__srcKey !== 'p:' + s.src) { clip.innerHTML = '<div class="sccl-pat"></div>'; clip.firstChild.style.backgroundImage = 'url("' + s.src + '")'; clip.__srcKey = 'p:' + s.src; clip.__empty = false; }
-        applyStyle(clip.firstChild, { backgroundSize: (s.tile || 40) + '% auto' });
+        var pg = patternGeom(model, s, it.w);
+        applyStyle(clip.firstChild, { backgroundSize: pg.tw + 'px auto', backgroundPosition: pg.ox + 'px ' + pg.oy + 'px' });
       } else {
         if (clip.__srcKey !== 'i:' + s.src) {
           clip.innerHTML = ''; var img = document.createElement('img'); img.className = 'sccl-img'; img.draggable = false; img.src = s.src;
@@ -693,21 +727,25 @@
     ctx.drawImage(img, cx - dw / 2, cy - dh / 2, dw, dh);
   }
 
-  // Same behaviour as the Lookbook's ilDrawTiledPattern: tile width is a % of the BOX width.
-  function drawTiled(ctx, img, w, h, tilePct) {
-    var tw = Math.max(4, Math.round(w * (tilePct || 40) / 100));
+  // Same behaviour as the Lookbook's ilDrawTiledPattern: tile width comes from patternGeom (a % of the slot
+  // width, or an absolute size in 'fixed' mode); ox/oy shift the pattern inside the frame.
+  function drawTiled(ctx, img, w, h, pg) {
+    var tw = Math.max(4, Math.round(pg.tw));
     var th = Math.max(4, Math.round(tw * ((img.naturalHeight || img.height) / (img.naturalWidth || img.width) || 1)));
     var c = document.createElement('canvas'); c.width = tw; c.height = th;
     c.getContext('2d').drawImage(img, 0, 0, tw, th);
+    ctx.save();
+    ctx.translate(pg.ox || 0, pg.oy || 0);
     ctx.fillStyle = ctx.createPattern(c, 'repeat');
-    ctx.fillRect(0, 0, w, h);
+    ctx.fillRect(-(pg.ox || 0), -(pg.oy || 0), w, h);
+    ctx.restore();
   }
 
   function drawSlotContent(ctx, model, slot, img, w, h) {
     ctx.save();
     tracePath(ctx, effectiveMask(model, slot), 0, 0, w, h, model.radius);
     ctx.clip();
-    if (slot.kind === 'pattern') drawTiled(ctx, img, w, h, slot.tile);
+    if (slot.kind === 'pattern') drawTiled(ctx, img, w, h, patternGeom(model, slot, w));
     else drawFitted(ctx, img, w, h, slot);
     var bw = slot.border && slot.border.w > 0 ? slot.border.w / 100 * Math.min(w, h) : 0;
     if (bw) {
@@ -839,4 +877,6 @@
   SC.renderDom = renderDom; SC.drawCanvas = drawCanvas; SC.tracePath = tracePath;
   SC.shadowParams = shadowParams; SC.toTemplate = toTemplate; SC.applyTemplate = applyTemplate;
   SC.clamp = clamp; SC.uid = uid;
+  SC.patternGeom = patternGeom; SC.setScaleMode = setScaleMode; SC.setPatternScale = setPatternScale;
+  SC.HEART = HEART; SC.POLY = POLY;
 })(typeof window !== 'undefined' ? window : globalThis);
