@@ -704,3 +704,47 @@
   white-space: nowrap;
   flex: 0 0 auto;
 }
+
+
+/* ===== Creative Lookbook page tools: free shapes, colour swatches, selection, alignment ===== */
+.canvas-item.shape-item { border: 0; border-radius: 0; background: transparent; outline: 2px solid transparent; }
+.canvas-item.shape-item.selected { outline-color: var(--accent); }
+.canvas-item.shape-item .item-resize-handle { width: 26px; height: 26px; right: -13px; bottom: -13px; }
+.canvas-item.shape-item .item-delete-handle { width: 26px; height: 26px; line-height: 22px; font-size: 15px; top: -13px; right: -13px; }
+.canvas-item .item-rotate-handle {
+  position: absolute; left: 50%; top: -38px; width: 28px; height: 28px; margin-left: -14px; border-radius: 50%;
+  background: var(--accent); color: #fff; border: 2px solid #fff; font-size: 16px; line-height: 24px; text-align: center;
+  cursor: grab; display: none; touch-action: none; user-select: none;
+}
+.canvas-item.selected .item-rotate-handle { display: block; }
+.canvas-item.multi-selected { outline: 2px dashed var(--accent2, #3aa6a0); outline-offset: 1px; }
+.il-guide { position: absolute; pointer-events: none; z-index: 99998; background: var(--accent3, #ff8a5b); }
+.il-guide-v { top: 0; bottom: 0; width: 1px; }
+.il-guide-h { left: 0; right: 0; height: 1px; }
+
+/* one colour-swatch component for text, shape fill/outline, page background and extracted colours */
+.il-strip { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.il-sw {
+  width: 34px; height: 34px; border-radius: 50%; padding: 0; flex: 0 0 auto; cursor: pointer;
+  border: 2px solid rgba(255,255,255,0.8); box-shadow: 0 0 0 1px rgba(0,0,0,0.3); background: #ccc;
+}
+.il-sw.active { box-shadow: 0 0 0 1px rgba(0,0,0,0.3), 0 0 0 4px var(--accent); }
+.il-sw-add { background: rgba(255,255,255,0.85); color: #333; font-size: 20px; line-height: 1; font-weight: 700; display: grid; place-items: center; }
+#ilGroupStyle .lookbook-palette-swatch { width: 34px; height: 34px; }
+#ilGroupStyle .lookbook-palette-hex { display: none; }
+#ilGroupStyle .lookbook-palette-strip { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.il-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.il-chip { padding: 9px 12px; min-height: 40px; font-size: 13px; border-radius: 999px; border: 1px solid var(--border); background: rgba(255,255,255,0.55); color: var(--text, inherit); cursor: pointer; }
+.il-toggle.on { background: var(--accent); color: #fff; }
+.il-seg { display: flex; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 8px; }
+.il-seg button { flex: 1; border: 0; border-radius: 0; padding: 10px 6px; min-height: 42px; font-size: 13px; background: transparent; color: var(--muted); cursor: pointer; }
+.il-seg button.on { background: var(--accent); color: #fff; }
+.il-seg button:disabled { opacity: .45; }
+.il-grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 6px; }
+.il-grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+.il-grid3 button, .il-grid2 button { min-height: 44px; padding: 8px 4px; font-size: 13px; }
+#ilAlignBlock.il-disabled { opacity: .6; }
+
+.il-grid3 button, .il-grid2 button { min-width: 0; width: 100%; box-sizing: border-box; padding-left: 2px; padding-right: 2px; }
+.il-grid3 > *, .il-grid2 > * { min-width: 0; }

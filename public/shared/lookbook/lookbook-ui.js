@@ -9,6 +9,8 @@
 (function (global) {
   'use strict';
   var HTML = `  <div class="lookbook-editor-card">
+    <!-- shared custom-colour picker for every swatch strip; lives outside any hidden section so iPad Safari will open it -->
+    <input type="color" id="ilCustomColorInput" aria-hidden="true" tabindex="-1" style="position:fixed; left:0; top:0; width:1px; height:1px; opacity:0; pointer-events:none; border:none; padding:0;">
     <div class="lookbook-editor-topbar">
       <button type="button" class="secondary" id="lbHomeBtn" title="back to your projects">‹ projects</button>
       <h2 class="lb-title"><input id="lbProjectName" type="text" value="" placeholder="untitled lookbook" aria-label="project name" maxlength="80" autocomplete="off" spellcheck="false"></h2>
@@ -60,6 +62,12 @@
               <button class="secondary" id="lbUploadImagesBtn" type="button">＋ upload images</button>
             </div>
 
+            <div class="lookbook-tool-block">
+              <h4>decorative shapes</h4>
+              <div class="il-chips" id="ilShapeKinds"></div>
+              <p class="lookbook-tool-hint">shapes are free objects: drag them anywhere, over anything, then colour them in Style.</p>
+            </div>
+
             <button class="secondary" id="ilAddPaletteBtn" type="button" title="uses the colours of your patterns and images">+ add colour palette</button>
             <button class="secondary" id="ilAddTextBtn" type="button">+ add text</button>
             <button class="secondary" id="ilOpenCollageBtn" type="button" title="build a collage from patterns, mock-ups and photos">🧩 collage builder</button>
@@ -71,6 +79,34 @@
 
           <section id="ilGroupArrange" class="lookbook-tool-group" hidden>
             <button class="secondary" id="ilDeleteItemBtn" type="button" disabled>delete selected</button>
+
+            <div class="lookbook-tool-block">
+              <h4>selecting &amp; snapping</h4>
+              <button class="secondary il-toggle" id="ilMultiBtn" type="button" aria-pressed="false">☑ select several</button>
+              <button class="secondary" id="ilSelectAllBtn" type="button">select everything on this page</button>
+              <button class="secondary il-toggle" id="ilSnapBtn" type="button" aria-pressed="false">snapping to guides: off</button>
+            </div>
+
+            <div class="lookbook-tool-block" id="ilAlignBlock">
+              <h4>align</h4>
+              <div class="il-seg" id="ilAlignRel" role="group" aria-label="align relative to">
+                <button type="button" data-rel="page" class="on">to the page</button>
+                <button type="button" data-rel="selection">to the selection</button>
+              </div>
+              <div class="il-grid3">
+                <button type="button" class="secondary" data-align="left" title="align left">⇤ left</button>
+                <button type="button" class="secondary" data-align="center" title="align centre">↔ centre</button>
+                <button type="button" class="secondary" data-align="right" title="align right">right ⇥</button>
+                <button type="button" class="secondary" data-align="top" title="align top">⤒ top</button>
+                <button type="button" class="secondary" data-align="middle" title="align middle">↕ middle</button>
+                <button type="button" class="secondary" data-align="bottom" title="align bottom">⤓ bottom</button>
+              </div>
+              <div class="il-grid2">
+                <button type="button" class="secondary" data-distribute="h" title="space evenly, left to right">space across</button>
+                <button type="button" class="secondary" data-distribute="v" title="space evenly, top to bottom">space down</button>
+              </div>
+              <p class="lookbook-tool-hint" id="ilAlignNote"></p>
+            </div>
 
             <div id="ilLayerControls" class="lookbook-tool-block" hidden>
               <h4>rotation &amp; resizing</h4>
@@ -99,7 +135,33 @@
                 <button type="button" class="secondary" id="ilPageBgImageBtn">upload image…</button>
                 <input type="file" id="ilPageBgImageFile" accept="image/*" hidden>
               </div>
+              <div class="lookbook-palette-strip il-strip" id="ilPageBgStrip"></div>
               <button type="button" class="secondary" id="ilPageBgClearBtn">clear (white)</button>
+            </div>
+
+            <div id="ilExtractedBlock" class="lookbook-tool-block" hidden>
+              <h4>colours from your pictures</h4>
+              <div class="lookbook-palette-strip il-strip" id="ilExtractedStrip"></div>
+              <p class="lookbook-tool-hint">tap one to colour the selected text or shape, or the page background if nothing is selected.</p>
+              <button type="button" class="secondary" id="ilAddExtractedPaletteBtn">add these as a palette on the page</button>
+            </div>
+
+            <div id="ilShapeControls" class="lookbook-tool-block" hidden>
+              <h4>shape</h4>
+              <div id="ilShapeFillRow">
+                <label>fill</label>
+                <div class="lookbook-palette-strip il-strip" id="ilShapeFillStrip"></div>
+                <button type="button" class="secondary il-toggle" id="ilShapeNoFillBtn">no fill</button>
+              </div>
+              <label>outline colour</label>
+              <div class="lookbook-palette-strip il-strip" id="ilShapeStrokeStrip"></div>
+              <button type="button" class="secondary il-toggle" id="ilShapeNoStrokeBtn">no outline</button>
+              <label>outline width <span id="ilShapeStrokeWValue">0px</span></label>
+              <input type="range" id="ilShapeStrokeWSlider" min="0" max="40" step="1" value="0">
+              <label>opacity <span id="ilShapeOpacityValue">100%</span></label>
+              <input type="range" id="ilShapeOpacitySlider" min="5" max="100" step="1" value="100">
+              <label>rotate <span id="ilShapeRotateValue">0°</span></label>
+              <input type="range" id="ilShapeRotateSlider" min="0" max="359" step="1" value="0">
             </div>
 
             <div id="ilShadowGroup" class="lookbook-tool-block" hidden>
@@ -130,8 +192,11 @@
               <label>size <span id="ilFontSizeValue">24px</span></label>
               <input type="range" id="ilFontSizeSlider" min="10" max="96" value="24">
               <label>colour</label>
-              <div class="lookbook-palette-strip" id="ilPaletteStrip"></div>
-              <input type="color" id="ilCustomColorInput" style="position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; border:none; padding:0;">
+              <div class="lookbook-palette-strip il-strip" id="ilPaletteStrip"></div>
+              <div id="ilTextOpacityRow" hidden>
+                <label>text opacity <span id="ilTextOpacityValue">100%</span></label>
+                <input type="range" id="ilTextOpacitySlider" min="5" max="100" step="1" value="100">
+              </div>
             </div>
           </section>
 

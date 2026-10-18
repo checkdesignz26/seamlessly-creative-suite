@@ -54,6 +54,7 @@
     ensureStyles();
     var model = opts.model;
     var editing = false, sel = null, lastRes = null, raf = 0;
+    var panMode = false;   // when on, dragging a photo/pattern moves the picture INSIDE its frame instead of moving/swapping the frame
 
     var ui = document.createElement('div'); ui.className = 'sccl-ui'; host.appendChild(ui);
 
@@ -203,7 +204,16 @@
         var wasSelected = sel && sel.id === id;
         select({ type: type, id: id });
         var o2 = selectedObj(); if (!o2) return;
-        if (type === 'decor' || model.mode === 'free') {
+        if (panMode && type === 'slot' && o2.src) {
+          var rect0 = el.getBoundingClientRect(), hr0 = host.getBoundingClientRect();
+          var kx = (hr0.width || 1) / s.W;
+          if (o2.kind === 'pattern') {
+            var itp = lastRes && lastRes.items.filter(function (i) { return i.slot === o2; })[0];
+            drag = { kind: 'patpan', obj: o2, startP: p, ox: o2.patX || 0, oy: o2.patY || 0, tw: SC.patternGeom(model, o2, itp ? itp.w : rect0.width / kx).tw, pid: e.pointerId };
+          } else {
+            drag = { kind: 'pan', obj: o2, startP: p, ox: o2.offX || 0, oy: o2.offY || 0, w: rect0.width / kx, h: rect0.height / ((hr0.height || 1) / s.H), pid: e.pointerId };
+          }
+        } else if (type === 'decor' || model.mode === 'free') {
           var g2 = geomPct(o2, type);
           drag = { kind: 'move', obj: o2, gp: g2, type: type, startP: p, ox: g2.x, oy: g2.y, moved: false, pid: e.pointerId };
         } else if (wasSelected && o2.src && o2.kind !== 'pattern' && (o2.zoom || 1) > 1) {
@@ -250,6 +260,10 @@
         drag.obj.offX = SC.clamp(drag.ox + (p.x - drag.startP.x) / bw * 100, -mo, mo);
         drag.obj.offY = SC.clamp(drag.oy + (p.y - drag.startP.y) / bh * 100, -mo, mo);
         schedule(); change(false);
+      } else if (drag.kind === 'patpan') {
+        drag.obj.patX = drag.ox + (p.x - drag.startP.x) / drag.tw * 100;
+        drag.obj.patY = drag.oy + (p.y - drag.startP.y) / drag.tw * 100;
+        schedule(); change(false);
       } else if (drag.kind === 'divider') {
         var g = lastRes.grid, k = drag.k, arr = drag.arr.slice();
         var delta = (drag.axis === 'col' ? p.x - drag.startP.x : p.y - drag.startP.y);
@@ -286,6 +300,10 @@
         var to = lastRes.items[d.target] ? model.slots.indexOf(lastRes.items[d.target].slot) : -1;
         if (from >= 0 && to >= 0 && from !== to) SC.swapSlots(model, from, to);
       }
+      if (d.kind === 'patpan') {   // a repeat looks identical every whole tile, so keep the stored offset small
+        var wrap = function (v) { return ((((v + 50) % 100) + 100) % 100) - 50; };
+        d.obj.patX = wrap(d.obj.patX || 0); d.obj.patY = wrap(d.obj.patY || 0);
+      }
       refresh(); change(true);
     }
     host.addEventListener('pointerup', end, true);
@@ -302,7 +320,9 @@
     var api = {
       model: model,
       setModel: function (m) { model = m; api.model = m; sel = null; refresh(); },
-      setEditing: function (on) { editing = !!on; if (!editing) { var had = !!sel; sel = null; if (had && opts.onSelect) opts.onSelect(null); } refresh(); },
+      setPanMode: function (on) { panMode = !!on; },
+      isPanMode: function () { return panMode; },
+      setEditing: function (on) { editing = !!on; if (!editing) { panMode = false; var had = !!sel; sel = null; if (had && opts.onSelect) opts.onSelect(null); } refresh(); },
       isEditing: function () { return editing; },
       select: select,
       getSelection: function () { return sel ? { type: sel.type, id: sel.id } : null; },

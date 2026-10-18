@@ -126,11 +126,15 @@ with sync_playwright() as p:
     check('tapping a cell selects it and shows the photo controls', ev("document.querySelector('#ilCollageRoot .lookbook-tool-block h4') && [...document.querySelectorAll('#ilCollageRoot h4')].some(h=>h.textContent==='selected photo' && !h.parentElement.hidden)"))
     pg.click("#ilCollageRoot .sccl-chip[data-mask='heart']"); pg.wait_for_timeout(150)
     ev("""()=>{ const c=ilSelectedItem.__collage; const o=c.editor.getSelectedObject(); o.shadow=60; o.border={w:3,color:'#ffffff'}; o.zoom=1.6; o.offX=5; c.editor.refresh(); c.commit(true); }""")
-    pg.click("#ilCollageRoot summary:has-text('decorations')"); pg.click("#ilCollageRoot .sccl-chip:has-text('tape')"); pg.wait_for_timeout(200)
+    # decorations are now FREE page objects (shape items), not pieces locked inside the collage
+    pg.click("#ilCollageRoot summary:has-text('decorative shapes')"); pg.click("#ilCollageRoot .sccl-chip:has-text('tape')"); pg.wait_for_timeout(200)
+    ev("()=>{ ilSelectItem(document.querySelector('.collage-item')); ilSetToolGroup('collage'); }"); pg.wait_for_timeout(250)
+    ev("()=>{ [...document.querySelectorAll('#ilCollageRoot details')].forEach(d=>{ if (d.textContent.includes('decorative shapes')) d.open = true; }); }")
     pg.click("#ilCollageRoot .sccl-chip:has-text('star')"); pg.wait_for_timeout(200)
+    ev("()=>{ ilSelectItem(document.querySelector('.collage-item')); ilSetToolGroup('collage'); }"); pg.wait_for_timeout(250)
     m = model()
     check('mask / shadow / border / zoom stored on the photo', m['slots'][0]['mask'] == 'heart' and m['slots'][0]['shadow'] == 60 and m['slots'][0]['border']['w'] == 3)
-    check('two decorations added', len(m['decor']) == 2)
+    check('two decorative shapes added as free page objects (none inside the collage)', len(m['decor']) == 0 and ev("document.querySelectorAll('.shape-item').length") == 2)
     pg.screenshot(path=OUT + '/03_styled.png')
 
     print('Saving as a reusable template')
