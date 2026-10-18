@@ -416,7 +416,7 @@ html.in-suite .suite-only{display:block!important}
 .tb-row .tool-btn,.tb-row .pill,.tb-name{min-height:44px;white-space:nowrap;flex:0 0 auto;box-sizing:border-box}
 .tb-row .pill{display:inline-flex;align-items:center;flex:0 1 auto;min-width:0;max-width:36vw;overflow:hidden;text-overflow:ellipsis;font-size:13px}
 .tb-name{display:flex;align-items:center;gap:6px;flex:0 1 auto;min-width:96px;max-width:280px;border:1px solid var(--btnBorder);border-radius:12px;background:var(--btnBg);color:var(--text);padding:8px 12px;font:inherit;font-size:14px;font-weight:850;cursor:pointer}
-.tb-name #projNameTxt{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+.tb-name #projNameTxt{flex:1 1 auto;min-width:0;overflow:hidden;white-space:nowrap;text-align:left}
 .tb-caret{flex:none;opacity:.7}
 .tb-status{flex:0 0 auto;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px;font-weight:700;opacity:.75;background:none!important;border:0!important;padding:0 2px!important;min-width:0!important;cursor:default}
 #saveStatusPill.saving{opacity:.6;font-style:italic}#saveStatusPill.failed{opacity:1;color:#c0392b;font-weight:900}
@@ -425,6 +425,31 @@ html.in-suite .suite-only{display:block!important}
 #selMenuBtn{min-width:104px}
 #tbEditBtn.active{background:var(--accentTeal,#5cb8ab);color:#fff}
 .tb-row .tool-btn.active,.tb-row .tool-btn.sel-on{box-shadow:0 0 0 2px var(--pink)}
+.col-strip{position:fixed;left:92px;right:14px;bottom:46px;z-index:140;display:none;align-items:center;gap:8px;padding:8px 10px;background:var(--sideBg);color:var(--text);border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 34px rgba(0,0,0,.34);max-width:calc(100vw - 106px)}
+.col-head,.col-add,.col-x{flex:0 0 auto;border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:12px;padding:0 12px;min-height:44px;font:inherit;font-weight:700;cursor:pointer}
+.col-add{font-size:22px;min-width:48px}.col-x{opacity:.7;min-width:40px}
+.col-scroll{flex:1 1 auto;display:flex;gap:8px;overflow-x:auto;padding:2px;-webkit-overflow-scrolling:touch}
+.col-card{position:relative;flex:0 0 auto;width:110px;border:2px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden;cursor:pointer}
+.col-card.on{border-color:#c47ae0;box-shadow:0 0 0 2px rgba(196,122,224,.35)}
+.col-card img{display:block;width:100%;height:54px;object-fit:cover;background:#fff}
+.col-name{display:block;font-size:12px;font-weight:700;padding:3px 24px 4px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.col-strip.collapsed{left:92px;right:auto;bottom:46px;padding:4px;border-radius:14px}
+.col-card{touch-action:pan-x;-webkit-user-select:none;user-select:none}
+.col-card.drag{z-index:5;opacity:.9;box-shadow:0 8px 22px rgba(0,0,0,.4);transition:none}
+.col-name-input{display:block;width:calc(100% - 4px);box-sizing:border-box;margin:2px;font:inherit;font-size:12px;font-weight:700;padding:2px 4px;border:1px solid #c47ae0;border-radius:6px;background:#fff;color:#222}
+.col-more{position:absolute;right:0;bottom:0;width:28px;height:26px;border:0;background:transparent;color:var(--text);font-size:18px;font-weight:800;cursor:pointer}
+.col-card{width:98px}.col-card img{height:50px}
+.col-card:not(.on){opacity:.88}
+.col-card.on .col-name{background:#c47ae0;color:#fff}
+.col-tag{position:absolute;left:4px;top:4px;background:#c47ae0;color:#fff;font-size:10px;font-weight:800;letter-spacing:.3px;padding:1px 6px;border-radius:8px;pointer-events:none}
+.col-card.fresh{animation:colFresh 1.1s ease-out 2}
+@keyframes colFresh{0%,100%{box-shadow:0 0 0 0 rgba(196,122,224,0)}50%{box-shadow:0 0 0 6px rgba(196,122,224,.55)}}
+.tb-name.two{padding:3px 12px;gap:8px}
+.tb-name .tb-two{display:flex;flex-direction:column;align-items:flex-start;min-width:0;line-height:1.1;text-align:left}
+.tb-cap{font-size:9.5px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;opacity:.62}
+.tb-nm{font-size:14px;font-weight:850;max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#patNameChip.tb-name{border-color:#c47ae0}
+
 .tb-menu{position:fixed;z-index:160;min-width:250px;max-width:min(360px,calc(100vw - 16px));overflow:auto;background:var(--sideBg);color:var(--text);border:1px solid var(--line);border-radius:16px;padding:8px;box-shadow:0 18px 50px rgba(0,0,0,.38);-webkit-overflow-scrolling:touch}
 .tb-item{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:10px 12px;border:0;border-radius:10px;background:transparent;color:var(--text);font:inherit;font-size:15px;font-weight:800;text-align:left;cursor:pointer}
 .tb-item:active{background:var(--accentPurple)}.tb-item.on{background:var(--accentPurple);box-shadow:inset 0 0 0 2px var(--pink)}
@@ -477,7 +502,7 @@ html.in-suite .suite-only{display:block!important}
 .pal-sel{flex:1;min-width:0;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text)}
 .size-combo{display:flex;align-items:center;gap:2px}
 .size-combo input.size-num{width:58px;min-width:0;padding:6px 4px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:15px;text-align:center}
-.size-combo select.size-pick{width:30px;padding:6px 0;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:transparent;font-size:14px}
+.size-combo select.size-pick{width:30px;padding:6px 0;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23777' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/12px 8px no-repeat;-webkit-appearance:none;appearance:none;color:transparent;font-size:14px}
 .size-combo select.size-pick option{color:#222}
 .slider-row.has-size{grid-template-columns:64px 1fr auto}
 .pen-bar{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;z-index:30;display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:94%;padding:8px 10px;border-radius:14px;background:var(--btnBg);border:1px solid var(--btnBorder);box-shadow:0 6px 18px rgba(0,0,0,.18);font-size:12.5px;color:var(--muted)}
@@ -1090,13 +1115,14 @@ html.in-suite .suite-only{display:block!important}
     </div>
     <div class="hint" id="groupHint" style="margin:0 0 8px;"></div>
     <div class="row" style="gap:6px;"><button id="groupBtn" class="btn mini primary" style="flex:1">🧩 Group</button><button id="ungroupBtn" class="btn mini" style="flex:1">🧩 Ungroup</button></div>
+    <div class="row" style="margin-top:6px;gap:6px;"><button id="grpAddBtn" class="btn mini" style="flex:1" title="Tap more things to add or remove them">＋ Add / remove</button><button id="grpInsideBtn" class="btn mini" style="flex:1" title="Select one part of the group to edit it">✎ Edit inside</button></div>
     <div class="row" style="margin-top:6px;"><button id="grpMotifBtn" class="btn mini" style="flex:1" title="Turns the drawing into one motif that moves and resizes instantly. Edit Motif brings the strokes back.">📦 Turn into motif (fast)</button></div>
     <div class="row" style="margin-top:6px;gap:6px;"><button id="grpLockBtn" class="btn mini active" style="flex:1" title="Keep the shape's proportions while resizing">🔒 Proportions locked</button><button id="grpScaleStrokesBtn" class="btn mini active" style="flex:1" title="Line thickness grows and shrinks with the artwork">〰️ Scale strokes: On</button></div>
     <div class="row" style="margin-top:6px;gap:6px;align-items:center;"><span style="font-size:12.5px;opacity:.8;width:44px;">Size</span><input id="grpSizePct" type="number" min="5" max="1000" value="100" style="width:70px;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);">%<button id="grpSizeBtn" class="btn mini" style="flex:1">Resize</button></div>
     <div class="row" style="margin-top:6px;gap:6px;align-items:center;"><span style="font-size:12.5px;opacity:.8;width:44px;">Turn</span><input id="grpTurnDeg" type="number" min="-360" max="360" value="90" style="width:70px;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);">°<button id="grpTurnBtn" class="btn mini" style="flex:1">Turn</button></div>
-    <div class="row" style="margin-top:6px;gap:6px;align-items:center;"><span style="font-size:12.5px;opacity:.8;width:44px;">Colour</span><input id="grpColour" type="color" value="#000000" style="width:44px;height:34px;padding:0;border:none;background:none;"><span style="font-size:12.5px;opacity:.8;margin-left:6px;">Line</span><input id="grpWidth" type="number" min="1" max="200" placeholder="size" style="width:62px;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);"><button id="grpEditAllBtn" class="btn mini" style="flex:1" title="Apply the colour, line size and opacity to everything selected">Apply to all</button></div>
+    <div class="row" style="margin-top:6px;gap:6px;align-items:center;"><span style="font-size:12.5px;opacity:.8;width:44px;">Colour</span><input id="grpColour" type="color" value="#000000" style="width:44px;height:34px;padding:0;border:none;background:none;"><span style="font-size:12.5px;opacity:.8;margin-left:6px;">Line</span><input id="grpWidth" list="sizePresetList" type="number" min="0.05" step="any" max="400" placeholder="size" style="width:62px;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);"><button id="grpEditAllBtn" class="btn mini" style="flex:1" title="Apply the colour, line size and opacity to everything selected">Apply to all</button></div>
+    <div class="row" style="margin-top:6px;gap:6px;align-items:center;"><span style="font-size:12.5px;opacity:.8;width:44px;">Fill</span><input id="grpFillColour" type="color" value="#f2c14e" title="Fill colour for every closed shape in the selection" style="width:44px;height:34px;padding:0;border:none;background:none;"><button id="grpFillBtn" class="btn mini" style="flex:1" title="Fill every closed shape in the selection with this colour">🎨 Fill all</button><button id="grpNoFillBtn" class="btn mini" style="flex:1" title="Take the fill off every shape in the selection">No fill</button><datalist id="sizePresetList"></datalist></div>
     <div class="row" style="margin-top:6px;gap:6px;align-items:center;"><span style="font-size:12.5px;opacity:.8;width:44px;">Opacity</span><input id="grpOpacity" type="number" min="1" max="100" placeholder="%" style="width:62px;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);"><button id="grpUseBrushBtn" class="btn mini" style="flex:1" title="Redraws every selected stroke with the brush you have chosen now, keeping each stroke's own colour and size">🖌️ Use my current brush</button></div>
-    <div class="row" style="margin-top:6px;gap:6px;"><button id="grpAddBtn" class="btn mini" style="flex:1" title="Tap more things to add or remove them">＋ Add / remove</button><button id="grpInsideBtn" class="btn mini" style="flex:1" title="Select one part of the group to edit it">✎ Edit inside</button></div>
     <div class="row" style="margin-top:6px;gap:6px;"><button id="grpBlendBtn" class="btn mini" style="flex:1" title="Select two motifs or two groups, then Blend to make steps between them">🌀 Blend two…</button></div>
     <div class="row" style="margin-top:6px;gap:6px;"><button id="grpDeleteBtn" class="btn mini danger" style="flex:1">✕ Delete selection</button></div>
   </div>
@@ -1105,9 +1131,11 @@ html.in-suite .suite-only{display:block!important}
     <div class="toolbar tb2" id="toolbar">
       <div class="tb-row tb-main" id="tbMain">
         <button id="projectsBtn" class="tool-btn primary tb-fix" title="Your projects and folders">📁 Projects</button>
-        <button id="projNameChip" class="tb-name" aria-haspopup="menu" aria-expanded="false" title="Project menu: New, Save, Download, Import, Earlier saves"><span id="projNameTxt">📄 …</span><span class="tb-caret">▾</span></button>
+        <button id="projNameChip" class="tb-name" aria-haspopup="menu" aria-expanded="false" title="Project menu: New, Save, Download, Import, Earlier saves"><span id="projNameTxt" class="tb-two"><span class="tb-cap">Project</span><span class="tb-nm">…</span></span><span class="tb-caret">▾</span></button>
+        <button id="patNameChip" class="tb-name two" style="display:none" title="Current pattern — tap to rename it">…</button>
         <span id="saveStatusPill" class="tb-status" data-ovp="4" data-ovl="" title="Autosave status">Saved</span>
         <div class="toolbar-spacer"></div>
+        <button id="fingerBtn" class="tool-btn" data-ovp="2.5" data-ovl="☝️ Draw with finger" aria-pressed="false" title="Draw with Finger: ON = one finger uses the selected tool, two fingers pan and zoom. OFF = Pencil draws, fingers pan and zoom.">☝️ Finger Off</button>
         <button id="undoBtn" class="tool-btn" data-ovp="2" data-ovl="↩️ Undo">↩️ Undo</button>
         <button id="redoBtn" class="tool-btn" data-ovp="3" data-ovl="↪️ Redo">↪️ Redo</button>
         <button id="exportMenuBtn" class="tool-btn primary tb-fix" aria-haspopup="menu" aria-expanded="false" title="Export as image or SVG">📸 Export ▾</button>
@@ -1231,7 +1259,7 @@ html.in-suite .suite-only{display:block!important}
 </div>
     <div id="backupsPanel" style="display:none;position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:90;background:var(--sideBg);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:0 18px 50px rgba(0,0,0,.35);font-size:13.5px;max-width:min(560px,calc(100vw - 24px));max-height:70vh;overflow:auto;"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;font-weight:800;margin-bottom:6px;">🕘 Earlier saves<button id="backupsClose" class="btn mini">Close</button></div><div id="backupsList"></div><div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line);"><button id="newBlankBtn" class="btn mini" style="width:100%;">➕ New Project</button><div class="hint">Your current project is saved first, then a fresh one opens. Find every project under 📁 Projects.</div></div></div>
     <div id="restoreBanner" style="display:none;"><span id="restoreBannerText">📂 Autosaved session found from </span><span id="restoreBannerTime"></span> <button id="restoreAcceptBtn" class="btn mini primary">Restore</button><button id="restoreDeclineBtn" class="btn mini">Start Fresh</button><button id="restoreOkBtn" class="btn mini primary" style="display:none;">OK</button></div>
-    <div id="canvasViewportOuter" class="canvas-viewport-outer"><div id="canvasWrap" class="canvas-wrap"><div id="viewPopover" class="sym-pop"><div class="section-title">🧭 Canvas / View</div><div class="row" style="margin-bottom:10px;align-items:center;gap:8px;"><div id="viewRotVal" class="pill" style="flex:1;text-align:center;">Rotation 0°</div><button id="viewRotResetBtn" class="tool-btn" style="flex:1" title="Turn the canvas back upright">Reset to 0°</button></div><button id="viewRotLockBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">🔒 Lock rotation: On</button><button id="viewSharpBtn" class="tool-btn" style="width:100%;margin-bottom:10px;" title="How crisp the picture on screen is. Sharper uses more of the iPad memory.">🔍 Sharpness: Normal</button><button id="viewGuidesBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">📐 Guides: Off</button><button id="viewCursorBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">⭕ Brush cursor: On</button><button id="viewResetBtn" class="tool-btn" style="width:100%;margin-bottom:10px;" title="0°, centred and fitted">🔍 Reset view (0°, fit)</button><button id="symToggle" class="tool-btn" style="width:100%;margin-bottom:10px;">🦋 Symmetry Off</button><div class="row" style="margin-bottom:10px;"><button id="tilingBtn" class="tool-btn active" style="flex:1">Tiling On</button><div id="layoutPill" class="pill">📍 Grid Mode</div></div><button id="themeToggle" class="tool-btn" style="width:100%;margin-bottom:10px;">☀️ Light Mode</button><button id="clearDrawing" class="btn mini danger" style="width:100%;margin-bottom:10px;">Clear Drawing &amp; Motifs</button><button id="clearAllDrawing" class="btn mini danger" style="width:100%;margin-bottom:10px;">Clear All Layers &amp; Motifs</button><label class="row" style="gap:8px;align-items:center;margin:6px 0;font-size:13px;"><input type="checkbox" id="dblDupChk" checked> Double-tap a selected item to duplicate it (a motif opens for editing instead)</label><button id="viewCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="zoomPopover" class="sym-pop"><div class="section-title">🔍 View <span id="zoomPopPct" class="small"></span></div><div class="zoom-row"><button id="zoomOutBtn" class="tool-btn" aria-label="Zoom out">−</button><button id="zoomInBtn" class="tool-btn" aria-label="Zoom in">+</button></div><button id="zoom100Btn" class="tool-btn" style="width:100%;margin-bottom:8px;">100% — actual size</button><button id="zoomFitBtn" class="tool-btn" style="width:100%;margin-bottom:8px;">Fit to View</button><button id="zoomRotResetBtn" class="tool-btn" style="width:100%;margin-bottom:8px;">↺ Reset rotation to 0°</button><button id="zoomResetBtn" class="tool-btn primary" style="width:100%;margin-bottom:8px;">Reset View (0°, centre, fit)</button><button id="updateAppBtn" class="tool-btn" style="width:100%;margin-bottom:8px;" title="Fetch the newest version of the app">⟳ Get latest version <span style="opacity:.6;font-weight:600">(you have v286)</span></button><div class="hint" style="margin-bottom:8px;">These always work, even if the canvas has scrolled out of sight.</div><button id="zoomCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="hiPopover" class="sym-pop"><div class="section-title">🖼️ High-resolution card (PNG)</div><div class="hint" style="margin-bottom:8px;">Redraws your whole card sharply at the size you pick, with brushes, pictures and the background. Just the card, no repeat edges. </div><div class="hint" style="margin-bottom:4px;">A normal greeting card is <b>5 × 7 in</b> (a smaller one is 4.25 × 5.5 in). Pick the long side of your card in inches:</div><div class="row" style="margin-bottom:8px;"><button class="tool-btn hi-preset" data-in="5.5">5.5 in</button><button class="tool-btn hi-preset" data-in="7">7 in</button><button class="tool-btn hi-preset" data-in="10">10 in</button></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>Long side</label><input id="hiInInput" type="number" min="1" max="30" step="0.1" value="10" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><span>in</span></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>Quality</label><select id="hiDpi" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><option value="300">300 dpi (print)</option><option value="600">600 dpi (extra sharp)</option><option value="200">200 dpi (smaller file)</option><option value="150">150 dpi (screen / email)</option></select><span></span></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>or pixels</label><input id="hiLongInput" type="number" min="200" max="8000" step="1" value="3000" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><span>px</span></div><div id="hiInfo" class="hint" style="margin-bottom:8px;"></div><label class="hint" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;"><input id="hiTransparent" type="checkbox"> Transparent background (instead of white)</label><button id="hiSaveBtn" class="tool-btn primary" style="width:100%;margin-bottom:8px;min-height:44px;">⬇️ Save PNG</button><button id="hiCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="svgPopover" class="sym-pop"><div class="section-title">🖋️ Export SVG</div><div class="hint" style="margin-bottom:8px;">Vector strokes and fills only. Pictures (placed motifs, background image) are not vector, so they are left out.</div><div class="row" style="margin-bottom:8px;"><button class="tool-btn svg-preset" data-size="780">780</button><button class="tool-btn svg-preset" data-size="1800">1800</button><button class="tool-btn svg-preset" data-size="3600">3600</button></div><div class="slider-row" style="grid-template-columns:64px 1fr 30px;"><label>Size</label><input id="svgSizeInput" type="number" min="64" max="20000" step="1" value="3600" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><span>px</span></div><div class="hint" style="margin-bottom:8px;">Width and height of the square file. 3600 × 3600 is the usual pattern size. The artwork scales exactly.</div><button id="svgSaveBtn" class="tool-btn primary" style="width:100%;margin-bottom:8px;min-height:44px;">⬇️ Save SVG</button><button id="svgCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="recolourPopover" class="sym-pop"><div class="section-title">🎨 Recolour Parts</div><div class="hint" style="margin-bottom:8px;">Motif: <b id="recolourName"></b>. Each row is one colour used in the motif. Pick a new colour for any of them.</div><div id="recolourRows"></div><button id="recolourApplyBtn" class="tool-btn primary" style="width:100%;margin:8px 0;min-height:44px;">Apply to this motif</button><button id="recolourNewBtn" class="tool-btn" style="width:100%;margin-bottom:8px;min-height:44px;">Save as new colourway</button><div class="row"><button id="recolourResetBtn" class="btn mini" style="flex:1">Reset</button><button id="recolourCloseBtn" class="btn mini" style="flex:1">✕ Close</button></div></div><div id="symPopover" class="sym-pop"><div class="section-title">🦋 Symmetry</div><div class="grid"><button class="sym-btn btn active" data-sym="off">Off</button><button class="sym-btn btn" data-sym="vertical">Vertical</button><button class="sym-btn btn" data-sym="horizontal">Horizontal</button><button class="sym-btn btn" data-sym="quad">Quad</button><button class="sym-btn btn" data-sym="diamond">Diamond</button></div><div class="slider-row"><label>Axis X</label><input id="symX" type="range" min="0" max="1800" value="900"><span id="symXVal">50%</span></div><div class="slider-row"><label>Axis Y</label><input id="symY" type="range" min="0" max="1800" value="900"><span id="symYVal">50%</span></div><div class="slider-row"><label>Angle</label><input id="symAng" type="range" min="-90" max="90" step="1" value="0"><span id="symAngVal">0°</span></div><div class="row"><button id="symAngReset" class="btn mini">0° Straight</button><button id="symAng45" class="btn mini">45°</button></div><div class="row" style="margin-top:6px;"><button id="symLenWhole" class="btn mini active" style="flex:1">Line: whole canvas</button><button id="symLenShort" class="btn mini" style="flex:1">Line: short</button></div><div class="slider-row" id="symLenRow" style="display:none"><label>Length</label><input id="symLen" type="range" min="100" max="1800" step="10" value="500"><span id="symLenVal">500</span></div><div class="row" style="margin-top:6px;"><button id="symCentre" class="btn mini">Centre Axis</button><button id="symClose" class="btn mini">Done</button></div><div class="hint">Move the mirror point to make flowers, leaves and playful asymmetric symmetry.</div></div><canvas id="fabricCanvas" aria-hidden="true"></canvas><canvas id="canvas" width="1800" height="1800"></canvas><div id="tileOutline" aria-hidden="true"><svg id="tileDiamond" viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;left:0;top:0;width:100%;height:100%;display:none;overflow:visible"><polygon points="50,0 100,50 50,100 0,50" fill="none" stroke="rgba(214,70,150,.9)" stroke-width="2.5" vector-effect="non-scaling-stroke"/></svg></div><div id="traceBox" aria-hidden="true"></div><div id="replayGuide" aria-hidden="true"><div class="rgBox"><span></span></div></div><div id="selectionBox" class="selection-box"><button id="motifEditChip" class="btn mini primary" style="display:none">✏️ Edit Motif</button><div id="resizeHandle" class="handle"></div><div id="rotateHandle" class="rotHandle"></div></div><div id="pivotMarker" style="display:none;position:absolute;width:18px;height:18px;margin:-9px 0 0 -9px;border:2px solid var(--pink);border-radius:50%;background:rgba(255,255,255,.85);pointer-events:none;z-index:5;"><div style="position:absolute;left:50%;top:-6px;bottom:-6px;width:2px;margin-left:-1px;background:var(--pink)"></div><div style="position:absolute;top:50%;left:-6px;right:-6px;height:2px;margin-top:-1px;background:var(--pink)"></div></div><div id="paintBBoxOverlay" class="selection-box" style="display:none;"><div id="paintResizeHandle" class="handle" title="Drag to resize. Tap to make 25% bigger."></div><div id="paintRotateHandle" class="rotHandle" title="Drag to rotate. Tap to turn 45 degrees."></div><input id="strokeColourHandle" class="sel-colour strokeColourHandle" type="color" value="#000000" title="Tap to change colour"></div><div id="groupBox" class="selection-box" style="display:none;"><div class="gh" data-h="nw" style="left:0%;top:0%;cursor:nwse-resize"></div><div class="gh" data-h="n" style="left:50%;top:0%;cursor:ns-resize"></div><div class="gh" data-h="ne" style="left:100%;top:0%;cursor:nesw-resize"></div><div class="gh" data-h="e" style="left:100%;top:50%;cursor:ew-resize"></div><div class="gh" data-h="se" style="left:100%;top:100%;cursor:nwse-resize"></div><div class="gh" data-h="s" style="left:50%;top:100%;cursor:ns-resize"></div><div class="gh" data-h="sw" style="left:0%;top:100%;cursor:nesw-resize"></div><div class="gh" data-h="w" style="left:0%;top:50%;cursor:ew-resize"></div><div id="grpRotHandle" class="rotHandle" title="Drag to turn. Tap to turn 45 degrees."></div></div><div id="symAxis" class="sym-axis locked"></div><div id="rotateChip" class="rotate-chip">Canvas 0°</div><div id="pathNodeOverlay"></div></div></div>
+    <div id="canvasViewportOuter" class="canvas-viewport-outer"><div id="canvasWrap" class="canvas-wrap"><div id="viewPopover" class="sym-pop"><div class="section-title">🧭 Canvas / View</div><div class="row" style="margin-bottom:10px;align-items:center;gap:8px;"><div id="viewRotVal" class="pill" style="flex:1;text-align:center;">Rotation 0°</div><button id="viewRotResetBtn" class="tool-btn" style="flex:1" title="Turn the canvas back upright">Reset to 0°</button></div><button id="viewRotLockBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">🔒 Lock rotation: On</button><button id="viewSharpBtn" class="tool-btn" style="width:100%;margin-bottom:10px;" title="How crisp the picture on screen is. Sharper uses more of the iPad memory.">🔍 Sharpness: Normal</button><button id="viewGuidesBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">📐 Guides: Off</button><button id="viewCursorBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">⭕ Brush cursor: On</button><button id="viewResetBtn" class="tool-btn" style="width:100%;margin-bottom:10px;" title="0°, centred and fitted">🔍 Reset view (0°, fit)</button><button id="symToggle" class="tool-btn" style="width:100%;margin-bottom:10px;">🦋 Symmetry Off</button><div class="row" style="margin-bottom:10px;"><button id="tilingBtn" class="tool-btn active" style="flex:1">Tiling On</button><div id="layoutPill" class="pill">📍 Grid Mode</div></div><button id="themeToggle" class="tool-btn" style="width:100%;margin-bottom:10px;">☀️ Light Mode</button><button id="clearDrawing" class="btn mini danger" style="width:100%;margin-bottom:10px;">Clear Drawing &amp; Motifs</button><button id="clearAllDrawing" class="btn mini danger" style="width:100%;margin-bottom:10px;">Clear All Layers &amp; Motifs</button><label class="row" style="gap:8px;align-items:center;margin:6px 0;font-size:13px;"><input type="checkbox" id="dblDupChk" checked> Double-tap a selected item to duplicate it (a motif opens for editing instead)</label><button id="viewCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="zoomPopover" class="sym-pop"><div class="section-title">🔍 View <span id="zoomPopPct" class="small"></span></div><div class="zoom-row"><button id="zoomOutBtn" class="tool-btn" aria-label="Zoom out">−</button><button id="zoomInBtn" class="tool-btn" aria-label="Zoom in">+</button></div><button id="zoom100Btn" class="tool-btn" style="width:100%;margin-bottom:8px;">100% — actual size</button><button id="zoomFitBtn" class="tool-btn" style="width:100%;margin-bottom:8px;">Fit to View</button><button id="zoomRotResetBtn" class="tool-btn" style="width:100%;margin-bottom:8px;">↺ Reset rotation to 0°</button><button id="zoomResetBtn" class="tool-btn primary" style="width:100%;margin-bottom:8px;">Reset View (0°, centre, fit)</button><button id="updateAppBtn" class="tool-btn" style="width:100%;margin-bottom:8px;" title="Fetch the newest version of the app">⟳ Get latest version <span style="opacity:.6;font-weight:600">(you have v299)</span></button><div class="hint" style="margin-bottom:8px;">These always work, even if the canvas has scrolled out of sight.</div><button id="zoomCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="hiPopover" class="sym-pop"><div class="section-title">🖼️ High-resolution card (PNG)</div><div class="hint" style="margin-bottom:8px;">Redraws your whole card sharply at the size you pick, with brushes, pictures and the background. Just the card, no repeat edges. </div><div class="hint" style="margin-bottom:4px;">A normal greeting card is <b>5 × 7 in</b> (a smaller one is 4.25 × 5.5 in). Pick the long side of your card in inches:</div><div class="row" style="margin-bottom:8px;"><button class="tool-btn hi-preset" data-in="5.5">5.5 in</button><button class="tool-btn hi-preset" data-in="7">7 in</button><button class="tool-btn hi-preset" data-in="10">10 in</button></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>Long side</label><input id="hiInInput" type="number" min="1" max="30" step="0.1" value="10" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><span>in</span></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>Quality</label><select id="hiDpi" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><option value="300">300 dpi (print)</option><option value="600">600 dpi (extra sharp)</option><option value="200">200 dpi (smaller file)</option><option value="150">150 dpi (screen / email)</option></select><span></span></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>or pixels</label><input id="hiLongInput" type="number" min="200" max="8000" step="1" value="3000" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><span>px</span></div><div id="hiInfo" class="hint" style="margin-bottom:8px;"></div><label class="hint" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;"><input id="hiTransparent" type="checkbox"> Transparent background (instead of white)</label><button id="hiSaveBtn" class="tool-btn primary" style="width:100%;margin-bottom:8px;min-height:44px;">⬇️ Save PNG</button><button id="hiCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="svgPopover" class="sym-pop"><div class="section-title">🖋️ Export SVG</div><div class="hint" style="margin-bottom:8px;">Vector strokes and fills only. Pictures (placed motifs, background image) are not vector, so they are left out.</div><div class="row" style="margin-bottom:8px;"><button class="tool-btn svg-preset" data-size="780">780</button><button class="tool-btn svg-preset" data-size="1800">1800</button><button class="tool-btn svg-preset" data-size="3600">3600</button></div><div class="slider-row" style="grid-template-columns:64px 1fr 30px;"><label>Size</label><input id="svgSizeInput" type="number" min="64" max="20000" step="1" value="3600" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><span>px</span></div><div class="hint" style="margin-bottom:8px;">Width and height of the square file. 3600 × 3600 is the usual pattern size. The artwork scales exactly.</div><button id="svgSaveBtn" class="tool-btn primary" style="width:100%;margin-bottom:8px;min-height:44px;">⬇️ Save SVG</button><button id="svgCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="recolourPopover" class="sym-pop"><div class="section-title">🎨 Recolour Parts</div><div class="hint" style="margin-bottom:8px;">Motif: <b id="recolourName"></b>. Each row is one colour used in the motif. Pick a new colour for any of them.</div><div id="recolourRows"></div><button id="recolourApplyBtn" class="tool-btn primary" style="width:100%;margin:8px 0;min-height:44px;">Apply to this motif</button><button id="recolourNewBtn" class="tool-btn" style="width:100%;margin-bottom:8px;min-height:44px;">Save as new colourway</button><div class="row"><button id="recolourResetBtn" class="btn mini" style="flex:1">Reset</button><button id="recolourCloseBtn" class="btn mini" style="flex:1">✕ Close</button></div></div><div id="symPopover" class="sym-pop"><div class="section-title">🦋 Symmetry</div><div class="grid"><button class="sym-btn btn active" data-sym="off">Off</button><button class="sym-btn btn" data-sym="vertical">Vertical</button><button class="sym-btn btn" data-sym="horizontal">Horizontal</button><button class="sym-btn btn" data-sym="quad">Quad</button><button class="sym-btn btn" data-sym="diamond">Diamond</button></div><div class="slider-row"><label>Axis X</label><input id="symX" type="range" min="0" max="1800" value="900"><span id="symXVal">50%</span></div><div class="slider-row"><label>Axis Y</label><input id="symY" type="range" min="0" max="1800" value="900"><span id="symYVal">50%</span></div><div class="slider-row"><label>Angle</label><input id="symAng" type="range" min="-90" max="90" step="1" value="0"><span id="symAngVal">0°</span></div><div class="row"><button id="symAngReset" class="btn mini">0° Straight</button><button id="symAng45" class="btn mini">45°</button></div><div class="row" style="margin-top:6px;"><button id="symLenWhole" class="btn mini active" style="flex:1">Line: whole canvas</button><button id="symLenShort" class="btn mini" style="flex:1">Line: short</button></div><div class="slider-row" id="symLenRow" style="display:none"><label>Length</label><input id="symLen" type="range" min="100" max="1800" step="10" value="500"><span id="symLenVal">500</span></div><div class="row" style="margin-top:6px;"><button id="symCentre" class="btn mini">Centre Axis</button><button id="symClose" class="btn mini">Done</button></div><div class="hint">Move the mirror point to make flowers, leaves and playful asymmetric symmetry.</div></div><canvas id="fabricCanvas" aria-hidden="true"></canvas><canvas id="canvas" width="1800" height="1800"></canvas><div id="tileOutline" aria-hidden="true"><svg id="tileDiamond" viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;left:0;top:0;width:100%;height:100%;display:none;overflow:visible"><polygon points="50,0 100,50 50,100 0,50" fill="none" stroke="rgba(214,70,150,.9)" stroke-width="2.5" vector-effect="non-scaling-stroke"/></svg></div><div id="traceBox" aria-hidden="true"></div><div id="replayGuide" aria-hidden="true"><div class="rgBox"><span></span></div></div><div id="selectionBox" class="selection-box"><button id="motifEditChip" class="btn mini primary" style="display:none">✏️ Edit Motif</button><div id="resizeHandle" class="handle"></div><div id="rotateHandle" class="rotHandle"></div></div><div id="pivotMarker" style="display:none;position:absolute;width:18px;height:18px;margin:-9px 0 0 -9px;border:2px solid var(--pink);border-radius:50%;background:rgba(255,255,255,.85);pointer-events:none;z-index:5;"><div style="position:absolute;left:50%;top:-6px;bottom:-6px;width:2px;margin-left:-1px;background:var(--pink)"></div><div style="position:absolute;top:50%;left:-6px;right:-6px;height:2px;margin-top:-1px;background:var(--pink)"></div></div><div id="paintBBoxOverlay" class="selection-box" style="display:none;"><div id="paintResizeHandle" class="handle" title="Drag to resize. Tap to make 25% bigger."></div><div id="paintRotateHandle" class="rotHandle" title="Drag to rotate. Tap to turn 45 degrees."></div><input id="strokeColourHandle" class="sel-colour strokeColourHandle" type="color" value="#000000" title="Tap to change colour"></div><div id="groupBox" class="selection-box" style="display:none;"><div class="gh" data-h="nw" style="left:0%;top:0%;cursor:nwse-resize"></div><div class="gh" data-h="n" style="left:50%;top:0%;cursor:ns-resize"></div><div class="gh" data-h="ne" style="left:100%;top:0%;cursor:nesw-resize"></div><div class="gh" data-h="e" style="left:100%;top:50%;cursor:ew-resize"></div><div class="gh" data-h="se" style="left:100%;top:100%;cursor:nwse-resize"></div><div class="gh" data-h="s" style="left:50%;top:100%;cursor:ns-resize"></div><div class="gh" data-h="sw" style="left:0%;top:100%;cursor:nesw-resize"></div><div class="gh" data-h="w" style="left:0%;top:50%;cursor:ew-resize"></div><div id="grpRotHandle" class="rotHandle" title="Drag to turn. Tap to turn 45 degrees."></div></div><div id="symAxis" class="sym-axis locked"></div><div id="rotateChip" class="rotate-chip">Canvas 0°</div><div id="pathNodeOverlay"></div></div></div>
     <div id="status" class="status">✨ Apple Pencil draws | one finger protected | two fingers pan/pinch/rotate | two-finger tap Undo | three-finger tap Redo | Capture Motif saves drawing ✨</div>
   </main>
   <div id="dockR" class="dock"></div>
@@ -1876,7 +1904,45 @@ let editingMotifId=null,editingMotifStash=null,editingMotifFrame=null,editingMot
 let history=[],hIndex=-1;let touchState=null;let lastTouchEnd=0;
 const $=id=>document.getElementById(id);
 function setStatus(t){$('status').textContent=t;}
-function isPen(e){return e.pointerType==='pen'||e.pointerType==='mouse'}
+// ---- Input: Apple Pencil, mouse, or (optionally) a finger ----
+// Every tool asks isPen(e) before it reacts, so one switch gives fingers the SAME tools as the Pencil.
+let fingerDraw=false;try{fingerDraw=localStorage.getItem('sp-fingerDraw')==='1';}catch(e){}
+let penSeenAt=-1e9,penEverSeen=false,multiTouchLock=false,fingerHintAt=-1e9;
+const touchDown=new Map(); // active finger pointers: id -> element they started on
+['pointerdown','pointermove','pointerup'].forEach(ev=>document.addEventListener(ev,e=>{if(e.pointerType==='pen'){penSeenAt=performance.now();penEverSeen=true;}},{capture:true,passive:true}));
+document.addEventListener('pointerdown',e=>{if(e.pointerType==='touch')touchDown.set(e.pointerId,e.target);},{capture:true,passive:true});
+['pointerup','pointercancel'].forEach(ev=>document.addEventListener(ev,e=>{if(e.pointerType==='touch'){touchDown.delete(e.pointerId);if(!touchDown.size)multiTouchLock=false;}},{capture:true,passive:true}));
+function isPen(e){
+  const t=e.pointerType;
+  if(t==='pen'||t==='mouse')return true;
+  if(t!=='touch')return false;
+  const down=e.type==='pointerdown';
+  if(!fingerDraw){
+    if(down&&!penEverSeen&&performance.now()-fingerHintAt>30000){fingerHintAt=performance.now();try{setStatus('☝️ To draw with your finger, turn on “Finger” in the top bar. Two fingers always pan and zoom.');}catch(_){}}
+    return false;
+  }
+  if(multiTouchLock)return false;                                  // a second finger landed: this is a pan/zoom
+  if(down){
+    if(performance.now()-penSeenAt<450)return false;               // the Pencil is down or hovering: that touch is a resting palm
+    if(Math.max(e.width||0,e.height||0)>=55)return false;          // palm-sized contact
+  }
+  return true;
+}
+// A second finger turns a drawing touch into a pan/zoom: cancel what the first finger started (nothing half-drawn is kept).
+function fingerGestureStart(){
+  if(multiTouchLock)return;multiTouchLock=true;
+  touchDown.forEach((target,id)=>{
+    const el=(target&&target.isConnected)?target:canvas;
+    try{el.dispatchEvent(new PointerEvent('pointercancel',{pointerId:id,pointerType:'touch',bubbles:true,composed:true}));}catch(_){}
+  });
+}
+function setFingerDraw(v){
+  fingerDraw=!!v;try{localStorage.setItem('sp-fingerDraw',fingerDraw?'1':'0');}catch(e){}
+  const b=document.getElementById('fingerBtn');if(b){b.classList.toggle('active',fingerDraw);b.setAttribute('aria-pressed',fingerDraw?'true':'false');b.textContent='☝️ Finger '+(fingerDraw?'On':'Off');b.dataset.ovl='☝️ Draw with finger: '+(fingerDraw?'On':'Off');}
+  try{setStatus(fingerDraw?'☝️ Finger drawing is ON — one finger uses the selected tool, two fingers pan and zoom. Pencil still works as usual.':'✏️ Finger drawing is OFF — fingers pan and zoom, Pencil draws.');}catch(e){}
+}
+document.addEventListener('DOMContentLoaded',()=>{const b=document.getElementById('fingerBtn');if(b){b.addEventListener('click',()=>setFingerDraw(!fingerDraw));fingerDraw=!!fingerDraw;b.classList.toggle('active',fingerDraw);b.setAttribute('aria-pressed',fingerDraw?'true':'false');b.textContent='☝️ Finger '+(fingerDraw?'On':'Off');}});
+['gesturestart','gesturechange'].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false})); // no Safari page-zoom under the canvas
 function currentBrushIdForSettings(){return eraserActive?'eraser':activeBrushId;}
 function currentSettings(){return BrushEngine.getSettings(currentBrushIdForSettings());}
 function getActiveLayer(){const l=layers.find(l=>l.id===activeLayerId)||null;if(l&&l.asleep)wakeLayer(l);return l;}
@@ -3520,12 +3586,12 @@ canvas.addEventListener('pointercancel',()=>{
 // is exactly why those controls stopped responding to a real tap/Apple
 // Pencil touch on iPad while still "working" under a mouse-driven click.
 function isUiTouchTarget(e){return !!(e.target&&e.target.closest&&e.target.closest('button,input,select,textarea,.sym-pop,.handle,.rotHandle,.gh'));}
-wrap.addEventListener('touchstart',e=>{if(isUiTouchTarget(e))return;e.preventDefault();const now=Date.now();const start=copyTouches(e.touches);let anchor=null;if(start.length>=2){const m=mid(start[0],start[1]),r=wrap.getBoundingClientRect();anchor=unprojectPoint(m.x-(r.left+r.width/2),m.y-(r.top+r.height/2),zoom,rot,panX,panY);}touchState={n:e.touches.length,start,last:copyTouches(e.touches),moved:false,time:now,zoom,panX,panY,rot,anchor};}, {passive:false});
+wrap.addEventListener('touchstart',e=>{if(isUiTouchTarget(e))return;e.preventDefault();if(e.touches.length>=2)fingerGestureStart();const now=Date.now();const start=copyTouches(e.touches);let anchor=null;if(start.length>=2){const m=mid(start[0],start[1]),r=wrap.getBoundingClientRect();anchor=unprojectPoint(m.x-(r.left+r.width/2),m.y-(r.top+r.height/2),zoom,rot,panX,panY);}touchState={n:e.touches.length,start,last:copyTouches(e.touches),moved:false,time:now,zoom,panX,panY,rot,anchor};}, {passive:false});
 // Two-finger pinch/rotate/pan: the canvas point that was between the fingers when the gesture began
 // is kept under the point between the fingers NOW (setViewAnchored), so zoom and rotation pivot on
 // the fingers instead of the canvas centre. Angle changes are wrapped to (-180°,180°] so crossing
 // the ±180° boundary can't jump, and a small dead zone stops a plain pinch from rotating the canvas.
-wrap.addEventListener('touchmove',e=>{if(isUiTouchTarget(e))return;e.preventDefault();if(!touchState)return;const cur=copyTouches(e.touches);touchState.moved=true;if(cur.length>=2&&touchState.start.length>=2&&touchState.anchor){const s=touchState.start,c=cur;const sd=dist(s[0],s[1]),cd=dist(c[0],c[1]);let da=ang(c[0],c[1])-ang(s[0],s[1]);da=Math.atan2(Math.sin(da),Math.cos(da));const DEAD=4*Math.PI/180;da=Math.sign(da)*Math.max(0,Math.abs(da)-DEAD);const cm=mid(c[0],c[1]),r=wrap.getBoundingClientRect();setViewAnchored(Math.min(zoom*1.5,Math.max(zoom/1.5,touchState.zoom*(cd/Math.max(sd,70)))),touchState.rot+da*180/Math.PI,touchState.anchor.x,touchState.anchor.y,cm.x-(r.left+r.width/2),cm.y-(r.top+r.height/2));}}, {passive:false});
+wrap.addEventListener('touchmove',e=>{if(isUiTouchTarget(e))return;e.preventDefault();if(!touchState)return;const cur=copyTouches(e.touches);touchState.moved=true;if(cur.length===1&&touchState.n===1&&!fingerDraw){if(performance.now()-penSeenAt>450){const l=touchState.last[0]||cur[0];panX+=cur[0].x-l.x;panY+=cur[0].y-l.y;applyTransform();}touchState.last=cur;return;}if(cur.length>=2&&touchState.start.length>=2&&touchState.anchor){const s=touchState.start,c=cur;const sd=dist(s[0],s[1]),cd=dist(c[0],c[1]);let da=ang(c[0],c[1])-ang(s[0],s[1]);da=Math.atan2(Math.sin(da),Math.cos(da));const DEAD=4*Math.PI/180;da=Math.sign(da)*Math.max(0,Math.abs(da)-DEAD);const cm=mid(c[0],c[1]),r=wrap.getBoundingClientRect();setViewAnchored(Math.min(zoom*1.5,Math.max(zoom/1.5,touchState.zoom*(cd/Math.max(sd,70)))),touchState.rot+da*180/Math.PI,touchState.anchor.x,touchState.anchor.y,cm.x-(r.left+r.width/2),cm.y-(r.top+r.height/2));}}, {passive:false});
 wrap.addEventListener('touchend',e=>{if(isUiTouchTarget(e))return;e.preventDefault();if(!touchState)return;const dt=Date.now()-touchState.time;const tap=!touchState.moved&&dt<260;if(tap&&touchState.n===2){undo();lastTouchEnd=Date.now()}else if(tap&&touchState.n===3){redo();lastTouchEnd=Date.now()}if(touchState.moved&&Math.abs(rot)>180){rot=((rot+180)%360+360)%360-180;applyTransform();}touchState=null;}, {passive:false});
 function copyTouches(t){return Array.from(t).map(v=>({x:v.clientX,y:v.clientY}))}function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y)||1}function ang(a,b){return Math.atan2(b.y-a.y,b.x-a.x)}function mid(a,b){return{x:(a.x+b.x)/2,y:(a.y+b.y)/2}}
 // Renders the CURRENT strokes (all visible layers, flattened) to a cropped PNG data URL — shared
@@ -3662,7 +3728,7 @@ function selectAtBase(x,y){
   // "other shapes" set. Tapping something ineligible (open path, fill, paint, locked layer) just
   // explains why instead of silently adding it, matching the hybrid-artwork-protection rule.
   if(shapeMultiSelectMode){
-    const lockedIds=new Set(layers.filter(l=>l.locked).map(l=>l.id));
+    const lockedIds=new Set(layers.filter(l=>l.locked||l.visible===false).map(l=>l.id)); // a hidden layer is not selectable either: you would be grabbing something you cannot see
     let hitStroke=null;
     for(let i=strokes.length-1;i>=0;i--){
       const s=strokes[i];if(lockedIds.has(s.layerId)||s.id===selectedStrokeId)continue;
@@ -3693,7 +3759,7 @@ function selectAtBase(x,y){
   if(!selected){
     // Hit tolerance grows a little for thin strokes so a thin 2px line isn't effectively
     // unselectable — never smaller than a comfortable ~18px finger/pencil target either way.
-    const lockedIds=new Set(layers.filter(l=>l.locked).map(l=>l.id));
+    const lockedIds=new Set(layers.filter(l=>l.locked||l.visible===false).map(l=>l.id)); // a hidden layer is not selectable either: you would be grabbing something you cannot see
     let best=null,bestDist=Infinity;
     for(let i=strokes.length-1;i>=0;i--){
       const s=strokes[i];if(lockedIds.has(s.layerId)||s.guideHidden||s.patFill)continue;
@@ -5080,21 +5146,39 @@ $('addLayerBtn').onclick=()=>{
   setStatus('📚 Added "'+layer.name+'" — new strokes go here now.');
 };
 $('renameLayerBtn').onclick=()=>{const l=getActiveLayer();if(l)startLayerRename(l.id);};
+// Deep copy of a layer: every stroke is cloned with a new id, and links between strokes (a shape and its fill, a shape and the pattern clipped
+// inside it, grouped strokes) are re-pointed at the copies, so the copy is fully independent of the original.
+function duplicateLayerDeep(src,name){
+  const copy=makeLayer(name||src.name+' copy');
+  copy.visible=src.visible;copy.opacity=src.opacity;copy.locked=false;copy.blur=src.blur||0;copy.blend=src.blend||'source-over';copy.alphaLock=!!src.alphaLock;copy.clip=!!src.clip;
+  layers.splice(layers.indexOf(src)+1,0,copy);
+  const srcStrokes=strokes.filter(s=>s.layerId===src.id),idMap=new Map();
+  srcStrokes.forEach(s=>idMap.set(s.id,crypto.randomUUID()));
+  const clones=srcStrokes.map(s=>{
+    const c=JSON.parse(JSON.stringify(s));
+    c.id=idMap.get(s.id);c.layerId=copy.id;delete c._sig;
+    if(c.fillOf&&idMap.has(c.fillOf))c.fillOf=idMap.get(c.fillOf);
+    if(c.clipStrokeId&&idMap.has(c.clipStrokeId))c.clipStrokeId=idMap.get(c.clipStrokeId);
+    return c;
+  });
+  // keep the same stacking: put each clone straight after the stroke it came from
+  clones.forEach((c,i)=>{const at=strokes.indexOf(srcStrokes[i]);strokes.splice(at+1+i,0,c);});
+  // patterns clipped inside a shape of this layer live on their own layer: copy those too, clipped to the new shape
+  const pats=strokes.filter(q=>q.patFill&&idMap.has(q.clipStrokeId)&&q.layerId!==src.id&&!clones.includes(q));
+  pats.forEach(q=>{
+    const pl=layers.find(l=>l.id===q.layerId);if(!pl)return;
+    const pc=makeLayer(pl.name+' copy');pc.visible=pl.visible;pc.opacity=pl.opacity;pc.blend=pl.blend||'source-over';
+    layers.splice(layers.indexOf(copy)+1,0,pc);
+    const c=JSON.parse(JSON.stringify(q));c.id=crypto.randomUUID();c.layerId=pc.id;c.clipStrokeId=idMap.get(q.clipStrokeId);
+    strokes.push(c);
+  });
+  return copy;
+}
 $('duplicateLayerBtn').onclick=()=>{
   const src=getActiveLayer();if(!src)return;
-  const copy=makeLayer(src.name+' copy');
-  copy.visible=src.visible;copy.opacity=src.opacity;copy.locked=false;copy.blur=src.blur||0;
-  layers.splice(layers.indexOf(src)+1,0,copy);
-  const newStrokes=strokes.filter(s=>s.layerId===src.id).map(s=>({
-    ...s,id:crypto.randomUUID(),layerId:copy.id,
-    points:s.points.map(p=>({...p})),
-    settings:s.settings?{...s.settings}:null,
-    nodes:s.nodes?s.nodes.map(n=>({...n})):null,
-    ...(s.strokeGradient?{strokeGradient:{...s.strokeGradient}}:{}),
-  }));
-  strokes=strokes.concat(newStrokes);
+  const copy=duplicateLayerDeep(src);
   activeLayerId=copy.id;
-  renderLayersList();rebuildLayer(copy.id);pushHist();redraw();
+  renderLayersList();rebuildAllLayers();pushHist();redraw();
   setStatus('⧉ Duplicated "'+src.name+'".');
 };
 let dragMotif=null,dragStroke=null,quickMoveOn=false;
@@ -5213,7 +5297,7 @@ canvas.addEventListener('pointermove',e=>{
     redraw();
   }
 });
-canvas.addEventListener('pointerup',()=>{
+['pointerup','pointercancel'].forEach(ev=>canvas.addEventListener(ev,()=>{
   if(dragMotif){dragMotif=null;pushHist();}
   if(dragStroke){
     if(dragStroke.moved&&dragStroke.guide){
@@ -5235,7 +5319,7 @@ canvas.addEventListener('pointerup',()=>{
     }
     dragStroke=null;
   }
-});
+}));
 function getSel(){return placed.find(p=>p.id===selected)}
 // On-canvas resize/rotate handles, mirroring Magic Builder's brick handles - the same two
 // gestures as the sidebar's Size slider and rotate buttons, just directly on the selection box
@@ -5419,7 +5503,7 @@ function setMulti(strokeIds,placedIds,gid){
 function grpSnapshotOf(st,pl){
   const cl=a=>a.map(p=>({...p}));
   return {
-    st:st.map(s=>({s,cuts:s.cuts?s.cuts.map(c=>({...c})):null,points:cl(s.points),nodes:s.nodes?cl(s.nodes):null,regions:s.regions?s.regions.map(cl):null,shape:s.shape?{...s.shape}:null,settings:s.settings?{...s.settings}:null,size:(()=>{try{return strokeSettings(s).size;}catch(e){return null;}})()})),
+    st:st.map(s=>({s,cuts:s.cuts?s.cuts.map(c=>({...c})):null,points:cl(s.points),nodes:s.nodes?cl(s.nodes):null,regions:s.regions?s.regions.map(cl):null,shape:s.shape?{...s.shape}:null,settings:s.settings?{...s.settings}:null,radial:s.radial?{...s.radial}:null,radialOf:s.radialOf||null,radialK:s.radialK,size:(()=>{try{return strokeSettings(s).size;}catch(e){return null;}})()})),
     pl:pl.map(p=>({p,x:p.x,y:p.y,s:p.s,r:p.r,w:p.w,h:p.h})),
   };
 }
@@ -5442,6 +5526,10 @@ function grpApply(base,op,scaleStrokes){
         s.shape=sh;s.points=shapeToPoints(sh);
       }else{s.shape=null;} // a stretched shape is no longer a clean parametric one; it stays a normal editable path
     }
+    // Rotate-copies (a flower of petals) are rebuilt around the original's centre: that centre has to travel and scale with the group,
+    // otherwise the next sync rebuilds every petal around the OLD centre. A stretch can't be expressed as a rotation, so it unlinks them.
+    if(b.radial){if(uniform){const n=f(b.radial.cx,b.radial.cy);s.radial={...b.radial,cx:n.x,cy:n.y};}else delete s.radial;}
+    if(b.radialOf&&!uniform){delete s.radialOf;delete s.radialK;}
     if(b.size!=null&&!s.fillColor){
       if(scaleStrokes){s.settings=Object.assign({},b.settings||strokeSettings(s),{size:Math.max(0.5,b.size*k)});}
       else s.settings=b.settings;
@@ -5460,7 +5548,7 @@ function grpApply(base,op,scaleStrokes){
   });
 }
 function grpRestore(base){
-  base.st.forEach(b=>{const s=b.s;if(b.cuts)s.cuts=b.cuts;else delete s.cuts;s.points=b.points;s.nodes=b.nodes;s.regions=b.regions;s.shape=b.shape;s.settings=b.settings;});
+  base.st.forEach(b=>{const s=b.s;if(b.cuts)s.cuts=b.cuts;else delete s.cuts;s.points=b.points;s.nodes=b.nodes;s.regions=b.regions;s.shape=b.shape;s.settings=b.settings;if(b.radial)s.radial=b.radial;else delete s.radial;if(b.radialOf){s.radialOf=b.radialOf;s.radialK=b.radialK;}});
   base.pl.forEach(b=>{const p=b.p;p.x=b.x;p.y=b.y;p.s=b.s;p.r=b.r;p.w=b.w;p.h=b.h;});
 }
 // Turning always happens about the group's own centre (remembered while it stays selected), not the centre of its
@@ -5598,7 +5686,7 @@ function syncGroupBar(){
   if(!multiSel)return;
   const n=multiSel.strokeIds.length+multiSel.placedIds.length,o=curOpts(),g=!!multiSel.groupId;
   $('groupBarTitle').textContent=g?'🧩 Group · '+n+' items':'☑️ '+n+' selected';
-  $('groupHint').textContent=g?'Drag inside the box to move. Corner handles resize, the top handle turns. Ungroup to edit parts again.':'Group them to move, resize and turn as one. Nothing is flattened.';
+  $('groupHint').textContent=g?'Drag inside the box to move. Corner handles resize, the top handle turns. Double-tap a part to edit just that part, or Ungroup.':'Group them to move, resize and turn as one. Nothing is flattened.';
   $('groupBtn').disabled=g||n<2;$('ungroupBtn').disabled=!g;$('grpInsideBtn').disabled=!g;
   $('grpLockBtn').classList.toggle('active',!!o.lock);$('grpLockBtn').textContent=o.lock?'🔒 Proportions locked':'🔓 Free resize';
   $('grpScaleStrokesBtn').classList.toggle('active',!!o.scale);$('grpScaleStrokesBtn').textContent='〰️ Scale strokes: '+(o.scale?'On':'Off');
@@ -5630,9 +5718,9 @@ function ungroupSelection(){
   if(!multiSel||!multiSel.groupId)return;
   const gid=multiSel.groupId;
   strokes.forEach(s=>{if(s.groupId===gid)delete s.groupId;});placed.forEach(p=>{if(p.groupId===gid)delete p.groupId;});
-  delete groups[gid];multiSel.groupId=null;
-  pushHist();redraw();
-  setStatus('Ungrouped. Every part is its own object again (still selected); tap one to edit it.');
+  delete groups[gid];multiSel=null;groupInsideId=null;
+  pushHist();syncStrokeSelectionUI();updateSelectedControls();redraw();
+  setStatus('Ungrouped. Every part is its own object again. Tap one to select it.');
 }
 function selectAllArtwork(){
   if(pathEditStrokeId)commitEditPath();
@@ -5783,7 +5871,7 @@ function selectSame(kind){
   const ids=strokes.filter(s=>!skip.has(s.layerId)&&s.points&&s.points.length&&test(s)).map(s=>s.id);
   setMulti(ids,[],null);selAddArmed=false;groupInsideId=null;
   syncStrokeSelectionUI();updateSelectedControls();redraw();
-  setStatus('🎯 Selected '+ids.length+' matching stroke'+(ids.length===1?'':'s')+'. Change the colour or line size for all of them in the panel, or resize them with the handles.');
+  setStatus('🎯 Selected '+ids.length+' matching stroke'+(ids.length===1?'':'s')+'. Change the colour, fill or line size for all of them in the panel, or resize them with the handles.');
 }
 function editAllSelected(){
   if(!multiSel)return;
@@ -5802,6 +5890,20 @@ function editAllSelected(){
   $('selSameColourBtn').onclick=()=>selectSame('colour');$('selSameStrokeBtn').onclick=()=>selectSame('stroke');$('selSameFillBtn').onclick=()=>selectSame('fill');
   $('grpColour').oninput=e=>{e.target.dataset.touched='1';};
   $('grpEditAllBtn').onclick=editAllSelected;
+  try{$('sizePresetList').innerHTML=SIZE_PRESETS.map(v=>'<option value="'+v+'">').join('');}catch(e){}
+  // Fill (or un-fill) every closed shape in the selection at once — e.g. after Select same › Stroke, fill all the motifs in one go.
+  const grpFillAll=on=>{
+    if(!multiSel)return;
+    const {st}=selMembers(),outs=st.filter(x=>!x.fillOf&&(on?efEligible(x):(x.fill&&x.fill.on)));
+    if(!outs.length){setStatus(on?'🎨 None of the selected shapes can hold a fill — they need to be closed outlines.':'None of the selected shapes has a fill.');return;}
+    const col=$('grpFillColour').value;
+    outs.forEach(x=>{if(on)x.fill=Object.assign({opacity:1},x.fill||{},{on:true,same:false,color:col});else x.fill.on=false;});
+    try{fillSync();}catch(e){}
+    new Set(outs.map(x=>x.layerId)).forEach(id=>{try{rebuildLayer(id);}catch(e){}});
+    pushHist();redraw();scheduleAutosave&&scheduleAutosave();
+    setStatus((on?'🎨 Filled ':'⌧ Removed the fill from ')+outs.length+' shape'+(outs.length===1?'':'s')+'. Undo brings it back.');
+  };
+  $('grpFillBtn').onclick=()=>grpFillAll(true);$('grpNoFillBtn').onclick=()=>grpFillAll(false);
   $('grpUseBrushBtn').onclick=()=>{
     if(!multiSel)return;const {st}=selMembers();if(!st.length)return;
     if(eraserActive){setStatus('Pick a drawing brush first, not the eraser.');return;}
@@ -5825,6 +5927,17 @@ function editAllSelected(){
   $('grpTurnBtn').onclick=()=>{const bb=selBBox();const v=parseFloat($('grpTurnDeg').value);if(!bb||!isFinite(v))return;const pv=grpPivot(bb);grpApplyOnce({ax:pv.x,ay:pv.y,sx:1,sy:1,rot:v,dx:0,dy:0});setStatus('Turned '+v+'°.');};
   $('releaseMotifBtn').onclick=releaseMotifToGroup;
   const box=$('groupBox');
+  // Double-tap a part of a selected group (finger, Pencil or mouse) = pick just that part. The box covers the group, so it sees the taps.
+  box.addEventListener('pointerdown',e=>{
+    if(e.target!==box||!multiSel)return;
+    const now=performance.now(),G=window.__grpTap;
+    if(G&&G.g===(multiSel.groupId||'multi')&&now-G.t<500&&Math.hypot(e.clientX-G.x,e.clientY-G.y)<45){
+      window.__grpTap=null;e.preventDefault();e.stopImmediatePropagation();
+      const gid=multiSel.groupId;if(gid)groupInsideId=gid;multiSel=null;selectAt(e.clientX,e.clientY);
+      if(!selectedStrokeId&&!selected&&gid){groupInsideId=null;const m=groupMembersOf(gid);setMulti(m.strokeIds,m.placedIds,gid);redraw();setStatus('Double-tap right on a motif to pick just that one.');}
+      else setStatus('Editing one part of the group. Tap empty canvas to finish.');
+    }else window.__grpTap={t:now,x:e.clientX,y:e.clientY,g:multiSel.groupId||'multi'};
+  },true);
   grpBindHandle(box,'move');grpBindHandle($('grpRotHandle'),'rot');
   box.querySelectorAll('.gh').forEach(h=>grpBindHandle(h,h.dataset.h));
 })();
@@ -6341,7 +6454,7 @@ $('rcMake').onclick=()=>{
   setStatus('⌒ Corners rounded (radius '+r+'). Undo brings them back.');
 };
 let drawLock=false,editExplicit=false;try{drawLock=localStorage.getItem('sp-drawLock')==='1';}catch(e){}
-function syncMode(){if(drawLock&&mode==='edit'&&!editExplicit)mode='draw';try{tbToolSync();}catch(e){}try{if(penOn&&mode==='edit')penSet(false);if(warpOn&&mode==='edit')warpSet(false);if(cloneOn&&mode==='edit')cloneSet(false);if(smudgeOn&&mode==='edit')smudgeSet(false);}catch(e){}$('drawModeBtn').classList.toggle('active',mode==='draw');$('editModeBtn').classList.toggle('active',mode==='edit');canvas.style.cursor=mode==='draw'?'crosshair':'grab';setStatus(mode==='draw'?'✏️ Draw Mode: Apple Pencil draws, two fingers move the canvas.':'↔️ Edit Mode: tap motif with Pencil/mouse, then move, scale, rotate or flip.');;if(typeof syncStrokeSelectionUI==='function')syncStrokeSelectionUI();}
+function syncMode(){if(drawLock&&mode==='edit'&&!editExplicit)mode='draw';try{tbToolSync();}catch(e){}try{if(penOn&&mode==='edit')penSet(false);if(warpOn&&mode==='edit')warpSet(false);if(cloneOn&&mode==='edit')cloneSet(false);if(smudgeOn&&mode==='edit')smudgeSet(false);}catch(e){}$('drawModeBtn').classList.toggle('active',mode==='draw');$('editModeBtn').classList.toggle('active',mode==='edit');canvas.style.cursor=mode==='draw'?'crosshair':'grab';setStatus(mode==='draw'?'✏️ Draw Mode: Apple Pencil draws, two fingers move the canvas.':'↔️ Edit Mode: tap a motif, then move, scale, rotate or flip.');;if(typeof syncStrokeSelectionUI==='function')syncStrokeSelectionUI();}
 $('drawModeBtn').onclick=()=>{if(pathEditStrokeId)commitEditPath();if(joinPendingStrokeId)endJoinPick();disarmAreaFill();disarmShapeMultiSelect();armedShapeType=null;syncShapeToolUI();mode='draw';selected=null;selectedStrokeId=null;multiSel=null;selAddArmed=false;groupInsideId=null;multiSelectMode=false;multiSelectIds=[];$('multiSelectToggle').textContent='🔢 Multi-Select: Off';$('multiSelectToggle').classList.remove('active');syncAlignUI();syncStrokeSelectionUI();syncMode();redraw()};$('editModeBtn').onclick=()=>{disarmAreaFill();armedShapeType=null;syncShapeToolUI();mode='edit';editExplicit=true;try{syncMode();}finally{editExplicit=false;}};$('captureBtn').onclick=()=>captureMotif();
 // Capture Area: drag a box on the canvas; only strokes inside it become the motif.
 function setCaptureArea(on){
@@ -6617,6 +6730,7 @@ document.querySelectorAll('.sel-brush').forEach(el=>{
   });
 });
 document.querySelectorAll('.sel-width').forEach(el=>{
+  el.step='any'; // a 0.05 step rounded the shown size (9.34 appeared as 9.35)
   el.addEventListener('input',e=>{
     const stroke=strokes.find(s=>s.id===selectedStrokeId);if(!stroke)return;
     if(!stroke.settings)stroke.settings=Object.assign({},BrushEngine.getSettings(stroke.brushId));
@@ -7549,7 +7663,7 @@ let patEdit=null,patDrag=null;
 function patEditor(){
   let ed=$('patEditor');if(ed)return ed;
   ed=document.createElement('div');ed.id='patEditor';
-  ed.innerHTML='<h4>🧩 Pattern inside shape</h4><div class="hint">Drag on the canvas with the Pencil (or mouse) to move the pattern. Fingers still pan and zoom.</div>'
+  ed.innerHTML='<h4>🧩 Pattern inside shape</h4><div class="hint">Drag on the canvas to move the pattern. Two fingers pan and zoom.</div>'
    +'<div class="pe-row"><span style="width:44px">Size</span><input type="range" id="peSize" min="5" max="800" step="1"><span class="pe-val" id="peSizeV"></span></div>'
    +'<div class="pe-row"><span style="width:44px">Turn</span><input type="range" id="peRot" min="-180" max="180" step="1"><span class="pe-val" id="peRotV"></span></div>'
    +'<div class="pe-btns"><button type="button" class="btn mini" id="peFit">Fit to shape</button><button type="button" class="btn mini" id="peChange">Change pattern</button><button type="button" class="btn mini danger" id="peRemove">Remove pattern</button><button type="button" class="btn mini primary" id="peDone">✓ Done</button></div>';
@@ -7825,7 +7939,7 @@ setInterval(()=>{try{efRefresh();}catch(e){}},600);
   function snapshot(list){return list.map(s=>({s,vals:colourProps(s).map(([g])=>g())}));}
   function applyFromBase(b,op){const layersTouched=new Set();b.forEach(({s,vals})=>{colourProps(s).forEach(([g,set],i)=>{if(vals[i]!=null)set(adjCol(vals[i],op));});layersTouched.add(s.layerId);});return layersTouched;}
   function finish(layersTouched){try{fillSync();}catch(e){}try{ctSync();}catch(e){}layersTouched.forEach(id=>{try{rebuildLayer(id);}catch(e){}});redraw();}
-  ['adjSel','adjLayer','adjAll'].forEach((id,i)=>{g$(id).onclick=()=>{scope=['sel','layer','all'][i];['adjSel','adjLayer','adjAll'].forEach(x=>g$(x).classList.toggle('active',x===id));base=null;};});
+  ['adjSel','adjLayer','adjAll'].forEach((id,i)=>{g$(id).onclick=()=>{scope=['sel','layer','all'][i];['adjSel','adjLayer','adjAll'].forEach(x=>g$(x).classList.toggle('active',x===id));base=null;try{adjZero();}catch(e){}};});
   g$('adjInvert').onclick=()=>{
     try{rcEnsureIdle();}catch(err){}
     const list=targets();if(!list.length){setStatus('🎛 Select a stroke first, or choose This layer / Everything.');return;}
@@ -7833,7 +7947,13 @@ setInterval(()=>{try{efRefresh();}catch(e){}},600);
   };
   const sliders=[['adjHue','adjHueVal',v=>v+'°'],['adjSat','adjSatVal',v=>v],['adjBri','adjBriVal',v=>v]];
   const read=()=>({hue:+g$('adjHue').value,sat:+g$('adjSat').value,bri:+g$('adjBri').value});
-  const ADJ_IDLE='Drag a slider to preview, let go to apply. It then springs back to the middle so you can adjust again.';
+  const ADJ_IDLE='Drag a slider to preview, let go to apply. The sliders stay where you leave them so you can keep fine-tuning.';
+  // The sliders keep their position after you let go: further dragging re-adjusts from the SAME original colours, so Hue, Saturation and
+  // Brightness add up instead of snapping back to 0. They reset only when something else changes (another edit, Undo, a new selection, scope).
+  const histSig=()=>history.length+':'+hIndex+'|'+(selectedStrokeId||'')+'|'+(multiSel&&multiSel.strokeIds?multiSel.strokeIds.join():'')+'|'+activeLayerId+'|'+scope;
+  let baseSig='',adjDragging=false;
+  const adjZero=()=>{sliders.forEach(([i,v,f])=>{g$(i).value=0;g$(v).textContent=f(0);});};
+  setInterval(()=>{if(base&&!adjDragging&&histSig()!==baseSig){base=null;heavy=false;adjZero();setState(ADJ_IDLE);}},400);
   const setState=t=>{const e=g$('adjState');if(e)e.textContent=t;};
   let heavy=false,raf=0;
   const hasPixels=list=>list.some(({s})=>strokes.some(x=>x.layerId===s.layerId&&x.brushId==='smudge'));
@@ -7845,14 +7965,14 @@ setInterval(()=>{try{efRefresh();}catch(e){}},600);
     const r=read(),none=!r.hue&&!r.sat&&!r.bri;
     finish(applyFromBase(base,r));
     if(!none)pushHist();
-    base=null;heavy=false;
-    sliders.forEach(([i,v,f])=>{g$(i).value=0;g$(v).textContent=f(0);});
-    setState(none?ADJ_IDLE:'✓ Applied. The sliders are back in the middle; Undo brings the old colours back.');
+    adjDragging=false;heavy=false;baseSig=histSig();
+    if(none){base=null;adjZero();}
+    setState(none?ADJ_IDLE:'✓ Applied. Keep dragging to fine-tune — Undo brings the old colours back.');
     if(!none)setStatus('🎛 Colours adjusted. Undo brings them back.');
   }
   sliders.forEach(([id,vid,fmt])=>{
     g$(id).addEventListener('input',e=>{
-      g$(vid).textContent=fmt(e.target.value);
+      g$(vid).textContent=fmt(e.target.value);adjDragging=true;
       if(!base){
         try{rcEnsureIdle();}catch(err){}
         const list=targets();if(!list.length){setStatus('🎛 Select a stroke first, or choose This layer / Everything.');setState('Nothing to adjust: select a stroke, or choose This layer / Everything.');return;}
@@ -8985,7 +9105,7 @@ function renderPathNodeOverlay(){
       let snapT=null,snapArmed=true;
       const onMove=ev=>{
         const p=screenToCanvas(ev.clientX,ev.clientY);
-        if(!Number.isFinite(p.x)||!Number.isFinite(p.y))return; // never let a bad reading corrupt the node
+        if(multiTouchLock||!Number.isFinite(p.x)||!Number.isFinite(p.y))return; // never let a bad reading corrupt the node; a second finger means pan/zoom
         let nx=p.x+dragDX,ny=p.y+dragDY;
         if(pathSnapOn){
           if(!snapT){snapT=buildSnapTargets(i);snapArmed=!findSnap(snapT,node.x,node.y);} // a node that STARTS next to another path stays free until you drag away from it, otherwise it would stick
@@ -9001,7 +9121,7 @@ function renderPathNodeOverlay(){
       };
       const onUp=()=>{el.removeEventListener('pointermove',onMove);showSnapHi(host,null);renderPathNodeOverlay();};
       el.addEventListener('pointermove',onMove);
-      el.addEventListener('pointerup',onUp,{once:true});
+      el.addEventListener('pointerup',onUp,{once:true});el.addEventListener('pointercancel',onUp,{once:true});
     });
     host.appendChild(el);
   });
@@ -9055,7 +9175,7 @@ function handlePathEditCanvasTap(e){
     }catch(err){}
     // Select tool: tapping a DIFFERENT line moves Edit Path straight onto it (no need to press
     // Edit Path again). A tap on bare canvas is still a no-op.
-    const lockedIds=new Set(layers.filter(l=>l.locked).map(l=>l.id));
+    const lockedIds=new Set(layers.filter(l=>l.locked||l.visible===false).map(l=>l.id)); // a hidden layer is not selectable either: you would be grabbing something you cannot see
     let best=null,bestDist=Infinity;
     strokes.forEach(st=>{
       if(st.id===pathEditStrokeId||lockedIds.has(st.layerId)||st.clipStrokeId||st.regions||!st.points||st.points.length<2)return;
@@ -10440,7 +10560,7 @@ $('svgSaveBtn').onclick=async()=>{
   svgSize=v;try{localStorage.setItem('sp-svgSize',String(v));}catch(e){}
   try{
     const svg=buildSvgExport(svgSize),blob=new Blob([svg],{type:'image/svg+xml'});
-    saveFileBlob(blob,'pattern-sketch-tile-'+svgSize+'.svg');
+    saveFileBlob(blob,exportBase()+'-'+svgSize+'.svg');
     $('svgPopover').classList.remove('open');
     const skipped=placed.filter(p=>p.img).length+((bgImg&&bgShown)?1:0);
     setStatus('🖋️ SVG saved at '+Math.round(svgSize*TW/TILE)+' × '+Math.round(svgSize*TH/TILE)+' px (vector only)'+(skipped?' — '+skipped+' picture'+(skipped===1?'':'s')+' (motif / background image) left out because they are not vector.':'.'));
@@ -10561,7 +10681,7 @@ async function exportTileSharp(k){
     const blob=await new Promise(r=>c.toBlob(r,'image/png'));
     if(!blob)throw new Error('the browser could not make an image this big');
     c.width=c.height=1;
-    saveFileBlob(blob,'pattern-sketch-tile-'+px+'.png');
+    saveFileBlob(blob,exportBase()+'-'+px+'px.png');
     setStatus('📸 Saved the tile at '+px+' px (crisp lines; Liquify paint is enlarged, so it stays as soft as it was painted).');
   }catch(err){console.error(err);setStatus('⚠️ Could not make the sharper tile: '+(err&&err.message||err)+'. Try a smaller size.');}
 }
@@ -10581,7 +10701,7 @@ $('hiSaveBtn').onclick=async()=>{
     if(!blob)throw new Error('the browser could not make an image this big');
     const fin=await pngWithDpi(blob,hiDpi);
     c.width=c.height=1;
-    saveFileBlob(fin,'pattern-sketch-card-'+d[0]+'x'+d[1]+'.png');
+    saveFileBlob(fin,exportBase()+'-card-'+d[0]+'x'+d[1]+'.png');
     $('hiPopover').classList.remove('open');
     setStatus('🖼️ Saved '+d[0]+' × '+d[1]+' px card ('+(d[0]/hiDpi).toFixed(2)+' × '+(d[1]/hiDpi).toFixed(2)+' in at '+hiDpi+' dpi).');
   }catch(err){console.error(err);setStatus('⚠️ Could not make the hi-res card: '+(err&&err.message||err)+'. Try a smaller size.');}
@@ -10873,7 +10993,7 @@ $('exportBtn').onclick=async()=>{try{await txReady();}catch(e){}updateComposite(
   // over its edges (same lattice as the on-screen repeat), so anything crossing an edge wraps round.
   const wrapOffs=[[0,0]];for(let ix=-1;ix<=1;ix++)for(let iy=-1;iy<=1;iy++){if(ix||iy)wrapOffs.push(tilePos(ix,iy));}
   wrapOffs.forEach(([ox,oy])=>o.drawImage(compositeCanvas,0,0,W,H,ox-CX,oy-CY,W,H));
-  placed.forEach(p=>{if(!p.img)return;wrapOffs.forEach(([ox,oy])=>{o.save();if(p.alpha!=null)o.globalAlpha=p.alpha;o.translate(p.x-CX+ox,p.y-CY+oy);o.rotate(p.r*Math.PI/180);o.scale(p.s*p.fx,p.s*p.fy);o.drawImage(p.img,-p.w/2,-p.h/2,p.w,p.h);o.restore();});});out.toBlob(b=>{if(b)SketchpadNative.saveBlob(b,'pattern-sketch-tile.png');},'image/png');};
+  placed.forEach(p=>{if(!p.img)return;wrapOffs.forEach(([ox,oy])=>{o.save();if(p.alpha!=null)o.globalAlpha=p.alpha;o.translate(p.x-CX+ox,p.y-CY+oy);o.rotate(p.r*Math.PI/180);o.scale(p.s*p.fx,p.s*p.fy);o.drawImage(p.img,-p.w/2,-p.h/2,p.w,p.h);o.restore();});});out.toBlob(b=>{if(b)SketchpadNative.saveBlob(b,exportBase()+'.png');},'image/png');};
 window.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='z'){e.shiftKey?redo():undo();}});
 function syncThemeToggleUI(){const light=document.body.classList.contains('theme-light');$('themeToggle').textContent=light?'🌙 Dark Mode':'☀️ Light Mode';}
 $('themeToggle').onclick=()=>{const light=document.body.classList.toggle('theme-light');try{localStorage.setItem('pkmTheme',light?'light':'dark');}catch(e){}syncThemeToggleUI();};
@@ -10988,8 +11108,9 @@ function setSaveStatus(state,at){
 // builder means all three always agree on what "the whole project" contains, and a field added
 // here automatically reaches every save path instead of needing three parallel edits.
 let traceSource=null; // the picture last used in Trace Image to Vector, kept with the project: {name,src,settings}
+let coll=null;      // pattern collection: {list:[{id,name,thumb,state,tl}],activeId} — null until the project has more than one pattern
 function buildDocObject(){
-  return {
+  const d={
     tileW:TW,tileH:TH,tilePhys:tilePhys,repeatPreview:showTiling?'tiled':'single',
     strokesJSON:strokesToJSON(),
     layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip}))),
@@ -11011,6 +11132,13 @@ function buildDocObject(){
     format:'sketchpad-project',version:2,projectName:(typeof activeProject!=='undefined'&&activeProject)?activeProject.name:null,
     savedAt:Date.now(),
   };
+  // A collection keeps the OPEN pattern in the normal top-level fields (so older projects, older app versions and every save path keep working);
+  // the other patterns ride along as stored states.
+  if(coll&&coll.list.length>=1){
+    d.patterns=coll.list.map(q=>({id:q.id,name:q.name,thumb:q.thumb||null,tl:q.tl||null,state:q.id===coll.activeId?null:q.state}));
+    d.activePatternId=coll.activeId;
+  }
+  return d;
 }
 // ---- Autosave safety net -----------------------------------------------------------------
 // The single "current" autosave used to be overwritten blindly, so one early autosave of a nearly
@@ -11057,6 +11185,29 @@ function makeThumb(){
     return c.toDataURL('image/jpeg',0.82);
   }catch(e){return null;}
 }
+// The project's preview: one pattern -> that pattern; several -> a collage of all of them (never just the last one edited).
+function loadImg(src){return new Promise(res=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>res(null);i.src=src;});}
+async function projectThumb(){
+  const own=makeThumb();
+  try{
+    if(!coll||coll.list.length<2)return own;
+    const q=colActive();if(q&&own)q.thumb=own;
+    const list=coll.list.slice(0,9),n=list.length,cols=n<=4?2:3,rows=Math.ceil(n/cols),S=240,gap=4;
+    const cw=(S-gap*(cols-1))/cols,ch=(S-gap*(rows-1))/rows;
+    const imgs=await Promise.all(list.map(x=>x.thumb?loadImg(x.thumb):null));
+    const c=document.createElement('canvas');c.width=c.height=S;const o=c.getContext('2d');
+    o.fillStyle='#d9d2e3';o.fillRect(0,0,S,S);
+    imgs.forEach((im,i)=>{
+      const x=(i%cols)*(cw+gap),y=Math.floor(i/cols)*(ch+gap);
+      o.save();o.beginPath();o.rect(x,y,cw,ch);o.clip();o.fillStyle='#fff';o.fillRect(x,y,cw,ch);
+      if(im){const k=Math.max(cw/im.width,ch/im.height),w=im.width*k,h=im.height*k;o.drawImage(im,x+(cw-w)/2,y+(ch-h)/2,w,h);}
+      o.restore();
+    });
+    return c.toDataURL('image/jpeg',0.82);
+  }catch(e){return own;}
+}
+let lastCollSig='';
+const collSig=()=>coll?coll.list.map(q=>q.id).join(','):'';
 // ---- Saving the open project ----
 function saveActive(opts){return queueJob(()=>doSave(opts||{}));}
 async function doSave(opts){
@@ -11065,7 +11216,7 @@ async function doSave(opts){
   if(!projDirty&&!opts.force){
     // Nothing changed: at most refresh the thumbnail (does not touch "last edited").
     if(opts.thumb&&(!p.thumb||Date.now()-lastThumbAt>5000)){
-      const t=makeThumb();
+      const t=await projectThumb();
       if(t){try{const m={...p,thumb:t};await dbPut(PROJ_STORE,m,p.id);p.thumb=t;lastThumbAt=Date.now();}catch(e){}}
     }
     return true;
@@ -11076,8 +11227,9 @@ async function doSave(opts){
   try{
     const doc=buildDocObject();
     const score=docScore(doc),now=Date.now();
-    const meta={...p,updatedAt:wasDirty?now:p.updatedAt,strokes:strokes.length,motifs:motifs.length,layout};
-    if(opts.thumb||!p.thumb||now-lastThumbAt>15000){const t=makeThumb();if(t){meta.thumb=t;lastThumbAt=now;}}
+    const meta={...p,updatedAt:wasDirty?now:p.updatedAt,strokes:strokes.length,motifs:motifs.length,layout,patterns:coll?coll.list.length:1};
+    const cs=collSig();
+    if(opts.thumb||!p.thumb||now-lastThumbAt>15000||cs!==lastCollSig){const t=await projectThumb();if(t){meta.thumb=t;lastThumbAt=now;lastCollSig=cs;}}
     let bak=null;
     if(lastScore>0&&(now-lastBackupAt>180000||score<lastScore*0.6)){
       try{const ex=await dbGet(PDOC_STORE,p.id);if(ex&&ex.savedAt)bak=ex;}catch(e){}
@@ -11088,7 +11240,7 @@ async function doSave(opts){
     });
     if(bak){lastBackupAt=now;pruneBackups(p.id,docScore(bak));}
     lastScore=score;
-    if(activeProject&&activeProject.id===p.id)Object.assign(activeProject,{updatedAt:meta.updatedAt,strokes:meta.strokes,motifs:meta.motifs,thumb:meta.thumb});
+    if(activeProject&&activeProject.id===p.id)Object.assign(activeProject,{updatedAt:meta.updatedAt,strokes:meta.strokes,motifs:meta.motifs,thumb:meta.thumb,patterns:meta.patterns});
     if(!projDirty)setSaveStatus('saved',now);   // only ever shown after the write has completed
     return true;
   }catch(e){
@@ -11155,7 +11307,9 @@ function resetForLoad(){
 }
 function syncProjectName(){
   const c=$('projNameChip');if(!c)return;
-  const tx=$('projNameTxt');if(tx)tx.textContent=activeProject?'📄 '+activeProject.name:'📄 No project open';
+  const two=(cap,nm)=>{const a=document.createElement('span');a.className='tb-cap';a.textContent=cap;const b=document.createElement('span');b.className='tb-nm';b.textContent=nm;return [a,b];};
+  const tx=$('projNameTxt');if(tx){tx.replaceChildren(...two('📄 Project',activeProject?activeProject.name:'No project open'));}
+  try{const pc=$('patNameChip'),q=colActive();if(pc){pc.style.display=(activeProject&&q)?'':'none';pc.replaceChildren(Object.assign(document.createElement('span'),{className:'tb-two'},{}));{const w=pc.firstChild;two('🧩 Pattern',q?q.name:'').forEach(n=>w.appendChild(n));}pc.title='Current pattern “'+(q?q.name:'')+'” — tap to rename it';pc.onclick=()=>{const a=colActive();if(a)colRename(a.id);};}}catch(e){}
   c.title=activeProject?activeProject.name+' — project menu':'';
   try{document.title=(activeProject?activeProject.name+' — ':'')+'Pattern Sketch';}catch(e){}
 }
@@ -11165,6 +11319,7 @@ function finishLoad(meta,doc){
   history=[];hIndex=-1;pushHist();viewReset();redraw();updateBaseScale();
   activeProject=meta;projDirty=false;lastScore=docScore(doc);lastBackupAt=Date.now();lastThumbAt=0;
   try{localStorage.setItem('sp-activeProject',meta.id);}catch(e){}
+  try{collEnsure();colStripRender();}catch(e){}
   syncProjectName();setSaveStatus('saved',meta.updatedAt||doc.savedAt);
   autosaveBlocked=false;
   try{if(window.SPTimelapse)SPTimelapse.onProjectLoaded(meta,doc);}catch(e){}
@@ -11265,7 +11420,16 @@ async function duplicateProject(id){
   if(activeProject&&activeProject.id===id){if(!(await flushBeforeSwitch()))return;}
   const [m,doc,metas]=await Promise.all([dbGet(PROJ_STORE,id),dbGet(PDOC_STORE,id),dbAll(PROJ_STORE)]);
   if(!m||!doc)return;
-  try{const nm=await createProjectRecord({name:uniqueName(m.name+' copy',metas),folderId:m.folderId,doc:JSON.parse(JSON.stringify(doc))});try{if(window.SPTimelapse)await SPTimelapse.copyFor(id,nm.id);}catch(e){}}
+  try{const nm=await createProjectRecord({name:uniqueName(m.name+' copy',metas),folderId:m.folderId,doc:JSON.parse(JSON.stringify(doc))});
+    try{if(window.SPTimelapse)await SPTimelapse.copyFor(id,nm.id);}catch(e){}
+    // every pattern of the copy gets its own timelapse recording too, so nothing is shared with the original project
+    try{const nd=await dbGet(PDOC_STORE,nm.id);
+      if(nd&&Array.isArray(nd.patterns)){
+        for(const q of nd.patterns){const old=q.tl;if(!old)continue;
+          const nt=old===id?nm.id:(String(old).startsWith(id+'~')?nm.id+String(old).slice(String(id).length):null);if(!nt)continue;
+          q.tl=nt;if(nt!==nm.id){try{if(window.SPTimelapse)await SPTimelapse.copyFor(old,nt);}catch(e){}}}
+        await dbPut(PDOC_STORE,nd,nm.id);}
+    }catch(e){console.warn('[project] pattern remap failed',e);}}
   catch(e){await projAsk({title:'⚠️ Couldn’t duplicate',message:'Storage refused the copy (it may be full).',ok:'OK',cancel:null});return;}
   setStatus('⧉ Duplicated “'+m.name+'” — the copy is fully independent.');
   renderProjects();
@@ -11280,7 +11444,8 @@ async function moveProject(id){
 async function trashProject(id){
   const m=await dbGet(PROJ_STORE,id);if(!m)return;
   const isActive=activeProject&&activeProject.id===id;
-  const r=await projAsk({title:'🗑️ Move to Trash?',message:'“'+m.name+'” will go to the Trash folder. You can restore it from there any time until you empty the Trash.'+(isActive?' It is the project you have open — it will be saved first.':''),ok:'Move to Trash',danger:true});
+  let nPat=1;try{const d0=await dbGet(PDOC_STORE,id);if(d0&&Array.isArray(d0.patterns))nPat=d0.patterns.length;}catch(e){}
+  const r=await projAsk({title:'🗑️ Move to Trash?',message:'“'+m.name+'”'+(nPat>1?' and all '+nPat+' of its patterns':'')+' will go to the Trash folder. You can restore it from there any time until you empty the Trash.'+(isActive?' It is the project you have open — it will be saved first.':''),ok:'Move to Trash',danger:true});
   if(!r)return;
   if(isActive){if(!(await flushBeforeSwitch()))return;}
   await updateMeta(id,{trashed:true,trashedAt:Date.now()});
@@ -11299,8 +11464,11 @@ async function restoreProject(id){
   setStatus('↩️ Restored “'+m.name+'”.');renderProjects();
 }
 async function deleteForever(ids,label){
-  const r=await projAsk({title:'Delete permanently?',message:label+' will be deleted for good. This cannot be undone.',ok:'Delete forever',danger:true});
+  let pats=0;const tlKeys=[];
+  for(const id of ids){try{const d0=await dbGet(PDOC_STORE,id);if(d0&&Array.isArray(d0.patterns)){pats+=d0.patterns.length;d0.patterns.forEach(q=>{if(q.tl&&q.tl!==id)tlKeys.push(q.tl);});}else pats+=1;}catch(e){pats+=1;}}
+  const r=await projAsk({title:'Delete permanently?',message:label+' will be deleted for good, including '+(pats>1?'all '+pats+' patterns inside '+(ids.length>1?'them':'it'):'its pattern')+'. This cannot be undone.',ok:'Delete forever',danger:true});
   if(!r)return;
+  for(const k of tlKeys){try{if(window.SPTimelapse)await SPTimelapse.deleteFor(k);}catch(e){}}
   for(const id of ids){
     try{
       const keys=((await idbReq(PDOC_STORE,'readonly',st=>st.getAllKeys()))||[]).filter(k=>k===id||String(k).startsWith('bak:'+id+':'));
@@ -11567,6 +11735,7 @@ async function renderProjects(){
     const card=pjEl('div','pj-card'+(isCur?' current':''));
     const th=pjEl('div','pj-thumb');if(m.thumb)th.style.backgroundImage='url('+m.thumb+')';else th.textContent='🎨';
     if(isCur)th.appendChild(pjEl('span','pj-badge','Open now'));
+    if((m.patterns||1)>1){const pb=pjEl('span','pj-badge','🧩 '+m.patterns+' patterns');pb.style.cssText='left:auto;right:8px;top:8px;bottom:auto';th.appendChild(pb);}
     if(pjView!=='trash')th.onclick=()=>switchToProject(m.id);
     card.appendChild(th);
     const info=pjEl('div','pj-info');info.appendChild(pjEl('div','pj-name',m.name));
@@ -11662,7 +11831,7 @@ $('newProjectBtn').onclick=()=>newProjectFlow(null);
 // the boot-time restore-prompt flow and by Open Project, so a project file round-trips through
 // exactly the same code path a real autosave restore does — including the interrupted-Edit-Motif
 // auto-finish logic below, which both callers need equally.
-async function applyDocObject(doc){
+async function applyDocObject(doc,opts){
   try{
     if(!doc)return false;
     if(Array.isArray(doc.customBrushes)&&doc.customBrushes.length){
@@ -11747,9 +11916,289 @@ async function applyDocObject(doc){
     projectPaletteId=(typeof doc.projectPaletteId==='string'&&savedPalettes.some(p=>p.id===doc.projectPaletteId))?doc.projectPaletteId:null;try{palRefresh();}catch(e){}
     renderSavedPalettesList();
     syncColourTargetUI();
+    if(!(opts&&opts.keepCollection)){try{collRestore(doc);}catch(e){coll=null;}}
     return true;
   }catch(e){console.warn('[sketchpad] restore failed',e);return false;}
 }
+
+// ============================ Pattern collection (v299) ============================
+// A project can hold several patterns (like a stack). The OPEN pattern lives in the normal app state (strokes, layers, undo history ...);
+// the others are stored as plain states in `coll` and swapped in through the same loader that opens a project. Each pattern keeps its own
+// layers, tile size/repeat, background, undo history (for the session) and timelapse. Shared across the collection: motifs, brushes, fonts, palettes.
+const PAT_KEYS=['tileW','tileH','tilePhys','repeatPreview','strokesJSON','layersJSON','activeLayerId','placedJSON','groupsJSON','bgSrc','bgOpacity','bgShown','tracesJSON','traceLocked','traceSource','layout','activeTemplate'];
+const patHist=new Map();let patBusy=false,patThumbSig='',colFresh=null;
+function colFlag(id){colFresh=id;setTimeout(()=>{if(colFresh===id){colFresh=null;document.querySelectorAll('.col-card.fresh').forEach(c=>c.classList.remove('fresh'));}},2400);}
+function colOpen(){let v=null;try{v=localStorage.getItem('sp-colStrip');}catch(e){}if(v==='1')return true;if(v==='0')return false;return !!(coll&&coll.list.length>1);} // the designer's choice sticks; by default the strip is open once there is more than one pattern
+function colSetOpen(v){try{localStorage.setItem('sp-colStrip',v?'1':'0');}catch(e){}patThumbSig='';colStripRender();}
+const colUid=()=>crypto.randomUUID();
+function exportBase(){const q=(typeof coll!=='undefined'&&coll)?colActive():null,n=q?q.name:(activeProject?activeProject.name:'pattern');return String(n||'pattern').replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'-')||'pattern';}
+
+function colState(d){const o={};PAT_KEYS.forEach(k=>{if(d[k]!==undefined)o[k]=d[k];});return o;}
+function colActive(){return coll&&coll.list.find(q=>q.id===coll.activeId);}
+function collEnsure(){
+  if(coll)return coll;
+  const id=colUid();
+  coll={list:[{id,name:(activeProject&&activeProject.name)||'Pattern 1',thumb:null,state:null,tl:activeProject?activeProject.id:null}],activeId:id};
+  return coll;
+}
+function collRestore(doc){
+  patHist.clear();
+  if(!doc||!Array.isArray(doc.patterns)||doc.patterns.length<1){coll=null;colStripRender();return;}
+  const list=doc.patterns.filter(q=>q&&q.id&&(q.state||q.id===doc.activePatternId)).map(q=>({id:q.id,name:String(q.name||'Pattern'),thumb:q.thumb||null,state:q.id===doc.activePatternId?null:q.state,tl:q.tl||null}));
+  if(!list.some(q=>q.id===doc.activePatternId)){coll=null;colStripRender();return;}
+  coll={list,activeId:doc.activePatternId};
+  colStripRender();
+}
+function tlKey(){const q=colActive();return(q&&q.tl)?q.tl:(activeProject?activeProject.id:null);}
+// Deep copy of a pattern state with fresh layer ids, so nothing (not even a cache) is shared with the original.
+function colClone(st){
+  const o=JSON.parse(JSON.stringify(st));
+  const ls=JSON.parse(o.layersJSON||'[]'),lm=new Map();
+  ls.forEach(l=>{const n=colUid();lm.set(l.id,n);l.id=n;});
+  o.layersJSON=JSON.stringify(ls);if(lm.has(o.activeLayerId))o.activeLayerId=lm.get(o.activeLayerId);
+  const ss=JSON.parse(o.strokesJSON||'[]');ss.forEach(q=>{if(lm.has(q.layerId))q.layerId=lm.get(q.layerId);});
+  o.strokesJSON=JSON.stringify(ss);
+  return o;
+}
+function colUniqueName(base){let n=base,i=2;while(coll.list.some(q=>q.name===n))n=base+' '+String(i++).padStart(2,'0');return n;}
+// "Marbled Original" -> "Marbled Original 02" -> "Marbled Original 03" ... (unique, readable; patterns are tracked by id, never by name)
+function colNextName(name){const b=String(name||'Pattern').replace(/ \d{2,3}$/,'');let n=2;const nm=()=>b+' '+String(n).padStart(2,'0');while(coll.list.some(q=>q.name===nm()))n++;return nm();}
+async function colSwitch(id,sopts){
+  sopts=sopts||{};
+  if(!coll||patBusy)return false;
+  if(id===coll.activeId)return true;
+  const target=coll.list.find(q=>q.id===id);if(!target||!target.state)return false;
+  if(editingMotifId){setStatus('🗂 Finish editing the motif first, then switch patterns.');return false;}
+  patBusy=true;
+  const cur=colActive(),wasWarp=(typeof warpOn!=='undefined')&&warpOn;
+  try{
+    commitPendingEdits();clearTimeout(autosaveTimer);
+    const live=buildDocObject();
+    cur.state=colState(live);cur.thumb=makeThumb()||cur.thumb;
+    patHist.set(cur.id,{history,hIndex});
+    const doc=Object.assign({},live,target.state);delete doc.patterns;delete doc.activePatternId;
+    const keepView={zoom,panX,panY,rot,tw:TW,th:TH};
+    autosaveBlocked=true;projDirty=false;
+    resetForLoad();
+    coll.activeId=id;const tState=target.state;target.state=null;
+    const ok=await applyDocObject(doc,{keepCollection:true});
+    if(!ok){target.state=tState;cur.state=null;coll.activeId=cur.id;autosaveBlocked=false;setStatus('⚠️ Could not open that pattern. Nothing was changed.');return false;}
+    if(!layers.length){layers=defaultLayers();activeLayerId=layers[layers.length-1].id;}
+    renderLayersList();
+    const h=patHist.get(id);
+    if(h&&h.history&&h.history.length&&h.hIndex>=0){history=h.history;hIndex=h.hIndex;}else{history=[];hIndex=-1;pushHist();}
+    if(keepView.tw===TW&&keepView.th===TH){zoom=keepView.zoom;panX=keepView.panX;panY=keepView.panY;rot=keepView.rot;try{applyTransform();}catch(e){}}else viewReset();
+    redraw();updateBaseScale();
+    autosaveBlocked=false;syncProjectName();
+    try{if(window.SPTimelapse)await SPTimelapse.onProjectLoaded(activeProject,null);}catch(e){}
+    // Liquify stays open across a pattern switch (it needs Draw mode); otherwise open the pattern ready to select, like opening a project
+    if(wasWarp){try{warpOn=false;warpSet(true);}catch(e){}}
+    else{try{if(!drawLock&&mode==='draw'&&strokes.length){$('editModeBtn').click();}}catch(e){}}
+    scheduleAutosave();patThumbSig='';
+    return true;
+  }catch(e){console.warn('[sketchpad] pattern switch failed',e);setStatus('⚠️ Could not switch pattern: '+(e&&e.message||e));return false;}
+  finally{patBusy=false;colStripRender();}
+}
+async function colDuplicate(){
+  if(!activeProject){setStatus('🗂 Open a project first.');return;}
+  if(patBusy)return;
+  collEnsure();commitPendingEdits();
+  const cur=colActive(),live=buildDocObject(),id=colUid();
+  const entry={id,name:colNextName(cur.name),thumb:makeThumb()||cur.thumb,state:colClone(colState(live)),tl:activeProject.id+'~'+id};
+  coll.list.splice(coll.list.indexOf(cur)+1,0,entry);
+  try{localStorage.setItem('sp-colStrip','1');}catch(e){}
+  if(await colSwitch(id)){colFlag(id);colStripRender();setStatus('⧉ New pattern “'+entry.name+'” — an exact copy of “'+cur.name+'”. Tap its name to rename.');}
+}
+async function colNew(){
+  if(!activeProject){setStatus('🗂 Open a project first.');return;}
+  if(patBusy)return;
+  collEnsure();commitPendingEdits();
+  const live=buildDocObject(),dl=defaultLayers(),st=colState(live),id=colUid();
+  Object.assign(st,{strokesJSON:'[]',layersJSON:JSON.stringify(dl.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:true,locked:false,opacity:100,blend:'source-over',alphaLock:false,blur:0,clip:false}))),activeLayerId:dl[dl.length-1].id,placedJSON:'[]',groupsJSON:'{}',bgSrc:null,tracesJSON:'[]',traceSource:null,activeTemplate:null});
+  const entry={id,name:colUniqueName('Pattern '+String(coll.list.length+1).padStart(2,'0')),thumb:null,state:st,tl:activeProject.id+'~'+id};
+  coll.list.push(entry);try{localStorage.setItem('sp-colStrip','1');}catch(e){}
+  if(await colSwitch(id)){colFlag(id);colStripRender();setStatus('➕ New blank pattern “'+entry.name+'”. Tap its name to rename.');}
+}
+async function colRename(id){
+  const q=coll&&coll.list.find(x=>x.id===id);if(!q)return;
+  const r=await projAsk({title:'✏️ Rename pattern',fields:[{key:'name',label:'Name',type:'text',value:q.name}],ok:'Rename'});
+  if(!r)return;const nm=String(r.name||'').trim().slice(0,60);if(!nm)return;
+  q.name=nm;syncProjectName();colStripRender();scheduleAutosave();
+}
+function colMoveTo(id,idx){
+  const i=coll.list.findIndex(x=>x.id===id);if(i<0)return;idx=Math.max(0,Math.min(coll.list.length-1,idx));if(idx===i)return;
+  const [q]=coll.list.splice(i,1);coll.list.splice(idx,0,q);colStripRender();scheduleAutosave();
+}
+// ---- Liquify variations ----
+function liquifyPresent(arr){return arr.some(q=>(q.brushId==='smudge'&&q.settings&&q.settings.liquify)||q.lqOrig);}
+// the pattern as it was before Liquify: Liquify paint moves removed, Liquify-bent shapes put back (everything else — layers, colours, other edits — stays)
+function stripLiquifyJSON(js){
+  const arr=JSON.parse(js||'[]'),out=[];
+  arr.forEach(q=>{
+    if(q.brushId==='smudge'&&q.settings&&q.settings.liquify)return;
+    if(q.lqOrig){const o=q.lqOrig;q.points=o.points?o.points.map(a=>({...a})):q.points;q.nodes=o.nodes?o.nodes.map(a=>({...a})):null;if(o.shape)q.shape=o.shape;q.closed=o.closed;if(o.cornerAuto)q.cornerAuto=true;else delete q.cornerAuto;delete q.lqOrig;}
+    out.push(q);
+  });
+  return JSON.stringify(out);
+}
+// Duplicate & Revert: keep this (liquified) pattern exactly as it is, and add a NEW pattern that is its pre-Liquify design; switch to it and keep Liquify open.
+async function colDupRevert(){
+  if(!activeProject||patBusy)return;
+  if(!liquifyPresent(strokes)){setStatus('🌀 Nothing to revert to yet: this pattern has no Liquify on it. Liquify it first — or use Duplicate Pattern for an exact copy.');return;}
+  collEnsure();commitPendingEdits();
+  const cur=colActive(),live=buildDocObject(),id=colUid();
+  const st=colClone(colState(live));st.strokesJSON=stripLiquifyJSON(st.strokesJSON);
+  const entry={id,name:colNextName(cur.name),thumb:null,state:st,tl:activeProject.id+'~'+id};
+  coll.list.splice(coll.list.indexOf(cur)+1,0,entry);
+  try{localStorage.setItem('sp-colStrip','1');}catch(e){}
+  if(await colSwitch(id)){
+    colFlag(id);colStripRender();
+    setStatus('⧉↺ “'+cur.name+'” kept as is. New pattern “'+entry.name+'” is the design from before Liquify. Tap its name to rename.');
+  }
+}
+function colMove(id,dir){
+  const i=coll.list.findIndex(x=>x.id===id),j=i+dir;if(i<0||j<0||j>=coll.list.length)return;
+  const t=coll.list[i];coll.list[i]=coll.list[j];coll.list[j]=t;colStripRender();scheduleAutosave();
+}
+async function colDelete(id){
+  if(!coll||coll.list.length<2){setStatus('🗂 A project needs at least one pattern.');return;}
+  const q=coll.list.find(x=>x.id===id);if(!q)return;
+  const r=await projAsk({title:'🗑 Delete this pattern?',message:'“'+q.name+'” and all of its layers will be removed from the collection. This can’t be undone — Undo only covers the pattern you are working on.',ok:'Delete pattern',danger:true});
+  if(!r)return;
+  const i=coll.list.indexOf(q);
+  if(id===coll.activeId){const nb=coll.list[i+1]||coll.list[i-1];if(!(await colSwitch(nb.id)))return;}
+  coll.list=coll.list.filter(x=>x!==q);patHist.delete(id);
+  try{if(window.SPTimelapse&&q.tl)await SPTimelapse.deleteFor(q.tl);}catch(e){}
+  syncProjectName();colStripRender();scheduleAutosave();setStatus('🗑 Deleted “'+q.name+'”.');
+}
+async function colRevertPattern(id){
+  if(id&&id!==coll.activeId&&!(await colSwitch(id)))return;
+  const q=colActive();liquifyRevertLayers(layers,'“'+(q?q.name:'this pattern')+'” (all layers)');
+}
+async function colExportAll(){
+  if(!coll||!activeProject)return;
+  const r=await projAsk({title:'📦 Export collection',message:'Saves every pattern as a seamless PNG tile, all in one ZIP file. It opens each pattern in turn and returns to this one.',fields:[{key:'k',label:'Size',type:'chips',options:[['1','Standard'],['2','Sharper 2×'],['4','Print 4×']],value:'1'}],ok:'Export ZIP'});
+  if(!r)return;const k=+r.k||1;
+  const origin=coll.activeId,order=coll.list.map(q=>q.id),files=[],used=new Set();
+  const safe=t=>String(t||'pattern').replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'-')||'pattern';
+  try{
+    for(let i=0;i<order.length;i++){
+      setStatus('📦 Drawing pattern '+(i+1)+' of '+order.length+'…');
+      if(!(await colSwitch(order[i])))throw new Error('could not open a pattern');
+      await new Promise(res=>setTimeout(res,80));
+      const c=await buildTileHi(k);
+      const blob=await new Promise(res=>c.toBlob(res,'image/png'));c.width=c.height=1;
+      if(!blob)throw new Error('the browser could not make an image this big');
+      let nm=String(i+1).padStart(2,'0')+'-'+safe((colActive()||{}).name),u=nm,n=2;while(used.has(u))u=nm+'-'+(n++);used.add(u);
+      files.push({name:u+'.png',data:new Uint8Array(await blob.arrayBuffer())});
+    }
+    saveFileBlob(makeZip(files),safe(activeProject.name)+'-collection.zip');
+    setStatus('📦 Saved '+files.length+' pattern tile'+(files.length===1?'':'s')+' in one ZIP.');
+  }catch(e){console.warn(e);setStatus('⚠️ Could not export the collection: '+(e&&e.message||e));}
+  finally{if(coll&&coll.activeId!==origin)await colSwitch(origin);}
+}
+function colCardMenu(anchor,id){
+  const i=coll.list.findIndex(x=>x.id===id),q=coll.list[i];
+  tbMenu(anchor,[
+    {head:q.name},
+    {label:'✏️ Rename…',run:()=>colRename(id)},
+    {label:'⧉ Duplicate pattern',sub:'exact copy',run:async()=>{if(await colSwitch(id))colDuplicate();}},
+    {label:'📸 Export this pattern (PNG tile)',run:async()=>{if(await colSwitch(id))pressLegacy('exportBtn')();}},
+    {sep:1},
+    {label:'◀ Move earlier',disabled:i<=0,run:()=>colMove(id,-1)},
+    {label:'▶ Move later',disabled:i>=coll.list.length-1,run:()=>colMove(id,1)},
+    {sep:1},
+    {label:'🗑 Delete pattern…',disabled:coll.list.length<2,run:()=>colDelete(id)},
+  ]);
+}
+function colHeaderMenu(anchor){
+  tbMenu(anchor,[
+    {head:'Collection · '+coll.list.length+' pattern'+(coll.list.length===1?'':'s')},
+    {label:'➕ New blank pattern',run:colNew},
+    {label:'⧉ Duplicate this pattern',run:colDuplicate},
+    {label:'📦 Export collection (ZIP of tiles)…',run:colExportAll},
+    {sep:1},
+    {label:'▾ Collapse the strip',run:()=>colSetOpen(false)},
+  ]);
+}
+function colOpenStrip(){if(!activeProject){setStatus('🗂 Open a project first.');return;}collEnsure();colSetOpen(!colOpen());}
+// small inline rename (double-tap a pattern's name): Enter / tap away saves, Escape cancels
+function colInlineRename(nameEl,q){
+  const inp=document.createElement('input');inp.type='text';inp.className='col-name-input';inp.value=q.name;inp.maxLength=60;
+  nameEl.replaceWith(inp);let done=false;
+  const fin=save=>{if(done)return;done=true;const v=inp.value.trim();if(save&&v&&v!==q.name){q.name=v;syncProjectName();scheduleAutosave();}colStripRender();};
+  inp.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();fin(true);}else if(e.key==='Escape')fin(false);});
+  inp.addEventListener('blur',()=>fin(true));inp.addEventListener('click',e=>e.stopPropagation());inp.addEventListener('pointerdown',e=>e.stopPropagation());
+  inp.focus();inp.select();
+}
+// press and hold a card, then slide it to a new place
+let colDragging=false;
+document.addEventListener('touchmove',e=>{if(colDragging)e.preventDefault();},{passive:false});
+function colDragInit(card,q,scroll){
+  let timer=0,sx=0,sy=0,pid=null;
+  const end=commit=>{
+    clearTimeout(timer);timer=0;
+    if(!colDragging){return;}
+    const r=card.getBoundingClientRect(),cx=r.left+r.width/2;
+    const others=[...scroll.querySelectorAll('.col-card')].filter(c=>c!==card);
+    const idx=others.filter(c=>{const b=c.getBoundingClientRect();return b.left+b.width/2<cx;}).length;
+    colDragging=false;card.classList.remove('drag');card.style.transform='';
+    if(commit)colMoveTo(q.id,idx);else colStripRender();
+  };
+  card.addEventListener('pointerdown',e=>{
+    if(e.target.closest('.col-more')||e.target.tagName==='INPUT')return;
+    sx=e.clientX;sy=e.clientY;pid=e.pointerId;
+    timer=setTimeout(()=>{timer=0;colDragging=true;card.classList.add('drag');try{card.setPointerCapture(pid);}catch(_){}try{navigator.vibrate&&navigator.vibrate(10);}catch(_){}},330);
+  });
+  card.addEventListener('pointermove',e=>{
+    if(timer&&Math.hypot(e.clientX-sx,e.clientY-sy)>8){clearTimeout(timer);timer=0;}
+    if(colDragging){e.preventDefault();card.style.transform='translateX('+(e.clientX-sx)+'px) scale(1.06)';}
+  });
+  card.addEventListener('pointerup',()=>{const was=colDragging;end(true);if(was)card._swallow=true;});
+  card.addEventListener('pointercancel',()=>end(false));
+}
+function colStripRender(){
+  let el=$('colStrip');
+  if(!el){el=document.createElement('div');el.id='colStrip';el.className='col-strip';document.body.appendChild(el);}
+  const has=activeProject&&coll;
+  if(!has){el.style.display='none';return;}
+  el.style.display='flex';el.innerHTML='';
+  const open=colOpen();
+  el.classList.toggle('collapsed',!open);
+  if(!open){
+    const pill=document.createElement('button');pill.type='button';pill.className='col-head';
+    const q=colActive();pill.textContent='🗂 Patterns · '+coll.list.length+' ▴';pill.title='Show the pattern strip ('+(q?q.name:'')+')';
+    pill.onclick=e=>{e.stopPropagation();colSetOpen(true);};el.appendChild(pill);return;
+  }
+  const head=document.createElement('button');head.type='button';head.className='col-head';head.textContent='🗂 Collection ▾';head.title='Collection menu';
+  head.onclick=e=>{e.stopPropagation();colHeaderMenu(head);};el.appendChild(head);
+  const scroll=document.createElement('div');scroll.className='col-scroll';el.appendChild(scroll);
+  coll.list.forEach(q=>{
+    const act=q.id===coll.activeId;
+    const card=document.createElement('div');card.className='col-card'+(act?' on':'')+(q.id===colFresh?' fresh':'');card.dataset.id=q.id;if(act)card.setAttribute('aria-current','true');
+    const im=document.createElement('img');im.alt='';im.draggable=false;if(q.thumb)im.src=q.thumb;card.appendChild(im);
+    if(act){const tg=document.createElement('span');tg.className='col-tag';tg.textContent='✎ Editing';card.appendChild(tg);}
+    const nm=document.createElement('span');nm.className='col-name';nm.textContent=q.name;nm.title='Double-tap to rename';card.appendChild(nm);
+    let lastTap=0;
+    nm.addEventListener('click',e=>{const now=Date.now();if(now-lastTap<380){e.stopPropagation();lastTap=0;colInlineRename(nm,q);}else lastTap=now;});
+    const mb=document.createElement('button');mb.type='button';mb.className='col-more';mb.textContent='⋯';mb.title='Pattern menu';
+    mb.onclick=e=>{e.stopPropagation();colCardMenu(mb,q.id);};card.appendChild(mb);
+    card.onclick=e=>{if(card._swallow){card._swallow=false;return;}if(!act)colSwitch(q.id);};
+    colDragInit(card,q,scroll);
+    scroll.appendChild(card);
+  });
+  const add=document.createElement('button');add.type='button';add.className='col-add';add.textContent='＋';add.title='New blank pattern';add.onclick=e=>{e.stopPropagation();colNew();};el.appendChild(add);
+  const x=document.createElement('button');x.type='button';x.className='col-x';x.textContent='▾';x.title='Collapse the strip';x.onclick=e=>{e.stopPropagation();colSetOpen(false);};el.appendChild(x);
+  const on=scroll.querySelector('.col-card.on');if(on){try{on.scrollIntoView({inline:'center',block:'nearest'});}catch(e){}}
+}
+// keep the open pattern's thumbnail fresh while the strip is showing (only after a change, never while drawing or liquifying)
+setInterval(()=>{try{
+  if(!colOpen()||!coll||patBusy||!activeProject||document.hidden||colDragging)return;
+  if(typeof warpDrag!=='undefined'&&warpDrag)return;
+  const sig=history.length+':'+hIndex+':'+coll.activeId;if(sig===patThumbSig)return;patThumbSig=sig;
+  const q=colActive(),t=makeThumb();if(!q||!t)return;q.thumb=t;
+  const im=document.querySelector('#colStrip .col-card.on img');if(im)im.src=t;
+}catch(e){}},2500);
 // 🕘 Earlier saves: the rolling backups made automatically before the autosave was overwritten.
 function friendlyWhen(ms){
   const d=new Date(ms),n=new Date(),tm=d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
@@ -11950,6 +12399,7 @@ function tbProjectMenu(){
   const nm=activeProject?activeProject.name:'No project open';
   tbMenu($('projNameChip'),[
     {head:nm},
+    {label:'🗂 Pattern collection',sub:(coll&&coll.list.length>1)?coll.list.length+' patterns':'add more patterns',disabled:!activeProject,run:colOpenStrip},
     {label:'✏️ Rename project',disabled:!activeProject,run:()=>{if(activeProject)renameProject(activeProject.id);}},
     {sep:1},
     {label:'➕ New Project',run:pressLegacy('newProjectBtn')},
@@ -12084,7 +12534,7 @@ async function runBenchmark(){
   }catch(e){out.push('Stopped early: '+(e&&e.message||e));}
   finally{zoom=save.zoom;panX=save.panX;panY=save.panY;rot=save.rot;activeLayerId=save.aid;try{getActiveLayer();syncAwake();applyTransform();compositeDirty=true;redraw();renderLayersList();}catch(e){}}
   const text=out.join('\n');
-  try{const h=JSON.parse(localStorage.getItem('sp-bench')||'[]');h.push({t:Date.now(),v:'v286',text});localStorage.setItem('sp-bench',JSON.stringify(h.slice(-6)));}catch(e){}
+  try{const h=JSON.parse(localStorage.getItem('sp-bench')||'[]');h.push({t:Date.now(),v:'v299',text});localStorage.setItem('sp-bench',JSON.stringify(h.slice(-6)));}catch(e){}
   return text;
 }
 window.__sketchpadBench=()=>runBenchmark();
@@ -12092,7 +12542,7 @@ async function showBenchmark(){
   const ok=await projAsk({title:'⏱ Speed test',message:'This times the project you have open, without changing it. Takes about 10 seconds. Please do not touch the screen until it finishes.',ok:'Start',cancel:'Cancel'});
   if(!ok)return;
   const text=await runBenchmark();
-  const r=await projAsk({title:'⏱ Speed test results',message:text+'\n\nApp v286. Send me a screenshot of this.',ok:'OK',cancel:null,extra:[{label:'Copy',value:'copy'}]});
+  const r=await projAsk({title:'⏱ Speed test results',message:text+'\n\nApp v299. Send me a screenshot of this.',ok:'OK',cancel:null,extra:[{label:'Copy',value:'copy'}]});
   if(r&&r.__extra==='copy'){try{await navigator.clipboard.writeText(text);setStatus('Copied.');}catch(e){}}
 }
 function tlLine(){
@@ -12400,6 +12850,8 @@ function tbTargetStroke(){return strokes.find(x=>x.id===(pathEditStrokeId||selec
 function tbSizeSync(){
   const n=$('tbSizeNum');if(!n)return;
   const st=tbTargetStroke(),sz=st?strokeSettings(st).size:currentSettings().size;
+  const tid=st?st.id:null,tchanged=tbSizeSync._id!==tid;tbSizeSync._id=tid;
+  if(tchanged&&document.activeElement===n)n.blur(); // tapping the canvas does not take focus off the box, so it kept showing the PREVIOUS stroke's size
   if(document.activeElement!==n)n.value=fmtSize(sz);
   n.max=$('brushSize').max;
   n.title=st?'Size of the selected stroke':'Brush size';
@@ -12516,7 +12968,7 @@ try{warpR=Math.min(400,Math.max(10,+localStorage.getItem('sp-warpR')||80));warpS
   const ring=document.createElement('div');ring.id='warpRing';ring.style.cssText='position:absolute;display:none;pointer-events:none;z-index:8;border:2px dashed #8f6bd8;border-radius:50%;box-sizing:border-box;background:rgba(143,107,216,.08)';
   wrap.appendChild(ring);
   const bar=document.createElement('div');bar.id='warpBar';bar.className='float-panel';bar.style.display='none';bar.style.width='300px';
-  bar.innerHTML='<div class="float-panel-handle" id="warpBarHandle"><span>🌀 Liquify</span><span class="float-panel-handle-actions"><button id="warpDoneBtn" class="btn mini primary float-panel-done">✓ Done</button><span class="float-panel-grip" title="Drag to move">⠿</span></span></div><div style="display:flex;flex-direction:column;gap:8px"><span id="warpSpace" style="display:flex;gap:6px"><button class="btn mini" data-ws="paint" type="button" title="Moves the actual paint, so colours smear and swirl into each other like marbling">Paint</button><button class="btn mini" data-ws="vector" type="button" title="Bends the vector lines and shapes, keeping them sharp and editable">Lines</button></span><span id="warpModes" style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn mini active" data-wm="push" type="button" title="Push strokes along your drag">Push</button><button class="btn mini" data-wm="pinch" type="button" title="Hold or drag: pulls strokes toward the centre">Pinch</button><button class="btn mini" data-wm="bloat" type="button" title="Hold or drag: pushes strokes away from the centre">Bloat</button><button class="btn mini" data-wm="twirl" type="button" title="Hold or drag: swirls strokes around the centre of the brush">Twirl</button></span><span id="warpDir" style="display:none;gap:3px"><button class="btn mini" data-wd="R" type="button" title="Swirl clockwise">↻ Clockwise</button><button class="btn mini" data-wd="L" type="button" title="Swirl anticlockwise">↺ Anticlockwise</button></span><span id="warpDir" style="display:none;gap:6px"><button class="btn mini" data-wd="R" type="button" title="Swirl clockwise">↻ Clockwise</button><button class="btn mini" data-wd="L" type="button" title="Swirl anticlockwise">↺ Anticlockwise</button></span><label style="justify-content:space-between">Size <input id="warpSize" type="range" min="10" max="400" step="1"></label><label style="justify-content:space-between">Strength <input id="warpStrength" type="range" min="10" max="100" step="1"></label><span id="warpHint" class="hint" style="text-align:center">Drag on the canvas to push strokes on the active layer.</span><span id="warpTile" class="hint" style="text-align:center;font-weight:700"></span></div>';
+  bar.innerHTML='<div class="float-panel-handle" id="warpBarHandle"><span>🌀 Liquify</span><span class="float-panel-handle-actions"><button id="warpDoneBtn" class="btn mini primary float-panel-done">✓ Done</button><span class="float-panel-grip" title="Drag to move">⠿</span></span></div><div style="display:flex;flex-direction:column;gap:8px"><span id="warpSpace" style="display:flex;gap:6px"><button class="btn mini" data-ws="paint" type="button" title="Moves the actual paint, so colours smear and swirl into each other like marbling">Paint</button><button class="btn mini" data-ws="vector" type="button" title="Bends the vector lines and shapes, keeping them sharp and editable">Lines</button></span><span id="warpModes" style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn mini active" data-wm="push" type="button" title="Push strokes along your drag">Push</button><button class="btn mini" data-wm="pinch" type="button" title="Hold or drag: pulls strokes toward the centre">Pinch</button><button class="btn mini" data-wm="bloat" type="button" title="Hold or drag: pushes strokes away from the centre">Bloat</button><button class="btn mini" data-wm="twirl" type="button" title="Hold or drag: swirls strokes around the centre of the brush">Twirl</button></span><span id="warpDir" style="display:none;gap:3px"><button class="btn mini" data-wd="R" type="button" title="Swirl clockwise">↻ Clockwise</button><button class="btn mini" data-wd="L" type="button" title="Swirl anticlockwise">↺ Anticlockwise</button></span><span id="warpDir" style="display:none;gap:6px"><button class="btn mini" data-wd="R" type="button" title="Swirl clockwise">↻ Clockwise</button><button class="btn mini" data-wd="L" type="button" title="Swirl anticlockwise">↺ Anticlockwise</button></span><label style="justify-content:space-between">Size <input id="warpSize" type="range" min="10" max="400" step="1"></label><label style="justify-content:space-between">Strength <input id="warpStrength" type="range" min="10" max="100" step="1"></label><span style="display:flex;flex-direction:column;gap:6px"><button class="btn mini" id="warpPatBtn" type="button" title="The pattern you are editing — tap to rename">🧩 …</button><button class="btn mini" id="warpDupRevBtn" type="button" title="Keep this pattern as it is, and start a new pattern from the design before Liquify">⧉↺ Duplicate &amp; Revert</button><span style="display:flex;gap:6px"><button class="btn mini" id="warpDupBtn" type="button" style="flex:1" title="Copy this pattern, as it looks now, into a new pattern">⧉ Duplicate</button><button class="btn mini" id="warpRevertBtn" type="button" style="flex:1" title="Take this pattern back to its design before Liquify (Undo brings it back)">↺ Revert Liquify</button></span></span><span id="warpHint" class="hint" style="text-align:center">Drag on the canvas to push strokes on the active layer.</span><span id="warpTile" class="hint" style="text-align:center;font-weight:700"></span></div>';
   document.body.appendChild(bar);
 }
 function warpRingAt(clientX,clientY,show){
@@ -12525,7 +12977,7 @@ function warpRingAt(clientX,clientY,show){
   ring.style.width=d+'px';ring.style.height=d+'px';ring.style.left=(clientX-r.left-d/2)+'px';ring.style.top=(clientY-r.top-d/2)+'px';ring.style.display='block';
 }
 function warpTileNote(){const e=$('warpTile');if(!e)return;if(warpOn&&showTiling&&LQ_BAD_LAYOUTS.includes(layout)){e.textContent='⚠️ Liquify does not wrap seamlessly in the '+layout+' layout yet. Switch to Grid, Half Drop or Half Brick.';return;}e.textContent=showTiling?'🔁 Repeat is on: your '+(warpPaint?'paint':'lines')+' wraps across the tile edges, so the pattern stays seamless.':'⚠️ Repeat is off: nothing wraps across the edges. Turn Tiling on (Grid) for a seamless pattern.';e.style.color=showTiling?'':'#b3402f';}
-setInterval(()=>{try{if(warpOn){warpTileNote();warpLayoutLock();}}catch(e){}},600);
+setInterval(()=>{try{if(warpOn){warpTileNote();warpLayoutLock();warpActionsSync();}}catch(e){}},600);
 const LQ_BAD_LAYOUTS=['diamond','ogee','tossed'];
 // Liquify can only wrap across square / half-shifted tile edges, so the layouts that work differently are greyed out while it is open.
 function warpLayoutLock(){
@@ -12536,6 +12988,7 @@ function warpLayoutLock(){
 }
 function warpSyncUI(){
   try{warpLayoutLock();}catch(e){}
+  try{warpActionsSync();}catch(e){}
   {const wb=$('warpBar'),was=wb.style.display==='block';wb.style.display=warpOn?'block':'none';if(warpOn&&!was){const vr=viewportOuter.getBoundingClientRect();positionFloatPanel('warpBar',vr.left+16,vr.top+16);}}
   $('tbWarpBtn').classList.toggle('active',warpOn);
   $('warpSize').value=warpR;$('warpStrength').value=Math.round(warpStr*100);
@@ -12568,6 +13021,17 @@ function warpStroke(s,cx,cy,dx,dy){
     if(i&&segDist(cx,cy,src[i-1],src[i])<R){touched=true;break;}
   }
   if(!touched)return false;
+  // Liquify bends only what the brush touches: a linked rotate-copy (flower petal) is cut loose first, otherwise the other petals are rebuilt from it and all change together.
+  if(s.radial||s.radialOf){
+    if(s.radial){strokes.forEach(c=>{if(c.radialOf===s.id){delete c.radialOf;delete c.radialK;}});}
+    delete s.radial;delete s.radialOf;delete s.radialK;
+  }
+  if(s.contour||s.contourOf){
+    if(s.contour){strokes.forEach(c=>{if(c.contourOf===s.id){delete c.contourOf;delete c.contourK;}});}
+    delete s.contour;delete s.contourOf;delete s.contourK;
+  }
+  // Keep the shape as it was before its FIRST Liquify push, so "Revert Liquify" can bring it back exactly (saved with the project).
+  if(!s.lqOrig){const cp=a=>a?a.map(q=>({...q})):null;s.lqOrig={points:cp(s.points),nodes:cp(s.nodes),shape:s.shape?JSON.parse(JSON.stringify(s.shape)):null,closed:!!s.closed,cornerAuto:!!s.cornerAuto};}
   const P=[src[0]];
   for(let i=1;i<src.length;i++){
     const a=src[i-1],b=src[i],len=Math.hypot(b.x-a.x,b.y-a.y);
@@ -12749,6 +13213,35 @@ $('smudgeBrushBtn').onclick=()=>tbBrushMenu($('smudgeBrushBtn'));
 $('smudgeSize').oninput=e=>{smudgeSize=+e.target.value;try{localStorage.setItem('sp-smudgeSize',String(smudgeSize));}catch(err){}const r=wrap.getBoundingClientRect();smudgeRingAt(r.left+r.width/2,r.top+r.height/2,true);clearTimeout(smudgeSet._t);smudgeSet._t=setTimeout(()=>smudgeRingAt(0,0,false),900);};
 $('smudgeStrength').oninput=e=>{smudgeStr=+e.target.value;try{localStorage.setItem('sp-smudgeStr',String(smudgeStr));}catch(err){}};
 $('warpDoneBtn').onclick=()=>warpSet(false);
+$('warpDupBtn').onclick=()=>{colDuplicate();};
+// Revert Liquify: removes the Liquify paint strokes from the active layer and restores every Lines-mode shape to its pre-Liquify geometry.
+// Only the distortion goes — the layer, its shapes, fills and patterns stay.
+function liquifyRevertLayers(layerList,label){
+  const ids=new Set(layerList.filter(l=>!l.locked).map(l=>l.id));
+  if(!ids.size){setStatus('🔒 The layer is locked — unlock it to revert Liquify.');return false;}
+  let paint=0,lines=0;
+  const keep=[];
+  strokes.forEach(q=>{if(ids.has(q.layerId)&&q.brushId==='smudge'&&q.settings&&q.settings.liquify){paint++;}else keep.push(q);});
+  strokes=keep;
+  strokes.forEach(q=>{
+    if(!ids.has(q.layerId)||!q.lqOrig)return;
+    const o=q.lqOrig;
+    q.points=o.points?o.points.map(a=>({...a})):q.points;
+    q.nodes=o.nodes?o.nodes.map(a=>({...a})):null;
+    if(o.shape)q.shape=JSON.parse(JSON.stringify(o.shape));
+    q.closed=o.closed;if(o.cornerAuto)q.cornerAuto=true;else delete q.cornerAuto;
+    delete q.lqOrig;lines++;
+  });
+  if(!paint&&!lines){setStatus('🌀 Nothing to revert on '+label+' — no Liquify has been applied.');return false;}
+  if(selectedStrokeId&&!strokes.some(q=>q.id===selectedStrokeId)){selectedStrokeId=null;try{syncStrokeSelectionUI();}catch(e){}}
+  ids.forEach(id=>rebuildLayer(id));segVer++;compositeDirty=true;try{invalidateDetail&&invalidateDetail();}catch(e){}
+  renderLayersList();pushHist();redraw();
+  setStatus('↺ Liquify reverted on '+label+(paint?' ('+paint+' paint move'+(paint===1?'':'s')+' removed)':'')+(lines?' ('+lines+' shape'+(lines===1?'':'s')+' restored)':'')+'. Undo brings the distortion back.');
+  return true;
+}
+$('warpRevertBtn').onclick=()=>{const q=colActive();liquifyRevertLayers(layers,'“'+(q?q.name:'this pattern')+'”');};
+$('warpDupRevBtn').onclick=()=>{colDupRevert();};
+function warpActionsSync(){try{const has=liquifyPresent(strokes);['warpRevertBtn','warpDupRevBtn'].forEach(id=>{const b=$(id);if(!b)return;b.disabled=!has;b.style.opacity=has?'':'.45';if(!has)b.title='Liquify something first';});const pb=$('warpPatBtn'),q=(typeof coll!=='undefined'&&coll)?colActive():null;if(pb){pb.style.display=q?'':'none';if(q){pb.textContent='🧩 '+q.name+' ✎';pb.onclick=()=>colRename(q.id);}}}catch(e){}}
 makeFloatPanelDraggable('warpBar','warpBarHandle');
 const wsSync=()=>document.querySelectorAll('#warpSpace [data-ws]').forEach(x=>x.classList.toggle('active',(x.dataset.ws==='paint')===warpPaint));
 document.querySelectorAll('#warpSpace [data-ws]').forEach(b=>b.onclick=()=>{warpPaint=b.dataset.ws==='paint';try{localStorage.setItem('sp-warpPaint',warpPaint?'1':'0');}catch(e){}wsSync();setStatus(warpPaint?'🌀 Liquify Paint: moves the paint itself, so colours smear and swirl together like marbling.':'🌀 Liquify Lines: bends vector lines and shapes and keeps them editable.');});
@@ -13620,6 +14113,13 @@ setInterval(()=>{const b=$('motifEditBanner');if(!b)return;const on=!!editingMot
 let dblTapLast={t:0,x:0,y:0,sel:null};
 function dblSelSnap(){return {sid:selectedStrokeId,pid:selected,multi:multiSel};}
 function dblTapCheck(e){
+  // Fingers tap, then tap again to drag or pick the next thing: that must never make a copy. Double-tap-to-duplicate is for Pencil/mouse; fingers use the Duplicate button.
+  // Double-tap a grouped object: pick just the part under the finger/Pencil (same as the panel's "Edit inside"). The group box handles the 2nd tap.
+  {const gid=multiSel&&(multiSel.groupId||'multi');window.__grpTap=gid?{t:performance.now(),x:e.clientX,y:e.clientY,g:gid}:null;}
+  if(e&&e.pointerType==='touch'){
+    dblTapLast={t:0,x:0,y:0,sel:null};
+    return;
+  }
   const chk=$('dblDupChk');if(chk&&!chk.checked)return;
   const now=performance.now(),near=Math.hypot(e.clientX-dblTapLast.x,e.clientY-dblTapLast.y)<45;
   const isDbl=now-dblTapLast.t<500&&near&&dblTapLast.sel;
@@ -13683,6 +14183,7 @@ window.__sketchpadTips=()=>[...motifTipCache.entries()].map(([k,v])=>{const d=v.
 window.__sketchpadDescribe=(a,b)=>describeChange(a,b);
 window.__sketchpadPush=()=>{rebuildAllLayers();pushHist();redraw();};
 window.__sketchpadBlurTest={filterOK:()=>blurFilterOK(),force:v=>{_blurFilterOK=v;},semi:()=>{updateComposite();const d=compositeCtx.getImageData(0,0,W,H).data;let semi=0,solid=0;for(let i=3;i<d.length;i+=4){if(d[i]>8&&d[i]<200)semi++;else if(d[i]>=200)solid++;}return [semi,solid];},hi:async n=>{const c=await buildHiRes(n,true);const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let semi=0;for(let i=3;i<d.length;i+=4)if(d[i]>8&&d[i]<200)semi++;return semi;}};
+window.__sketchpadCollection={get:()=>coll,history:()=>({n:history.length,i:hIndex}),colNew,colDuplicate,colDupRevert,colMoveTo,liquifyPresent:()=>liquifyPresent(strokes),colSwitch,colMove,colDelete,colRename,colRevertPattern,colExportAll,buildDocObject,applyDocObject,liquifyRevertLayers:()=>liquifyRevertLayers(layers,'test')};
 window.__sketchpadInternals=()=>({layers,strokes,rebuildAllLayers,pixTotal,segVerBump:()=>{segVer++;compositeDirty=true;redraw();}});
 window.__sketchpadLayerInfo=()=>{updateDisplayComposite();updateComposite();
   const cmp=document.createElement('canvas');cmp.width=W/4;cmp.height=H/4;const c=cmp.getContext('2d');
@@ -14389,7 +14890,7 @@ SPFonts.init().then(()=>{txRefreshMissing();});
   var STORE = 'timelapse';
   var MAX_BYTES = 160e6, MAX_EVENTS = 60000, CHUNK = 64, MIN_KEEP = 300;
   var R2 = function (v) { return Math.round(v * 100) / 100; };
-  var rep = function (k, v) { if (typeof v === 'number') { if (k === 'x' || k === 'y') return R2(v); if (k === 'pressure') return Math.round(v * 1000) / 1000; return v; } if (k === 'symFp' || k === 'img' || k === 'i') return undefined; return v; };
+  var rep = function (k, v) { if (typeof v === 'number') { if (k === 'x' || k === 'y') return R2(v); if (k === 'pressure') return Math.round(v * 1000) / 1000; return v; } if (k === 'symFp' || k === 'img' || k === 'i' || k === 'lqOrig') return undefined; return v; };
   var $ = function (id) { return document.getElementById(id); };
 
   // ------------------------------------------------------------------ recorder state
@@ -14768,18 +15269,18 @@ SPFonts.init().then(()=>{txRefreshMissing();});
   }
   function startRecording(fresh) {
     if (!activeProject) return;
-    S.pid = activeProject.id; S.base = baseNow(); S.log = []; S.folded = 0; S.bytes = 0; S.stash = [];
+    S.pid = tlKey() || activeProject.id; S.base = baseNow(); S.log = []; S.folded = 0; S.bytes = 0; S.stash = [];
     S.L = snapLast(); S.marks = history.map(function () { return mkMark(); }); S.marksBad = false; S.lastT = performance.now(); S.pd = 0;
     S.on = true; S.dirtyAll = true; S.baseDirty = true; S.dirtyFrom = 0; S.dirtyMeta = true; flush(); refreshPanel();
   }
   function stopRecording() { S.on = false; S.dirtyMeta = true; flush(); refreshPanel(); }
   async function onProjectLoaded(meta, doc) {
     detach();
-    var pid = meta && meta.id; if (!pid) return;
+    var pid = (typeof tlKey === 'function' && tlKey()) || (meta && meta.id); if (!pid) return;
     S.loading = true;
     var d = await loadFor(pid);
     S.loading = false;
-    if (!activeProject || activeProject.id !== pid) return;
+    if (!activeProject || ((typeof tlKey === 'function' && tlKey()) || activeProject.id) !== pid) return;
     S.pid = pid;
     if (d) {
       S.base = d.meta.base; S.log = d.log; S.folded = d.meta.folded || 0; S.savedChunks = d.meta.chunks || 0;
@@ -15223,7 +15724,7 @@ SPFonts.init().then(()=>{txRefreshMissing();});
     ov.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
     $('tlRecToggle').onclick = function () {
       if (!activeProject) return;
-      if (S.on) { stopRecording(); } else if (S.pid === activeProject.id && S.base) { S.on = true; try { reconcile(); } catch (e) { S.L = snapLast(); console.warn('[timelapse] resume', e); } S.marks = history.map(function () { return mkMark(); }); S.dirtyMeta = true; flush(); refreshPanel(); } else startRecording();
+      if (S.on) { stopRecording(); } else if (S.pid === (tlKey() || activeProject.id) && S.base) { S.on = true; try { reconcile(); } catch (e) { S.L = snapLast(); console.warn('[timelapse] resume', e); } S.marks = history.map(function () { return mkMark(); }); S.dirtyMeta = true; flush(); refreshPanel(); } else startRecording();
     };
     $('tlDefChk').onchange = function (e) { try { localStorage.setItem('sp-tlAuto', e.target.checked ? '1' : '0'); } catch (x) { } };
     $('tlDur').value = prefs.dur; $('tlDur').onchange = function (e) { prefs.dur = e.target.value; rebuildTimes(); };
@@ -15250,7 +15751,7 @@ SPFonts.init().then(()=>{txRefreshMissing();});
       if (!opts.length) { ui.msg.textContent = 'No other project has a recording to copy.'; return; }
       var r = await projAsk({ title: '📋 Copy a recording', message: 'The recording of the project you choose is copied into “' + activeProject.name + '”.' + (S.log.length ? ' This replaces the recording it has now.' : '') + ' Drawing from here on keeps adding to it.', fields: [{ key: 'from', label: 'Project', type: 'select', value: opts[0][0], options: opts }], ok: 'Copy recording' });
       if (!r || !r.from) return;
-      await flush(); var ok = await copyFor(r.from, activeProject.id);
+      await flush(); var ok = await copyFor(r.from, tlKey() || activeProject.id);
       if (!ok) { ui.msg.textContent = 'Could not copy that recording.'; return; }
       await onProjectLoaded(activeProject, null); refreshPanel(); ui.msg.textContent = 'Recording copied. Tap Play to watch it.';
     };
@@ -15397,7 +15898,6 @@ SPFonts.init().then(()=>{txRefreshMissing();});
   // If a project was already open before this script ran, pick it up.
   try { if (typeof activeProject !== 'undefined' && activeProject && !S.pid) onProjectLoaded(activeProject, null); } catch (e) { }
 })();
-
 
 // ---- Seamlessly Creative suite hooks (additive only; everything above is a straight copy of the standalone Sketch Pad).
 // They sit inside the app so they reuse exactly what "Load as Background" and the tile export already use.
