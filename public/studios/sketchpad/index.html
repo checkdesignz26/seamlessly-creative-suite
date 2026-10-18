@@ -1328,7 +1328,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v308'; // keep in step with CACHE in sw.js
+const APP_V='v309'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -4519,13 +4519,36 @@ $('grpBlendBtn').onclick=openBlend;$('blendMotifBtn').onclick=openBlend;
 //  - TRANSFORM BLEND (always available): position, size, turn, opacity and colour change smoothly, but the SHAPE does not.
 //    Each step is a copy of the nearer original (pictures stay as pictures at full available quality). It never crossfades.
 const OBJ_POINT_BUDGET=400000;
+// "Fill Shape" makes a separate filled stroke that copies the outline's points. Find it (the topmost one) so a blend
+// can carry the fill: its colour mixes between the two ends, and a morphed outline gets the fill too.
+function objFillFor(s){
+  if(!s||s.fillColor||!s.closed||!s.points||s.points.length<3)return null;
+  const bb=strokeBBox(s);let hit=null;
+  for(let i=strokes.length-1;i>=0;i--){
+    const f=strokes[i];
+    if(f===s||!f.fillColor||!f.closed||f.oblendId||f.blendId||!f.points||f.points.length!==s.points.length)continue;
+    const fb=strokeBBox(f);
+    if(Math.abs(fb.minX-bb.minX)<2&&Math.abs(fb.minY-bb.minY)<2&&Math.abs(fb.maxX-bb.maxX)<2&&Math.abs(fb.maxY-bb.maxY)<2){hit=f;break;}
+  }
+  return hit;
+}
+function objWithFill(s){
+  if(!s||s.fillColor)return s;
+  const f=objFillFor(s);if(!f)return s;
+  const c=blendClone(s);c.fillColor=f.fillColor;if(f.fillOpacity!=null)c.fillOpacity=f.fillOpacity;c.id=s.id;return c;
+}
 function objResolve(e){
   let st=[],pl=[];
   if(e.gid){const m=groupMembersOf(e.gid);st=m.strokeIds;pl=m.placedIds;}
   if(!st.length&&!pl.length){st=e.s||[];pl=e.p||[];}
   return {gid:e.gid||null,
-    st:st.map(id=>strokes.find(x=>x.id===id)).filter(x=>x&&!x.oblendId&&!x.blendId),
+    st:objAddFills(st.map(id=>strokes.find(x=>x.id===id)).filter(x=>x&&!x.oblendId&&!x.blendId)),
     pl:pl.map(id=>placed.find(x=>x.id===id)).filter(x=>x&&!x.oblendId&&x.img)};
+}
+function objAddFills(list){
+  const out=list.slice(),have=new Set(list.map(x=>x.id));
+  list.forEach(x=>{const f=objFillFor(x);if(f&&!have.has(f.id)){have.add(f.id);out.push(f);}});
+  return out;
 }
 function objIds(ep){return new Set(ep.st.map(s=>s.id).concat(ep.pl.map(p=>p.id)));}
 function objFrame(ep){
@@ -4571,13 +4594,15 @@ function objMorphPlan(A,B){
 function objPolyArea(pts){let a=0;for(let i=0,j=pts.length-1;i<pts.length;j=i++)a+=(pts[j].x+pts[i].x)*(pts[j].y-pts[i].y);return Math.abs(a/2);}
 function objPtIn(pt,poly){let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a.y>pt.y)!==(b.y>pt.y)&&pt.x<(b.x-a.x)*(pt.y-a.y)/(b.y-a.y)+a.x)c=!c;}return c;}
 function objContourStroke(src,pts){
-  const s=blendClone(src);
+  const s=blendClone(objWithFill(src));
   ['regions','nodes','shape','groupId','radial','radialOf','radialK','contour','contourOf','contourK','fillOf','blendId','blendSpec','oblendId','oblendSpec','oblendStep','clipStrokeId'].forEach(k=>delete s[k]);
   s.id=crypto.randomUUID();s.points=pts.map(p=>({x:p.x,y:p.y,pressure:p.pressure==null?1:p.pressure}));s.closed=true;return s;
 }
 function objContoursOf(ep){
   const out=[];let holes=0,open=0;
+  const fillIds=new Set();ep.st.forEach(x=>{const f=objFillFor(x);if(f)fillIds.add(f.id);});
   ep.st.forEach(s=>{
+    if(fillIds.has(s.id))return; // an outline's own Fill Shape stroke: its colour rides on the outline instead
     if(s.regions){s.regions.forEach(r=>{if(r&&r.length>=3)out.push({pts:r,src:s});});return;}
     if(!s.points||s.points.length<3)return;
     if(!s.closed){ // a hand-drawn loop whose end meets its start counts as a closed outline
@@ -4815,8 +4840,10 @@ function objPartsFromSelection(){
     multiSel.placedIds.forEach(id=>{const p=placed.find(x=>x.id===id);if(p)items.push({k:'p',id,gid:p.groupId||null});});
   }else if(selected){const p=placed.find(x=>x.id===selected);if(p)items.push({k:'p',id:p.id,gid:p.groupId||null});}
   const parts=new Map();
+  const fillOwner=new Map(); // a Fill Shape stroke travels with its outline as one piece
+  items.forEach(x=>{if(x.k!=='s')return;const st=strokes.find(q=>q.id===x.id),f=st&&objFillFor(st);if(f)fillOwner.set(f.id,st.id);});
   items.forEach(x=>{
-    const gid=(x.gid&&groupInsideId!==x.gid)?x.gid:null,st=x.k==='s'?strokes.find(q=>q.id===x.id):null,fam=st&&(st.radial||st.radialOf||st.contour||st.contourOf)?'fam:'+(st.radialOf||st.contourOf||st.id):null,key=gid||fam||(x.k+':'+x.id);
+    const gid=(x.gid&&groupInsideId!==x.gid)?x.gid:null,st=x.k==='s'?strokes.find(q=>q.id===x.id):null,fam=st&&(st.radial||st.radialOf||st.contour||st.contourOf)?'fam:'+(st.radialOf||st.contourOf||st.id):null,own=x.k==='s'&&fillOwner.get(x.id),key=gid||(own?'s:'+own:null)||fam||(x.k+':'+x.id);
     if(!parts.has(key))parts.set(key,{gid,s:[],p:[]});
     (x.k==='s'?parts.get(key).s:parts.get(key).p).push(x.id);
   });
