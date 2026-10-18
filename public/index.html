@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <title>Creative Lookbook</title>
+<script>/* opened inside the Seamlessly Creative suite (?project=…): skip the standalone start screen */
+if (/[?&]project=/.test(location.search)) document.documentElement.className += ' lb-in-suite';</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Creative Lookbook — lay out pattern collections, mock-ups and collages into multi-page lookbooks. Part of Seamlessly Creative.">
 <meta name="theme-color" content="#d8e5e7">
@@ -65,5 +67,8 @@
 <script src="shared/lookbook/lookbook-editor.js"></script>
 <script src="shared/lookbook/lookbook-tools.js"></script>
 <script src="app.js"></script>
+<!-- asset tray (works standalone) and the suite bridge (does nothing unless opened from the suite with ?project=) -->
+<script src="shared/lookbook/lookbook-tray.js"></script>
+<script src="shared/lookbook/lookbook-suite.js"></script>
 </body>
 </html>

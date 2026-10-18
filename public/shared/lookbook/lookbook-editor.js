@@ -672,7 +672,8 @@ function ilMountCollagePanel() {
   const root = document.getElementById('ilCollageRoot');
   if (!root) return;
   ilCollagePanel = window.ScCollage.mountPanel(root, {
-    tabs: ['patterns', 'mockups'].concat(ilCollageProjectId() && window.SCLibrary ? ['project'] : []),
+    // project assets (suite) are merged into these two lists by the suite bridge, so no separate 'project' tab
+    tabs: ['patterns', 'mockups'],
     tabNames: (ilHost().collageTabNames || undefined),
     emptyNotes: (ilHost().collageEmptyNotes || undefined),
     getCollage: ilGetSelectedCollage,
@@ -1216,6 +1217,7 @@ async function ilRenderImageStrip() {
 
 function ilRefreshHostStrips() {
   ilRenderPatternStrip(); ilRenderImageStrip(); if (ilCollagePanel) ilCollagePanel.reloadSources();
+  if (window.ilRenderAssetTray) window.ilRenderAssetTray();
   // new uploads add their colours to every colour picker (text, shapes, page background)
   ilBuildPaletteFromCollection().then(() => { if (ilSelectedItem) ilRefreshSelectionControls(ilSelectedItem); if (window.ilRefreshColourStrips) window.ilRefreshColourStrips(); }).catch(() => {});
 }

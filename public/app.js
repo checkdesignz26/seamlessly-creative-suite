@@ -227,8 +227,9 @@
     await openProject(p);
   }
 
-  async function newProject() {
-    var p = { id: ScLookbookStore.newId(), name: 'untitled lookbook', patterns: [], images: [], lookbook: { pages: [] } };
+  // `extra` lets a host (the suite bridge) set fields on the new project, e.g. { suiteProjectId, name }.
+  async function newProject(extra) {
+    var p = Object.assign({ id: ScLookbookStore.newId(), name: 'untitled lookbook', patterns: [], images: [], lookbook: { pages: [] } }, extra || {});
     try { await ScLookbookStore.put(p); } catch (e) { console.error(e); }
     await openProject(p);
     // a fresh project starts with one blank page; save it so it appears in the list straight away
@@ -289,7 +290,7 @@
   }
 
   function wire() {
-    $('lbNewBtn').addEventListener('click', newProject);
+    $('lbNewBtn').addEventListener('click', function () { newProject(); });
     $('lbOpenBtn').addEventListener('click', function () { $('lbFileOpen').click(); });
     $('lbOpenFileBtn').addEventListener('click', function () { $('lbFileOpen').click(); });
     $('lbFileOpen').addEventListener('change', async function (e) {

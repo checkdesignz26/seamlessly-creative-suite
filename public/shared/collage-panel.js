@@ -477,6 +477,6 @@
     }
 
     buildTabs(); renderTpls(); loadTab(); sync();
-    return { sync: sync, reloadSources: loadTab };
+    return { sync: sync, reloadSources: loadTab, addImages: addImages };
   };
 })(typeof window !== 'undefined' ? window : globalThis);

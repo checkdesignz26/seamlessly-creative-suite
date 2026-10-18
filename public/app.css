@@ -82,3 +82,6 @@ body { margin: 0; padding: 0; overflow: hidden; font-family: 'Quicksand', system
   .lb-save-status { display: none; }
   .lookbook-editor-topbar { flex-wrap: wrap; }
 }
+
+/* ---------- inside the suite: the suite's own project bar replaces the standalone start screen ---------- */
+.lb-in-suite #lbStart, .lb-in-suite #lbHomeBtn { display: none !important; }

@@ -8,6 +8,8 @@ its own inline editor and is deliberately not wired to these files (yet).
 | `lookbook-editor.js` | The editor engine. Classic script, globals prefixed `il…` (as in the original). Pages are `.lookbook-canvas` elements holding `.canvas-item` layers (pictures, text, palettes, collages). Includes (de)serialisation (`ilSerializeLookbook` / `ilRestoreLookbook`), zoom/fit, the tool panel, rasterising and exports (`ilExportPagePng/Jpeg`, `ilExportAllPdf`, `ilExportAllZip`). |
 | `lookbook-ui.js` | `ScLookbookUI.mount(el)` — the editor chrome (rail, tool panel, viewport, page strip). Mount **before** loading the editor script. |
 | `lookbook.css`, `lookbook-base.css` | Styling copied from Mock-up Studio (Coastal Atelier theme: use `<body class="theme-ocean-atelier">`). |
+| `lookbook-tray.js` | The collapsible asset tray under the page (patterns / mock-ups / images / other). Works in both standalone and suite; host items carry `kind`. |
+| `lookbook-suite.js` | Suite bridge. Does nothing unless the URL has `?project=<id>` (i.e. opened by the suite shell): opens the Lookbook belonging to that suite project, merges the project's assets (full resolution) into the host lists, adds ↻ refresh and "send this page to project" (kind `lookbook`, which Pattern Pages already receives). |
 | `lookbook-store.js` | `ScLookbookStore` — IndexedDB projects (`creativeLookbookDB`). Independent of the suite library and of Mock-up Studio's databases. |
 
 ## Host seam — `window.ScLookbookHost`
@@ -21,12 +23,13 @@ window.ScLookbookHost = {
   onChange()    { /* debounced, after any edit — autosave here */ },
   projectName() { return 'My lookbook'; },                    // used for export file names
   removeAsset(kind, src) { /* shows a × on library swatches */ },
+  refreshAssets() { /* optional: shows ↻ refresh in the tray */ }, assetsNote() { return ''; }, emptyNote(group) { return ''; },
   collageTabNames: { mockups: 'images' }, collageEmptyNotes: { mockups: '…' }
 };
 ```
 
-A future suite host would add the project library's assets in `getPatterns/getImages` and save through the
-project library instead of `ScLookbookStore`; nothing in the editor changes.
+The suite host (`lookbook-suite.js`) wraps `getPatterns/getImages` to add the project library's assets (images get
+`kind: 'mockup' | 'image' | 'other'`); the editable Lookbook is still saved by `ScLookbookStore`, tagged with `suiteProjectId`.
 
 ## Project data
 
