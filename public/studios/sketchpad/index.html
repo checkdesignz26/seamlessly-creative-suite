@@ -1328,7 +1328,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v307'; // keep in step with CACHE in sw.js
+const APP_V='v308'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -5383,7 +5383,7 @@ canvas.addEventListener('pointerdown',e=>{
   selectAt(e.clientX,e.clientY);
   if(selected){
     const p=screenToCanvas(e.clientX,e.clientY),m=getSel();
-    dragMotif={dx:p.x-m.x,dy:p.y-m.y};try{canvas.setPointerCapture(e.pointerId);}catch(err){}
+    dragMotif={dx:p.x-m.x,dy:p.y-m.y,sx:e.clientX,sy:e.clientY,moved:false};try{canvas.setPointerCapture(e.pointerId);}catch(err){}
   }else if(selectedStrokeId&&(selectedStrokeId===prevSelectedStrokeId||quickMoveOn)){
     const p=screenToCanvas(e.clientX,e.clientY);
     dragStroke={strokeId:selectedStrokeId,startX:p.x,startY:p.y,totalDx:0,totalDy:0,moved:false};
@@ -5392,7 +5392,8 @@ canvas.addEventListener('pointerdown',e=>{
 });
 canvas.addEventListener('pointermove',e=>{
   if(mode!=='edit')return;
-  if(dragMotif){const p=screenToCanvas(e.clientX,e.clientY),m=getSel();if(m){m.x=p.x-dragMotif.dx;m.y=p.y-dragMotif.dy;try{xfSnapMotif(m);}catch(err){}redraw();}return;}
+  if(dragMotif){if(!dragMotif.moved){if(Math.hypot(e.clientX-dragMotif.sx,e.clientY-dragMotif.sy)<9)return;dragMotif.moved=true;} // a tap (or a wobbling finger) only selects; it never nudges the motif
+    const p=screenToCanvas(e.clientX,e.clientY),m=getSel();if(m){m.x=p.x-dragMotif.dx;m.y=p.y-dragMotif.dy;try{xfSnapMotif(m);}catch(err){}redraw();}return;}
   if(dragStroke){
     const stroke=strokes.find(s=>s.id===dragStroke.strokeId);if(!stroke)return;
     const p=screenToCanvas(e.clientX,e.clientY);
@@ -5480,7 +5481,7 @@ canvas.addEventListener('pointermove',e=>{
   }
 });
 ['pointerup','pointercancel'].forEach(ev=>canvas.addEventListener(ev,()=>{
-  if(dragMotif){dragMotif=null;pushHist();}
+  if(dragMotif){const mv=dragMotif.moved;dragMotif=null;if(mv)pushHist();}
   if(dragStroke){
     if(dragStroke.moved&&dragStroke.guide){
       const st=strokes.find(x=>x.id===dragStroke.strokeId),g=st&&st.text&&st.text.path&&strokes.find(x=>x.id===st.text.path.gid);
