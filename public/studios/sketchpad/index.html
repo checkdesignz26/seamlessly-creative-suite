@@ -84,7 +84,7 @@ button,input,select{font:inherit}
 .float-panel{position:fixed;z-index:60;width:270px;max-width:calc(100vw - 24px);max-height:calc(100vh - 24px);overflow:auto;background:var(--sideBg);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:0 18px 50px rgba(0,0,0,.35)}
 .float-panel-handle{cursor:move;touch-action:none;-webkit-user-select:none;user-select:none;display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:900;font-size:15px;margin:-14px -14px 10px -14px;padding:12px 14px;border-radius:18px 18px 0 0;background:var(--panel2);border-bottom:1px solid var(--line)}
 .float-panel-handle.dragging{cursor:grabbing}
-#xformBar{width:290px;padding:12px;z-index:62}
+#xformBar{width:290px;padding:12px;z-index:62;height:auto!important;min-height:0!important;max-height:calc(100vh - 24px)}
 #xformBar .xf-row{display:flex;gap:6px;align-items:center;margin-top:7px}
 #xformBar .xf-row>label{font-size:12px;opacity:.8;width:18px;flex:none;font-weight:800}
 #xformBar input[type=number]{width:100%;min-width:0;padding:7px 6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px}
@@ -1328,7 +1328,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v305'; // keep in step with CACHE in sw.js
+const APP_V='v306'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -6079,7 +6079,7 @@ function xfSync(force){
   const bar=$('xformBar');if(!bar)return;
   const o=(mode==='edit')?xfObj():null;
   if(!o){if(bar.style.display!=='none')bar.style.display='none';xfSig='';return;}
-  if(bar.style.display==='none'){bar.style.display='block';if(!bar._placed){const vr=viewportOuter.getBoundingClientRect();positionFloatPanel('xformBar',vr.left+16,vr.top+16);bar._placed=true;}}
+  if(bar.style.display==='none'){bar.style.display='block';if(!bar._placed){const vr=viewportOuter.getBoundingClientRect();positionFloatPanel('xformBar',Math.max(vr.left+16,vr.right-306),vr.top+16);bar._placed=true;}}
   const g=xfGeom(o),b=xfBox(g),K=xfCanvasPx(),os=xfOrigSize(o);
   const sig=[o.kind,o.kind==='placed'?o.m.id:o.st.id,g.w,g.h,g.r,g.cx,g.cy,xfLock,xfSnapOn,xfCollapsed,K.pw,K.ph,os&&os.w,o.kind==='placed'?(o.m.fx+','+o.m.fy):''].join('|');
   if(!force&&sig===xfSig)return;xfSig=sig;
