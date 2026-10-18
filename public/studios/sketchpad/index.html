@@ -665,7 +665,7 @@ html.in-suite .suite-only{display:block!important}
       </div>
       <button id="continuousDrawToggle" class="btn mini" style="width:100%;margin-top:8px;">🔗 Continuous Draw: Off</button>
       <button id="liveTileToggle" class="btn mini" style="width:100%;margin-top:8px;">🔲 Live tile preview: Off</button>
-      <div class="hint">Off = faster: only the tile you draw in updates while the pen is down; the other tiles catch up when you lift.</div>
+      <div class="hint">On = every repeat is drawn while the pen is down. Off = faster on an older iPad: the other tiles catch up when you lift.</div>
       <div id="continuousDrawHint" class="hint" style="display:none;">On: starting a new stroke right where the last one ended extends it as one continuous path instead of a separate stroke.</div>
       <div class="brush-family-title">Recent</div>
       <div id="brushRecents" class="brush-family-row"></div>
@@ -1020,6 +1020,11 @@ html.in-suite .suite-only{display:block!important}
     <div id="blendPickRow" style="display:none;margin-top:8px;"><div class="hint" id="blendPickText">Tap the <b>second shape</b> on the canvas. The first one is the one you had selected.</div><button id="blendRepeatBtn" class="btn mini" style="width:100%;margin-top:6px;" title="No second shape: repeat this one along a path">&#128257; Or repeat just this one along a path</button><button id="blendCancelPickBtn" class="btn mini" style="width:100%;margin-top:6px;">Cancel</button></div>
     <div id="blendMsg" class="hint" style="display:none;margin-top:8px;"></div>
     <div id="blendBody" style="margin-top:8px;">
+      <div id="blendModeSel" style="display:none;gap:6px;margin-bottom:8px;"><button id="blendModeTransform" class="btn mini" style="flex:1;" title="Copies change position, size, turn, opacity and colour; the shape stays one of the two originals">Transform Blend</button><button id="blendModeMorph" class="btn mini" style="flex:1;" title="True morph: the outline itself changes gradually from the first shape into the second">Shape Morph</button></div>
+      <div id="blendMorphOpts" style="display:none;margin-bottom:8px;font-size:12.5px;">
+        <div class="row" style="align-items:center;gap:6px;"><span style="flex:none;opacity:.8" title="Slide where the second outline starts if the match looks twisted">Twist &deg;</span><input id="blendTwist" type="range" min="-180" max="180" step="5" value="0" style="flex:1;min-width:0;"><button id="blendFlipDir" class="btn mini" style="flex:none;" title="Walk the second outline the other way round">&#8644; Outline</button></div>
+        <div class="hint" style="margin-top:2px;">If a morph looks twisted or folded, slide Twist or flip the outline direction.</div>
+      </div>
       <div id="blendStepsLabel" style="font-size:12.5px;opacity:.85;margin-bottom:4px;">Steps between the two shapes</div>
       <div class="row" style="align-items:center;gap:8px;"><input id="blendSteps" type="range" min="1" max="40" step="1" value="5" style="flex:1;min-width:0;"><input id="blendStepsNum" type="number" min="1" max="40" step="1" value="5" inputmode="numeric" style="width:56px;flex:none;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);"></div>
       <div id="blendStepsNote" class="hint" style="margin:4px 0 8px;"></div>
@@ -1535,7 +1540,7 @@ function liveOvBegin(){
   liveOvVm=vm;liveOv.style.display='block';liveOvShown=true;liveOvOn=true;return true;
 }
 // draw(c) paints in logical canvas coordinates; bb (optional) lets off-screen tile repeats be skipped
-let liveTilePreview=true;try{liveTilePreview=localStorage.getItem('sp-liveTiles')!=='0';}catch(e){} // on by default: the repeats are drawn as you draw (switch off in Settings if an old iPad struggles)
+let liveTilePreview=true;try{liveTilePreview=localStorage.getItem('sp-liveTiles2')!=='0';}catch(e){} // on by default: the repeats are drawn as you draw (switch off in Settings if an old iPad struggles)
 function liveDraw(draw,clear,bb){
   const al=getActiveLayer();BrushEngine.underlay=al?{canvas:al.canvas,sx:1,sy:1}:null;
   try{return liveDraw0(draw,clear,bb);}finally{BrushEngine.underlay=null;}
@@ -4169,7 +4174,7 @@ function blendAt(P,u){
 // difference; ties go to the smallest turn so identical shapes do not spin. Open paths only try
 // the two directions. The final sample positions then include every corner of BOTH shapes
 // (when they are simple) so sharp corners survive, or an even resampling for dense curves.
-function blendPrepare(A,B){
+function blendPrepare(A,B,opt){
   const PA=blendPath(A),PB=blendPath(B);if(!PA||!PB)return null;
   const closed=PA.closed,M=96;
   const au=[];for(let j=0;j<M;j++)au.push(blendAt(PA,closed?j/M:j/(M-1)));
@@ -4197,8 +4202,15 @@ function blendPrepare(A,B){
   if(!cands.length)return null;
   // near-equal fits (a circle fits a rotated copy of itself at every offset) go to the smallest turn
   const minErr=Math.min.apply(null,cands.map(c=>c.err));
-  let best=null;
-  cands.forEach(c=>{if(c.err<=minErr+2e-3&&(!best||Math.abs(c.th)<Math.abs(best.th)-1e-3||(Math.abs(Math.abs(c.th)-Math.abs(best.th))<=1e-3&&c.err<best.err)))best=c;});
+  const pick=list=>{let b=null;const me=Math.min.apply(null,list.map(c=>c.err));
+    list.forEach(c=>{if(c.err<=me+2e-3&&(!b||Math.abs(c.th)<Math.abs(b.th)-1e-3||(Math.abs(Math.abs(c.th)-Math.abs(b.th))<=1e-3&&c.err<b.err)))b=c;});return b;};
+  let best=pick(cands);
+  // manual correspondence (Shape Morph): reverse which way round B's outline is walked, and/or slide its start point
+  if(opt&&closed&&(opt.flip||opt.twist)){
+    if(opt.flip){const other=cands.filter(c=>c.dir===-best.dir);if(other.length)best=pick(other);}
+    const sh=Math.round((+opt.twist||0)/360*M);
+    if(sh){const kk=(((best.k+sh)%M)+M)%M,hit=cands.find(c=>c.dir===best.dir&&c.k===kk);if(hit)best=hit;}
+  }
   const Bt=t=>closed?blendAt(PB,best.dir===1?(t+best.k/M):-(t+best.k/M)):blendAt(PB,best.dir===1?t:1-t);
   let params=[];
   if(PA.n<=60&&PB.n<=60){
@@ -4229,7 +4241,7 @@ function blendMeanPressure(s){let t=0;s.points.forEach(p=>{t+=p.pressure==null?1
 // Pure: returns the intermediate stroke objects (not yet added) or {error}.
 function generateBlend(A,B,spec){
   const reason=blendPairReason(A,B);if(reason)return {error:reason};
-  const prep=blendPrepare(A,B);if(!prep)return {error:'These shapes cannot be matched up (one has no usable length).'};
+  const prep=blendPrepare(A,B,(spec.flip||spec.twist)?{flip:!!spec.flip,twist:spec.twist}:null);if(!prep)return {error:'These shapes cannot be matched up (one has no usable length).'};
   const n=Math.max(1,Math.min(BLEND_MAX_STEPS,Math.round(spec.steps)||1));
   const out=[],cth=Math.cos(-prep.th),sth=Math.sin(-prep.th),L=prep.a.length;
   // each end's outline relative to its own centre; B is un-rotated/un-scaled so the remaining
@@ -4352,6 +4364,7 @@ function blendWriteControls(){
   $('blendColour').checked=d.colour;$('blendShape').checked=d.shape;$('blendPos').checked=d.pos;$('blendSize').checked=d.size;$('blendRot').checked=d.rot;
   if(d.obj)$('blendOpacity').checked=d.opacity!==false;
   blendSyncPathUI();
+  objSyncModeUI();
   blendUpdateNote();
 }
 function blendUpdateNote(){
@@ -4538,6 +4551,76 @@ function objMorphPlan(A,B){
   for(const [a,b] of pairs){const why=blendPairReason(a,b);if(why)return {reason:why};}
   return {pairs};
 }
+// ---- Shape Morph (extended pairing): works on outlines, not on node counts ----
+// Every closed outline of each side becomes one contour. A compound path (holes / several pieces) is split into its
+// pieces; when the two sides have a different number of contours the larger side's overlapping outlines are merged
+// into one silhouette (PolyBool union). Contours are then paired by position and size; any left over shrinks to (or
+// grows from) a dot. Holes are not morphed (limitation, reported in the panel).
+function objPolyArea(pts){let a=0;for(let i=0,j=pts.length-1;i<pts.length;j=i++)a+=(pts[j].x+pts[i].x)*(pts[j].y-pts[i].y);return Math.abs(a/2);}
+function objPtIn(pt,poly){let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a.y>pt.y)!==(b.y>pt.y)&&pt.x<(b.x-a.x)*(pt.y-a.y)/(b.y-a.y)+a.x)c=!c;}return c;}
+function objContourStroke(src,pts){
+  const s=blendClone(src);
+  ['regions','nodes','shape','groupId','radial','radialOf','radialK','contour','contourOf','contourK','fillOf','blendId','blendSpec','oblendId','oblendSpec','oblendStep','clipStrokeId'].forEach(k=>delete s[k]);
+  s.id=crypto.randomUUID();s.points=pts.map(p=>({x:p.x,y:p.y,pressure:p.pressure==null?1:p.pressure}));s.closed=true;return s;
+}
+function objContoursOf(ep){
+  const out=[];let holes=0,open=0;
+  ep.st.forEach(s=>{
+    if(s.regions){s.regions.forEach(r=>{if(r&&r.length>=3)out.push({pts:r,src:s});});return;}
+    if(!s.points||s.points.length<3)return;
+    if(!s.closed){ // a hand-drawn loop whose end meets its start counts as a closed outline
+      const f=s.points[0],l=s.points[s.points.length-1],bb=strokeBBox(s),dg=Math.hypot(bb.maxX-bb.minX,bb.maxY-bb.minY);
+      if(Math.hypot(f.x-l.x,f.y-l.y)>Math.max(10,dg*0.12)){open++;return;}
+    }
+    const q=s.nodes?nodesToPoints(s.nodes,true):s.points;out.push({pts:q,src:s});
+  });
+  // a compound stroke's inner rings are holes: leave them out
+  const keep=out.filter((c,i)=>{const t=c.pts[0];let depth=0;out.forEach((o,j)=>{if(j!==i&&o.src===c.src&&objPtIn(t,o.pts)&&objPolyArea(o.pts)>objPolyArea(c.pts))depth++;});if(depth%2){holes++;return false;}return true;});
+  return {list:keep,holes,open};
+}
+function objUnionContours(list){
+  if(list.length<2)return list;
+  let acc=null;
+  try{
+    list.forEach(c=>{const poly={regions:[c.pts.map(p=>[p.x,p.y])],inverted:false};acc=acc?PolyBool.union(acc,poly):poly;});
+  }catch(e){return list;}
+  const src=list.slice().sort((a,b)=>objPolyArea(b.pts)-objPolyArea(a.pts))[0].src;
+  const regs=(acc.regions||[]).filter(r=>r&&r.length>=3).map(r=>r.map(([x,y])=>({x,y,pressure:1})));
+  const outer=regs.filter((r,i)=>{let d=0;regs.forEach((o,j)=>{if(j!==i&&objPtIn(r[0],o)&&objPolyArea(o)>objPolyArea(r))d++;});return d%2===0;});
+  return outer.map(pts=>({pts,src,merged:true}));
+}
+function objMorphPlanExt(A,B){
+  if(A.pl.length||B.pl.length)return {reason:'Pictures (placed motifs) are bitmaps, so they can only be blended by position, size, turn and opacity.'};
+  if(!A.st.length||!B.st.length)return {reason:'There are no vector paths to morph.'};
+  const FA=objFrame(A),FB=objFrame(B);if(!FA||!FB)return {reason:'One of them has no size.'};
+  const ca=objContoursOf(A),cb=objContoursOf(B);
+  if(ca.open||cb.open){ // open lines: only the strict one-to-one pairing can handle them
+    const st=objMorphPlan(A,B);if(st.pairs)return st;
+    return {reason:'Shape Morph needs closed shapes (open lines can only be morphed one-to-one with the same number of paths).'};
+  }
+  let la=ca.list,lb=cb.list;if(!la.length||!lb.length)return {reason:'There are no closed outlines to morph.'};
+  const notes=[];
+  if(la.length!==lb.length){
+    if(la.length>lb.length){const n0=la.length;la=objUnionContours(la);if(la.length<n0)notes.push(n0+' outlines merged into '+la.length);}
+    else{const n0=lb.length;lb=objUnionContours(lb);if(lb.length<n0)notes.push(n0+' outlines merged into '+lb.length);}
+  }
+  const bb=l=>{let x0=1e12,y0=1e12,x1=-1e12,y1=-1e12;l.forEach(p=>{if(p.x<x0)x0=p.x;if(p.x>x1)x1=p.x;if(p.y<y0)y0=p.y;if(p.y>y1)y1=p.y;});return {cx:(x0+x1)/2,cy:(y0+y1)/2,m:Math.max(1,x1-x0,y1-y0)};};
+  const desc=(l,F)=>l.map(c=>{const b=bb(c.pts);return {c,cx:b.cx,cy:b.cy,x:(b.cx-F.cx)/F.M,y:(b.cy-F.cy)/F.M,m:b.m/F.M};});
+  const da=desc(la,FA),db=desc(lb,FB),all=[];
+  for(let i=0;i<da.length;i++)for(let j=0;j<db.length;j++)all.push({i,j,c:Math.hypot(da[i].x-db[j].x,da[i].y-db[j].y)+0.5*Math.abs(Math.log(da[i].m/db[j].m))});
+  all.sort((p,q)=>p.c-q.c);
+  const ui=new Set(),uj=new Set(),pairs=[];
+  const dot=(d,at)=>{const pts=[];for(let k=0;k<16;k++){const a=k/16*Math.PI*2;pts.push({x:at.cx+Math.cos(a)*.6,y:at.cy+Math.sin(a)*.6,pressure:1});}return objContourStroke(d.c.src,pts);};
+  all.forEach(p=>{if(ui.has(p.i)||uj.has(p.j))return;ui.add(p.i);uj.add(p.j);
+    pairs.push([objContourStroke(da[p.i].c.src,da[p.i].c.pts),objContourStroke(db[p.j].c.src,db[p.j].c.pts)]);});
+  let dots=0;
+  da.forEach((d,i)=>{if(!ui.has(i)){pairs.push([objContourStroke(d.c.src,d.c.pts),dot(d,d)]);dots++;}});
+  db.forEach((d,j)=>{if(!uj.has(j)){pairs.push([dot(d,d),objContourStroke(d.c.src,d.c.pts)]);dots++;}});
+  if(dots)notes.push(dots+' extra outline'+(dots===1?'':'s')+' shrink'+(dots===1?'s':'')+' to / grow'+(dots===1?'s':'')+' from a dot');
+  if(ca.holes+cb.holes)notes.push('holes are not morphed');
+  for(const [a,b] of pairs){const why=blendPairReason(a,b);if(why)return {reason:why};}
+  return {pairs,note:notes.join('; ')};
+}
 function objDominantColour(ep){const s=ep.st.find(x=>x.color);return s?s.color:null;}
 // ---- blend along a path: the guide stroke, evenly spaced poses on it ----
 const OBJ_PATH_MAX=200;
@@ -4590,15 +4673,15 @@ function objGenerate(A,B,spec){
     for(let k=0;k<n;k++)tl.push((k+1)/(n+1));
   }
   const posUse=spec.path?true:spec.pos;
-  let mode='transform',reason=null,pairs=null;
+  let mode='transform',reason=null,pairs=null,morphNote='';
   if(rep)reason='Repeating one shape: every copy is the same shape, changing only size, turn and opacity.';
-  else if(spec.shape){const plan=objMorphPlan(A,B);if(plan.pairs){mode='morph';pairs=plan.pairs;}else reason=plan.reason;}
+  else if(spec.shape){let plan=objMorphPlan(A,B);if(!plan.pairs&&spec.ext)plan=objMorphPlanExt(A,B);if(plan.pairs){mode='morph';pairs=plan.pairs;morphNote=plan.note||'';}else reason=plan.reason;}
   else reason='Shape morph is switched off.';
   const steps=[];for(let k=0;k<n;k++)steps.push({st:[],pl:[]});
   if(mode==='morph'){
     let failed=null;
     for(const [a,b] of pairs){
-      const r=generateBlend(a,b,{steps:n,colour:spec.colour,shape:true,pos:posUse,size:spec.size,rot:spec.rot,ts:tl});
+      const r=generateBlend(a,b,{steps:n,colour:spec.colour,shape:true,pos:posUse,size:spec.size,rot:spec.rot,ts:tl,flip:spec.flip,twist:spec.twist});
       if(r.error){failed=r.error;break;}
       const oa=strokeSettings(a).opacity;
       r.strokes.forEach((s,k)=>{
@@ -4653,13 +4736,13 @@ function objGenerate(A,B,spec){
     }
   }
   let gap=null;if(spots&&spots.length>1){let t=0;for(let i=1;i<spots.length;i++)t+=Math.hypot(spots[i].x-spots[i-1].x,spots[i].y-spots[i-1].y);gap=t/(spots.length-1);}
-  return {mode,reason,steps,identical:false,n,capped,gap,len:guide?guide.P.tot:null,closed:guide?guide.P.closed:null};
+  return {mode,reason,morphNote,steps,identical:false,n,capped,gap,len:guide?guide.P.tot:null,closed:guide?guide.P.closed:null};
 }
 function objSig(A,B,spec){
   const f=ep=>JSON.stringify([ep.st.map(s=>[s.id,s.color,s.fillColor,s.brushId,s.closed,s.settings&&s.settings.size,s.settings&&s.settings.opacity,s.points.length,s.points[0]&&Math.round(s.points[0].x*10),s.points[0]&&Math.round(s.points[0].y*10),s.points.length>1&&Math.round(s.points[s.points.length>>1].x*10),Math.round((s.points[s.points.length-1]||{x:0}).x*10),Math.round((s.points[s.points.length-1]||{y:0}).y*10)]),ep.pl.map(p=>[p.id,p.motifId,Math.round(p.x*10),Math.round(p.y*10),Math.round(p.s*1000),Math.round((p.r||0)*10),p.fx,p.fy,p.alpha])]);
   let h=5381;let gs='';
   if(spec.path){const G=objGuide(spec);gs=G?JSON.stringify([G.g.closed,G.P.n,G.g.points.map(p=>Math.round(p.x*10)+','+Math.round(p.y*10)).join(';')]):'noguide';}
-  const str=f(A)+'|'+f(B)+'|'+[spec.steps,spec.colour,spec.shape,spec.pos,spec.size,spec.rot,spec.opacity].join(',')+'|'+JSON.stringify([spec.path||null,spec.rep||null])+'|'+gs;
+  const str=f(A)+'|'+f(B)+'|'+[spec.steps,spec.colour,spec.shape,spec.pos,spec.size,spec.rot,spec.opacity,spec.ext?1:0,spec.flip?1:0,spec.twist||0].join(',')+'|'+JSON.stringify([spec.path||null,spec.rep||null])+'|'+gs;
   for(let i=0;i<str.length;i++)h=((h<<5)+h+str.charCodeAt(i))|0;return h+':'+str.length;
 }
 function objGenerated(id){return {st:strokes.filter(s=>s.oblendId===id),pl:placed.filter(p=>p.oblendId===id)};}
@@ -4683,7 +4766,7 @@ function objInstall(spec){
   if(gp.length)placed.splice(pIdx.length?Math.min(...pIdx)+1:placed.length,0,...gp);
   touched.forEach(id=>{if(layers.some(l=>l.id===id))rebuildLayer(id);});
   try{scheduleMotifHi();}catch(e){}
-  return {ok:true,mode:res.mode,reason:res.reason,count:gs.length+gp.length,steps:spec.steps,clamped:res.capped||clamped,sig,n:res.n,gap:res.gap,len:res.len,closed:res.closed,path:!!spec.path};
+  return {ok:true,mode:res.mode,reason:res.reason,morphNote:res.morphNote,count:gs.length+gp.length,steps:spec.steps,clamped:res.capped||clamped,sig,n:res.n,gap:res.gap,len:res.len,closed:res.closed,path:!!spec.path};
 }
 function objRemove(id){
   const g=objGenerated(id),touched=new Set(g.st.map(s=>s.layerId));
@@ -4721,7 +4804,7 @@ function objPartsFromSelection(){
   }else if(selected){const p=placed.find(x=>x.id===selected);if(p)items.push({k:'p',id:p.id,gid:p.groupId||null});}
   const parts=new Map();
   items.forEach(x=>{
-    const gid=(x.gid&&groupInsideId!==x.gid)?x.gid:null,key=gid||(x.k+':'+x.id);
+    const gid=(x.gid&&groupInsideId!==x.gid)?x.gid:null,st=x.k==='s'?strokes.find(q=>q.id===x.id):null,fam=st&&(st.radial||st.radialOf||st.contour||st.contourOf)?'fam:'+(st.radialOf||st.contourOf||st.id):null,key=gid||fam||(x.k+':'+x.id);
     if(!parts.has(key))parts.set(key,{gid,s:[],p:[]});
     (x.k==='s'?parts.get(key).s:parts.get(key).p).push(x.id);
   });
@@ -4748,16 +4831,16 @@ function objCheckEndpoint(part){
   if(all.strokeIds.some(id=>{const s=strokes.find(x=>x.id===id);return s&&(s.blendId||s.oblendId);})||all.placedIds.some(id=>{const p=placed.find(x=>x.id===id);return p&&p.oblendId;}))return 'That already contains a blend (use Expand Blend first).';
   return null;
 }
-function objSpecOf(d){return {id:d.id,obj:true,A:d.A,B:d.B,steps:d.steps,colour:d.colour,shape:d.shape,pos:d.pos,size:d.size,rot:d.rot,opacity:d.opacity!==false,path:d.path?blendClone(d.path):undefined,rep:d.rep?blendClone(d.rep):undefined,mode:'straight'};}
+function objSpecOf(d){return {id:d.id,obj:true,A:d.A,B:d.B,steps:d.steps,colour:d.colour,shape:d.shape,ext:!!d.ext,flip:!!d.flip,twist:+d.twist||0,pos:d.pos,size:d.size,rot:d.rot,opacity:d.opacity!==false,path:d.path?blendClone(d.path):undefined,rep:d.rep?blendClone(d.rep):undefined,mode:'straight'};}
 function objModeNote(r){
   const n=$('blendModeNote');if(!n)return;
   if(!r||r.error){n.style.display='none';return;}
   n.style.display='block';
-  {const sl=$('blendShape')&&$('blendShape').parentNode;if(sl)sl.style.display=(r.mode==='morph')?'flex':'none';} // only offer Shape morph when the two can really morph
+  objSyncModeUI();
   const pre=r.path?'📍 <b>Following the path.</b> ':'';
   n.innerHTML=pre+(r.mode==='morph'
-    ?'✅ <b>Shape morph</b> — the paths pair up, so each shape changes into the other point by point.'
-    :(r.reason&&r.reason.indexOf('Repeating')===0?'🔁 <b>Repeat</b> — every copy is the same shape; only size, turn and opacity change along the path.':'↔️ <b>Transform blend</b> — position, size, turn, opacity and colour change gradually, but the shape does not morph'+(r.reason?': '+escapeHtml(r.reason):'.')+' Each step is a copy of the nearer original.'));
+    ?'✅ <b>Shape Morph</b> — the outline itself changes gradually from the first shape into the second.'+(r.morphNote?' <i>('+escapeHtml(r.morphNote)+')</i>':'')
+    :(r.reason&&r.reason.indexOf('Repeating')===0?'🔁 <b>Repeat</b> — every copy is the same shape; only size, turn and opacity change along the path.':(blendDraft&&blendDraft.shape&&blendDraft.ext?'⚠️ <b>Shape Morph is not possible here</b>'+(r.reason?': '+escapeHtml(r.reason):'.')+' Showing a Transform Blend instead. ':'')+'↔️ <b>Transform blend</b> — position, size, turn, opacity and colour change gradually, but the shape does not morph'+(r.reason?': '+escapeHtml(r.reason):'.')+' Each step is a copy of the nearer original.'));
 }
 let objLastInfo=null;
 function objUpdateNote(){
@@ -4775,6 +4858,11 @@ function objPreview(){
   cancelAnimationFrame(blendRaf);
   blendRaf=requestAnimationFrame(()=>{
     const d=blendDraft;if(!d||!d.obj||!d.B||(d.rep&&!d.path))return;
+    if(!d.existing&&!d.rep&&!d.modeInit){ // new blend: start as a Shape Morph only where the old pairing already worked; otherwise Transform Blend until Shape Morph is chosen
+      d.modeInit=true;try{d.shape=!!objMorphPlan(objResolve(d.A),objResolve(d.B)).pairs;}catch(e){d.shape=false;}
+      $('blendShape').checked=d.shape;
+    }
+    objSyncModeUI();
     const r=objInstall(objSpecOf(d));
     if(r.error){blendMsg(r.error+' Your originals are untouched.',true);objModeNote(null);return;}
     objLastInfo=r;objUpdateNote();objSyncGuideHide(d);
@@ -4782,11 +4870,25 @@ function objPreview(){
     objModeNote(r);redraw();
   });
 }
+function objSyncModeUI(){
+  const d=blendDraft,on=!!(d&&d.obj);
+  $('blendModeSel').style.display=on?'flex':'none';
+  $('blendMorphOpts').style.display=(on&&d.shape&&d.ext)?'block':'none';
+  const m=$('blendModeMorph'),t=$('blendModeTransform');
+  if(on){m.classList.toggle('primary',!!d.shape);t.classList.toggle('primary',!d.shape);$('blendTwist').value=d.twist||0;$('blendFlipDir').classList.toggle('primary',!!d.flip);}
+}
+function objSetMode(morph){
+  const d=blendDraft;if(!d||!d.obj)return;
+  d.ext=true;$('blendShape').checked=!!morph;blendReadControls();objSyncModeUI();objPreview();
+}
+$('blendModeTransform').onclick=()=>objSetMode(false);$('blendModeMorph').onclick=()=>objSetMode(true);
+$('blendTwist').addEventListener('input',()=>{const d=blendDraft;if(!d||!d.obj)return;d.twist=+$('blendTwist').value||0;objPreview();});
+$('blendFlipDir').onclick=()=>{const d=blendDraft;if(!d||!d.obj)return;d.flip=!d.flip;objSyncModeUI();objPreview();};
 function objShowControls(on){
   $('blendOpacityLbl').style.display=on?'flex':'none';
   $('blendColourTxt').textContent=on?'Colour':'Colour & opacity';
   $('blendShapeTxt').textContent=on?'Shape morph':'Shape';
-  {const sl=$('blendShape')&&$('blendShape').parentNode;if(sl)sl.style.display='flex';}
+  {const sl=$('blendShape')&&$('blendShape').parentNode;if(sl)sl.style.display=on?'none':'flex';} // object blends use the Transform Blend | Shape Morph selector instead
   if(!on)$('blendModeNote').style.display='none';
   $('blendPickText').innerHTML=on?'Tap the <b>second motif or group</b> on the canvas. The first one is what you had selected.':'Tap the <b>second shape</b> on the canvas. The first one is the one you had selected.';
   $('blendStepsLabel').textContent=on?'Steps between the two (motifs / groups)':'Steps between the two shapes';
@@ -4804,7 +4906,7 @@ function openObjBlend(){
   if(parts.length>2){setStatus('🌀 Select exactly two motifs or groups to blend (you have '+parts.length+' selected). Group related pieces first.');return;}
   if(!parts.length){setStatus('🌀 Select a motif or group first, then tap Blend.');return;}
   for(const p of parts){const why=objCheckEndpoint(p);if(why){setStatus('🌀 '+why);return;}}
-  blendDraft={id:crypto.randomUUID(),obj:true,A:parts[0],B:parts[1]||null,aId:'obj-a',bId:parts[1]?'obj-b':null,steps:5,colour:true,shape:true,pos:true,size:true,rot:true,opacity:true,mode:'straight',existing:false};
+  blendDraft={id:crypto.randomUUID(),obj:true,A:parts[0],B:parts[1]||null,aId:'obj-a',bId:parts[1]?'obj-b':null,steps:5,colour:true,shape:true,ext:true,pos:true,size:true,rot:true,opacity:true,mode:'straight',existing:false};
   blendPickArmed=!parts[1];objShowControls(true);objModeNote(null);blendWriteControls();blendMsg('');blendShowPanel();syncStrokeSelectionUI();
   if(parts[1]){objPreview();setStatus('🌀 Adjust the blend, then tap Apply.');}else setStatus('🌀 Now tap the second motif or group on the canvas.');
 }
@@ -7528,7 +7630,7 @@ window.addEventListener('resize',()=>renderBrushPreview());
 function selectBrush(id){eraserActive=false;activeBrushId=id;try{if(smudgeOn)smudgeSyncUI();}catch(e){}try{localStorage.setItem('sp-lastBrush',id);}catch(e){}BrushEngine.touchRecent(id);syncRecents();restoreBrushColour();syncControlsFromSettings();syncActiveSwatches();}
 $('eraserToggle').onclick=()=>{eraserActive=!eraserActive;if(eraserActive)disarmAreaFill();syncControlsFromSettings();syncActiveSwatches();setStatus(eraserActive?'🧹 Eraser: drag over a stroke on the active layer to erase just that part of it.':'✏️ Back to '+BrushEngine.getBrush(activeBrushId).name+'.');};
 $('liveTileToggle').textContent='🔲 Live tile preview: '+(liveTilePreview?'On':'Off');
-$('liveTileToggle').onclick=()=>{liveTilePreview=!liveTilePreview;try{localStorage.setItem('sp-liveTiles',liveTilePreview?'1':'0');}catch(e){}$('liveTileToggle').textContent='🔲 Live tile preview: '+(liveTilePreview?'On':'Off');};
+$('liveTileToggle').onclick=()=>{liveTilePreview=!liveTilePreview;try{localStorage.setItem('sp-liveTiles2',liveTilePreview?'1':'0');}catch(e){}$('liveTileToggle').textContent='🔲 Live tile preview: '+(liveTilePreview?'On':'Off');};
 $('continuousDrawToggle').onclick=()=>{
   continuousDrawMode=!continuousDrawMode;
   $('continuousDrawToggle').textContent='🔗 Continuous Draw: '+(continuousDrawMode?'On':'Off');
@@ -16124,19 +16226,6 @@ SPFonts.init().then(()=>{txRefreshMissing();});
   try { if (typeof activeProject !== 'undefined' && activeProject && !S.pid) onProjectLoaded(activeProject, null); } catch (e) { }
 })();
 
-// ---- Seamlessly Creative suite hooks (additive only; everything above is a straight copy of the standalone Sketch Pad).
-// They sit inside the app so they reuse exactly what "Load as Background" and the tile export already use.
-window.__scLoadBackgroundFromDataUrl=function(dataUrl){
-  const img=new Image();
-  img.onload=()=>{bgImg=img;bgShown=true;$('bgEmpty').style.display='none';$('bgControls').style.display='block';redraw();setStatus('🧱 Background pattern loaded from project.');scheduleAutosave();};
-  img.src=dataUrl;
-};
-// Async: draws the repeat tile crisply from the vectors (the same builder as "Export tile at a sharper size"), about 1800 px on the long side.
-window.__scGetSketchpadExportCanvas=async function(){
-  const k=Math.min(2.3,1800/Math.max(TW,TH));
-  const canvas=await buildTileHi(k);
-  return {canvas,name:'Sketch Pad pattern'};
-};
 })();
 </script>
 <script>
@@ -16464,8 +16553,5 @@ window.__scGetSketchpadExportCanvas=async function(){
 </script>
 
 
-<script src="/shared/project-library.js"></script>
-<script src="/shared/suite-status.js"></script>
-<script src="/shared/adapters/sketchpad-adapter.js"></script>
 </body>
 </html>
