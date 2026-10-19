@@ -1350,7 +1350,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v324'; // keep in step with CACHE in sw.js
+const APP_V='v325'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -2843,18 +2843,20 @@ function cvtArrange(g,img,fw,fh,n){
 function cvtMaterialise(live,n){
   const S=JSON.parse(live.strokesJSON||'[]'),P=JSON.parse(live.placedJSON||'[]'),G=JSON.parse(live.groupsJSON||'{}');
   const outS=[],outP=[],outG={},k=1/n;
+  // Every id inside the artwork (stroke, group, blend, link and the ids inside blend / rotate / fill settings) is swapped for a new one in each copy,
+  // so each copy's links point at its OWN shapes. Layers and the motif library stay shared on purpose.
+  const UU=/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g,keep=new Set();
+  try{JSON.parse(live.layersJSON||'[]').forEach(l=>keep.add(l.id));}catch(e){}
+  try{motifs.forEach(m=>keep.add(m.id));}catch(e){}
+  keep.add(live.activeLayerId);
+  const jS=JSON.stringify(S),jP=JSON.stringify(P),jG=JSON.stringify(G),all=new Set();
+  for(const m of (jS+jP+jG).matchAll(UU))if(!keep.has(m[0]))all.add(m[0]);
   for(let a=0;a<n;a++)for(let b=0;b<n;b++){
     const off=tilePos(a,b),op={ax:CX,ay:CY,sx:k,sy:k,rot:0,dx:off[0]*k,dy:off[1]*k};
-    const idm=new Map(),gm=new Map(),bm=new Map();
-    S.forEach(o=>idm.set(o.id,crypto.randomUUID()));
-    const mapG=g=>{if(!g)return g;if(!gm.has(g)){const ng=crypto.randomUUID();gm.set(g,ng);if(G[g])outG[ng]=JSON.parse(JSON.stringify(G[g]));}return gm.get(g);};
-    const mapB=v=>{if(!v)return v;if(!bm.has(v))bm.set(v,crypto.randomUUID());return bm.get(v);};
-    const cs=S.map(o=>{
-      const c=JSON.parse(JSON.stringify(o));c.id=idm.get(o.id);
-      ['fillOf','radialOf','contourOf','clipStrokeId'].forEach(f=>{if(c[f])c[f]=idm.has(c[f])?idm.get(c[f]):c[f];});
-      if(c.groupId)c.groupId=mapG(c.groupId);if(c.blendId)c.blendId=mapB(c.blendId);if(c.oblendId)c.oblendId=mapB(c.oblendId);
-      return c;});
-    const cp=P.map(o=>{const c=JSON.parse(JSON.stringify(o));c.id=crypto.randomUUID();if(c.groupId)c.groupId=mapG(c.groupId);if(c.oblendId)c.oblendId=mapB(c.oblendId);return c;});
+    const map=new Map();all.forEach(id=>map.set(id,crypto.randomUUID()));
+    const sw=t=>t.replace(UU,m=>map.get(m)||m);
+    const cs=JSON.parse(sw(jS)),cp=JSON.parse(sw(jP));
+    Object.keys(G).forEach(g=>{if(map.has(g))outG[map.get(g)]=JSON.parse(sw(JSON.stringify(G[g])));});
     grpApply(grpSnapshotOf(cs,cp),op,true);
     cs.forEach(c=>{
       if(c.patFill){const t=op,u=(c.patFill.x-t.ax)*k,v=(c.patFill.y-t.ay)*k;c.patFill=Object.assign({},c.patFill,{x:t.ax+u+t.dx,y:t.ay+v+t.dy,s:(c.patFill.s||1)*k});}
@@ -15304,7 +15306,7 @@ window.__sketchpadDescribe=(a,b)=>describeChange(a,b);
 window.__sketchpadPush=()=>{rebuildAllLayers();pushHist();redraw();};
 window.__sketchpadBlurTest={filterOK:()=>blurFilterOK(),force:v=>{_blurFilterOK=v;},semi:()=>{updateComposite();const d=compositeCtx.getImageData(0,0,W,H).data;let semi=0,solid=0;for(let i=3;i<d.length;i+=4){if(d[i]>8&&d[i]<200)semi++;else if(d[i]>=200)solid++;}return [semi,solid];},hi:async n=>{const c=await buildHiRes(n,true);const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let semi=0;for(let i=3;i<d.length;i+=4)if(d[i]>8&&d[i]<200)semi++;return semi;}};
 window.__sketchpadCollection={get:()=>coll,history:()=>({n:history.length,i:hIndex}),colNew,colDuplicate,colDupRevert,colMoveTo,liquifyPresent:()=>liquifyPresent(strokes),colSwitch,colMove,colDelete,colRename,colRevertPattern,colExportAll,buildDocObject,applyDocObject,liquifyRevertLayers:()=>liquifyRevertLayers(layers,'test')};
-window.__sketchpadInternals=()=>({setMulti,syncStrokeSelectionUI,pushHist,undo,redo,radialSync,layers,strokes,rebuildAllLayers,pixTotal,segVerBump:()=>{segVer++;compositeDirty=true;redraw();}});
+window.__sketchpadInternals=()=>({setMulti,syncStrokeSelectionUI,pushHist,undo,redo,blendInstall,blendSpecOf,radialSync,layers,strokes,rebuildAllLayers,pixTotal,segVerBump:()=>{segVer++;compositeDirty=true;redraw();}});
 window.__sketchpadLayerInfo=()=>{updateDisplayComposite();updateComposite();
   const cmp=document.createElement('canvas');cmp.width=W/4;cmp.height=H/4;const c=cmp.getContext('2d');
   c.drawImage(displayCanvas,0,0,cmp.width,cmp.height);const a=c.getImageData(0,0,cmp.width,cmp.height).data;
