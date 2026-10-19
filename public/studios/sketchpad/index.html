@@ -272,6 +272,14 @@ button.pill:active{transform:scale(.97)}
 @keyframes spPulse{50%{box-shadow:0 0 0 7px rgba(255,142,214,.15)}}
 #brushRecents,#brushFavorites{min-height:44px}
 .sidebar{overflow-anchor:none}
+.tpl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tpl-card{display:flex;flex-direction:column;align-items:stretch;gap:4px;padding:5px;border-radius:12px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:11px;font-weight:800;cursor:pointer;line-height:1.15}
+.tpl-card canvas,.tpl-my canvas{position:static!important;left:auto;top:auto;transform:none!important;}
+.tpl-card canvas{width:100%;aspect-ratio:1/1;border-radius:8px;background:#fff;display:block}
+.tpl-card.active{outline:2px solid var(--accent,#a35cff)}
+.tpl-shapes{gap:6px;flex-wrap:nowrap}.tpl-shapes .tool-btn{flex:1;padding:8px 0;font-size:18px}
+.tpl-my{display:flex;align-items:center;gap:8px;padding:6px;border-radius:12px;border:1px solid var(--btnBorder);background:var(--btnBg);margin-bottom:6px}
+.tpl-my canvas{width:48px;height:48px;border-radius:8px;background:#fff;flex:none}.tpl-my .nm{flex:1;font-weight:850;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .suite-only{display:none!important}
 html.in-suite .suite-only{display:block!important}
 .motif-tray{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
@@ -592,6 +600,27 @@ html.in-suite .suite-only{display:block!important}
       <button class="btn mini template-btn" data-tpl="scattered">Scattered</button>
       <button class="btn mini template-btn" data-tpl="dotGrid">Dot Grid</button>
     </div><label class="upload accentPurple" style="margin-top:8px">📥 Import Template from Magic Builder<input id="templateImportInput" type="file" accept="application/json,.json" style="display:none"></label><button id="templateClear" class="btn mini danger" style="width:100%;margin-top:8px">✕ Clear Template</button><div class="hint">Pick a layout above, or import a template's layout exported from Magic Builder ("export for playground"), then tap a motif below to drop it into the next empty slot - bigger (hero) slots take your focal motifs, smaller (accent/filler) slots take details.</div></section>
+    <section class="section" id="tplSection"><div class="section-title">📐 Pattern Templates</div>
+      <div class="hint" style="margin:-2px 0 8px;">Coloured outline guides that help you plan a layout. They never fill in or limit your drawing.</div>
+      <div class="row" id="tplTabs" style="gap:6px;margin-bottom:8px;"><button class="tool-btn active" data-tab="pre" style="flex:1">Premade</button><button class="tool-btn" data-tab="my" style="flex:1">My Templates</button><button class="tool-btn" data-tab="new" style="flex:1">Create New</button></div>
+      <div id="tplPre" class="tpl-grid"></div>
+      <div id="tplMy" style="display:none"><div id="tplMyList"></div><label class="upload accentPurple" style="margin-top:8px">📥 Import template file<input id="tplImportInput" type="file" accept="application/json,.json" style="display:none"></label></div>
+      <div id="tplNew" style="display:none"><button id="tplBlankBtn" class="tool-btn" style="width:100%;margin-bottom:6px;">▫️ Start from a blank layout</button><button id="tplFromSelBtn" class="tool-btn" style="width:100%;" title="Copies the outline of the selected shapes into the guides. Your artwork is left as it is.">🧩 Make placeholders from selection</button><div class="hint" style="margin-top:6px;">Select shapes in Edit mode first. Their outlines become fixed guides; the originals are not changed.</div></div>
+      <div id="tplTools" style="display:none;margin-top:12px;border-top:1px solid var(--btnBorder);padding-top:10px;">
+        <div id="tplCurName" class="hint" style="font-weight:850;margin:0 0 6px;"></div>
+        <div class="hint" style="margin:0 0 4px;">Add shape</div>
+        <div class="row tpl-shapes" id="tplAddRow"><button class="tool-btn" data-k="circle" title="Circle">⚪</button><button class="tool-btn" data-k="oval" title="Oval">⬭</button><button class="tool-btn" data-k="square" title="Square">⬜</button><button class="tool-btn" data-k="rect" title="Rectangle">▭</button><button class="tool-btn" data-k="triangle" title="Triangle">△</button><button class="tool-btn" id="tplAddArrow" title="Direction arrow">➜</button></div>
+        <div class="hint" style="margin:8px 0 4px;">Replace selected with</div>
+        <div class="row tpl-shapes" id="tplRepRow"><button class="tool-btn" data-k="circle" title="Circle">⚪</button><button class="tool-btn" data-k="oval" title="Oval">⬭</button><button class="tool-btn" data-k="square" title="Square">⬜</button><button class="tool-btn" data-k="rect" title="Rectangle">▭</button><button class="tool-btn" data-k="triangle" title="Triangle">△</button></div>
+        <div class="slider-row" style="grid-template-columns:78px 1fr 40px;"><label>Outline</label><input id="tplColour" type="color" value="#e8546f" style="width:100%;height:34px;padding:0;"><span></span></div>
+        <div class="slider-row" style="grid-template-columns:78px 1fr 40px;"><label>Thickness</label><input id="tplWidth" type="range" min="1" max="24" step="1" value="5"><span id="tplWidthV">5</span></div>
+        <div class="slider-row" style="grid-template-columns:78px 1fr 40px;"><label>Guide opacity</label><input id="tplOpacity" type="range" min="10" max="100" step="5" value="100"><span id="tplOpacityV">100</span></div>
+        <div class="row" style="gap:6px;margin-top:6px;"><button id="tplShowBtn" class="tool-btn" style="flex:1">👁 Guides</button><button id="tplArrowsBtn" class="tool-btn" style="flex:1">➜ Arrows</button><button id="tplLockBtn" class="tool-btn" style="flex:1">🔓 Lock</button></div>
+        <div class="row" style="gap:6px;margin-top:6px;"><button id="tplSaveBtn" class="tool-btn primary" style="flex:1">💾 Save Template</button><button id="tplExportBtn" class="tool-btn" style="flex:1">📤 Export…</button></div>
+        <button id="tplClearBtn" class="tool-btn" style="width:100%;margin-top:6px;">✕ Remove the guides</button>
+        <div class="hint" style="margin-top:6px;">Guides sit on their own layers, never appear in your pattern exports, and can be hidden or locked here or in Layers.</div>
+      </div>
+    </section>
     <section class="section"><div class="section-title">🖼️ Motif Tray</div><div id="motifTray" class="motif-tray"></div><div id="motifEmpty" class="hint">Captured drawings and uploaded motifs appear here.</div></section>
     <section class="section"><div class="section-title">📚 Trace Reference</div><button id="traceToVectorBtn" class="btn primary" style="width:100%;margin-bottom:8px;">✨ Trace Image to Vector</button><label class="upload accentTeal">➕ Trace Artwork<input id="traceInput" type="file" accept="image/*" multiple style="display:none"></label><div id="traceList" class="trace-list" style="margin-top:8px"></div><div class="slider-row"><label>Opacity</label><input id="traceOpacity" type="range" min="5" max="100" value="35"><span id="traceOpacityVal">35%</span></div><div class="slider-row"><label>Scale</label><input id="traceScale" type="range" min="20" max="400" value="100"><span id="traceScaleVal">100%</span></div><div class="row"><button id="traceFit" class="btn mini">Fit</button><button id="traceCentre" class="btn mini">Centre</button><button id="traceLock" class="btn mini active">🔒 Locked</button><button id="traceClear" class="btn mini danger">Clear</button></div></section>
     <section class="section" id="colourSection">
@@ -1346,7 +1375,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v328'; // keep in step with CACHE in sw.js
+const APP_V='v329'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -2640,7 +2669,7 @@ function strokesToJSON(){return JSON.stringify(strokes,_rnd);}
 function snapshot(){
   return {
     strokesJSON:strokesToJSON(),
-    layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip}))),
+    layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip,tpl:l.tpl||0}))),
     activeLayerId,
     placed:JSON.stringify(placed.map(p=>({...p,img:null}))),
     selected,selectedStrokeId,
@@ -2681,7 +2710,7 @@ function applyLayerMeta(layerMeta,wantActiveId){
   const used=new Set();
   const take=m=>{const o=old.find(l=>l.id===m.id&&!used.has(l));if(o){used.add(o);return o;}return makeLayer(m.name);};
   if(layerMeta&&layerMeta.length){
-    layers=layerMeta.map(m=>{const l=take(m);l.name=m.name;l.id=m.id;l.kind=m.kind||'vector';l.visible=m.visible!==false;l.locked=!!m.locked;l.opacity=(m.opacity!=null)?m.opacity:100;l.blend=m.blend||'source-over';l.alphaLock=!!m.alphaLock;l.blur=+m.blur||0;l.clip=!!m.clip;return l;});
+    layers=layerMeta.map(m=>{const l=take(m);l.name=m.name;l.id=m.id;l.kind=m.kind||'vector';l.visible=m.visible!==false;l.locked=!!m.locked;l.opacity=(m.opacity!=null)?m.opacity:100;l.blend=m.blend||'source-over';l.alphaLock=!!m.alphaLock;l.blur=+m.blur||0;l.clip=!!m.clip;l.tpl=m.tpl||0;return l;});
   }else{
     layers=defaultLayers();
   }
@@ -3866,7 +3895,7 @@ function captureMotif(subset,stayInEdit){
   if(!preview){if(subset){strokes=allStrokes;rebuildAllLayers();}setStatus('Nothing to capture yet — draw with Apple Pencil first.');return}
   const source={
     strokesJSON:strokesToJSON(),
-    layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip}))),
+    layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip,tpl:l.tpl||0}))),
     bounds:preview.bounds,
   };
   // returnToDraw=true: the user was mid-drawing when they captured — see the comment on
@@ -4134,7 +4163,7 @@ function syncStrokeSelectionUI(){
   if(editPathBtnEl){
     const isPaint=!!(stroke&&stroke.clipStrokeId);
     const isMultiRegion=!!(stroke&&stroke.regions&&stroke.regions.length>1);
-    editPathBtnEl.disabled=!stroke||isPaint||isMultiRegion||!!stroke.text||!!stroke.outlined;try{const cb=$('actionsEditCurveBtn');if(cb)cb.style.display=penBezValid(stroke)?'':'none';}catch(e){}{const a=$('actionsEditPathBtn');if(a)a.disabled=editPathBtnEl.disabled;}
+    editPathBtnEl.disabled=!stroke||isPaint||isMultiRegion||!!stroke.text||!!stroke.outlined||!!stroke.tpl;try{const cb=$('actionsEditCurveBtn');if(cb)cb.style.display=penBezValid(stroke)?'':'none';}catch(e){}{const a=$('actionsEditPathBtn');if(a)a.disabled=editPathBtnEl.disabled;}
     editPathBtnEl.title=isPaint?'Painted content is edited by dragging its bounding-box handles on the canvas, not as individual nodes.'
       :isMultiRegion?'This shape has a hole or several separate pieces — node editing a multi-piece Shape Tools result isn\'t supported yet. It\'s still a real, movable, recolourable vector shape.'
       :'';
@@ -5408,7 +5437,7 @@ function duplicateSelectedStroke(){
 // (move nodes, add/delete, Smooth/Corner, Break/Open, Continue, Join, Simplify), and there is no
 // parametric fallback left to accidentally show a stale "original" shape underneath.
 function convertShapeToPath(){
-  const stroke=strokes.find(s=>s.id===selectedStrokeId);if(!stroke||!stroke.shape)return;
+  const stroke=strokes.find(s=>s.id===selectedStrokeId);if(!stroke||!stroke.shape||stroke.tpl)return;
   // shapeToPoints() repeats the first vertex at the end for a closed shape (that's what makes its
   // OUTLINE actually render closed, no gap) — drop that repeated point before deriving nodes, or
   // a closed shape would convert into a path with a redundant duplicate node sitting on its seam.
@@ -9307,11 +9336,11 @@ function findInsertionOnPath(px,py){
 // object left to fall back to, by design.
 const SHAPE_TYPES=['line','rect','roundRect','ellipse','circle','triangle','diamond','polygon','star','heart','teardrop','spiral'];
 // Shapes with a closed, filled silhouette — these are exactly the ones Paint Inside can target.
-const SHAPE_CLOSED={line:false,rect:true,roundRect:true,ellipse:true,circle:true,triangle:true,diamond:true,polygon:true,star:true,heart:true,teardrop:true,spiral:false};
+const SHAPE_CLOSED={arrow:false,line:false,rect:true,roundRect:true,ellipse:true,circle:true,triangle:true,diamond:true,polygon:true,star:true,heart:true,teardrop:true,spiral:false};
 // Vertex-exact shapes: shapeLocalPoints() already returns their real corners with nothing sampled
 // in between, so Convert to Path can hand those straight to the node editor as 'corner' nodes
 // instead of running RDP simplification (which would round off deliberately sharp corners).
-const SHAPE_POLYGONAL={line:true,rect:true,triangle:true,diamond:true,polygon:true,star:true};
+const SHAPE_POLYGONAL={arrow:true,line:true,rect:true,triangle:true,diamond:true,polygon:true,star:true};
 function defaultShapeParams(type){
   const p={type,x0:0,y0:0,x1:0,y1:0,rotation:0,flipH:false,flipV:false};
   if(type==='roundRect')p.cornerRadius=30; // 0-100, % of the shorter half-extent
@@ -9328,6 +9357,7 @@ function shapeLocalPoints(shape){
     case 'rect':return [{x:-1,y:-1},{x:1,y:-1},{x:1,y:1},{x:-1,y:1}];
     case 'triangle':return [{x:0,y:-1},{x:1,y:1},{x:-1,y:1}];
     case 'diamond':return [{x:0,y:-1},{x:1,y:0},{x:0,y:1},{x:-1,y:0}];
+    case 'arrow':return [{x:-1,y:0,corner:true},{x:1,y:0,corner:true},{x:0.45,y:-1,corner:true},{x:1,y:0,corner:true},{x:0.45,y:1,corner:true}];
     case 'polygon':{
       const n=Math.max(3,Math.round(shape.sides||6)),out=[];
       for(let i=0;i<n;i++){const a=-Math.PI/2+i*2*Math.PI/n;out.push({x:Math.cos(a),y:Math.sin(a)});}
@@ -9804,6 +9834,7 @@ $('openRotatePanelBtn').onclick=openRotatePanel;
 document.querySelectorAll('.rotQuick').forEach(b=>{b.onclick=()=>{const d=+b.dataset.deg;rotateSelectedStroke(d);setStatus('Rotated '+d+'\u00b0.');};});
 function enterEditPath(strokeId){
   let stroke=strokes.find(s=>s.id===strokeId);if(!stroke)return;
+  if(stroke.tpl){setStatus('📐 Template placeholders are fixed outlines: move, resize, rotate or replace them, but they have no nodes to edit.');return;}
   if(stroke.radialOf){ // a linked copy is rebuilt from its original, so edit the original (the copies follow) instead of silently losing the edit
     const src=strokes.find(s=>s.id===stroke.radialOf);
     if(src){stroke=src;selectedStrokeId=src.id;setStatus('🌸 That petal is a linked copy, so you are editing the original. All the copies follow.');}
@@ -10709,7 +10740,7 @@ function enterEditMotif(){
  armedShapeType=null;syncShapeToolUI();
  editingMotifStash={
   strokesJSON:strokesToJSON(),
-  layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip}))),
+  layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip,tpl:l.tpl||0}))),
   activeLayerId,mode,
  };
  editingMotifId=entry.id;
@@ -10776,7 +10807,7 @@ function finishEditMotif(){
   setStatus('✓ Motif updated — every linked instance now reflects your changes.');
  };
  if(entry&&preview){
-  entry.source={strokesJSON:strokesToJSON(),layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip}))),bounds:preview.bounds};
+  entry.source={strokesJSON:strokesToJSON(),layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip,tpl:l.tpl||0}))),bounds:preview.bounds};
   const img=new Image();
   img.onload=()=>{
    entry.img=img;entry.src=preview.src;
@@ -10819,7 +10850,7 @@ function recolourStrokeList(list,map){
 // trick Edit Motif uses, so Paint Inside clips and layer opacity come out identical), then restoring.
 function renderMotifSourcePreview(source){
   if(editingMotifId)return null;
-  const stash={strokesJSON:strokesToJSON(),layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip}))),activeLayerId};
+  const stash={strokesJSON:strokesToJSON(),layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip,tpl:l.tpl||0}))),activeLayerId};
   let preview=null;
   try{
     strokes=JSON.parse(source.strokesJSON);
@@ -11433,7 +11464,7 @@ function buildSvgExport(size){
   out.push('<rect id="background" x="'+CX+'" y="'+CY+'" width="'+TW+'" height="'+TH+'" fill="#ffffff"/>');
   let li=0;
   layers.forEach(layer=>{
-    if(!layer.visible)return;
+    if(!layer.visible||layer.tpl)return;
     const body=strokes.filter(s=>s.layerId===layer.id).map(s=>svgStrokeMarkup(s,clipIds)).join('');
     if(!body)return;
     li++;const id='art-'+li;
@@ -11502,7 +11533,8 @@ async function buildHiRes(long,transparent){
   const tmp=document.createElement('canvas');tmp.width=w;tmp.height=h;const t=tmp.getContext('2d');
   const cp=clipPass(true);
   for(let li=0;li<layers.length;li++){
-    const l=layers[li],st=cp.start(l);if(st==='skip')continue;
+    const l=layers[li];if(l.tpl)continue; // template guides are drawing aids, never part of the pattern export
+    const st=cp.start(l);if(st==='skip')continue;
     t.setTransform(1,0,0,1,0,0);t.clearRect(0,0,w,h);t.setTransform(k,0,0,k,-CX*k,-CY*k);
     let any=false;
     strokes.forEach(s=>{
@@ -11538,7 +11570,8 @@ async function buildTileHi(k,transparent){
   const tmp=document.createElement('canvas');tmp.width=w;tmp.height=h;const t=tmp.getContext('2d');
   const cp=clipPass(true);
   for(let li=0;li<layers.length;li++){
-    const l=layers[li],st=cp.start(l);if(st==='skip')continue;
+    const l=layers[li];if(l.tpl)continue; // template guides are drawing aids, never part of the pattern export
+    const st=cp.start(l);if(st==='skip')continue;
     t.setTransform(1,0,0,1,0,0);t.clearRect(0,0,w,h);
     let any=false;
     const pix=strokes.some(s=>s.layerId===l.id&&s.brushId==='smudge');
@@ -12061,7 +12094,7 @@ function buildDocObject(){
   const d={
     tileW:TW,tileH:TH,tilePhys:tilePhys,repeatPreview:showTiling?'tiled':'single',canvasTiling:canvasTiling,
     strokesJSON:strokesToJSON(),
-    layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip}))),
+    layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip,tpl:l.tpl||0}))),
     activeLayerId,
     placedJSON:JSON.stringify(placed.map(p=>({...p,img:null}))),
     groupsJSON:JSON.stringify(groups),
@@ -12118,7 +12151,7 @@ function queueJob(fn){const job=saveChain.then(fn,fn);saveChain=job.then(()=>{},
 function blankDoc(lay,tile,phys,preview){
   const dl=defaultLayers();
   const tt=tile?tileFromRatio(tile.split(':')[0],tile.split(':')[1]):[TILE,TILE];
-  return {format:'sketchpad-project',version:2,tileW:tt[0],tileH:tt[1],strokesJSON:'[]',layersJSON:JSON.stringify(dl.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip}))),activeLayerId:dl[dl.length-1].id,placedJSON:'[]',groupsJSON:'{}',motifs:[],editingMotifId:null,editingMotifStash:null,bgSrc:null,bgOpacity:1,bgShown:true,tracesJSON:'[]',traceLocked:true,customBrushes:[],layout:lay||'grid',activeTemplate:null,savedPalettes:savedPalettes.map(p=>({id:crypto.randomUUID(),name:p.name,hexes:p.hexes.slice()})),tilePhys:phys||null,repeatPreview:preview||'tiled',savedAt:Date.now()};
+  return {format:'sketchpad-project',version:2,tileW:tt[0],tileH:tt[1],strokesJSON:'[]',layersJSON:JSON.stringify(dl.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip,tpl:l.tpl||0}))),activeLayerId:dl[dl.length-1].id,placedJSON:'[]',groupsJSON:'{}',motifs:[],editingMotifId:null,editingMotifStash:null,bgSrc:null,bgOpacity:1,bgShown:true,tracesJSON:'[]',traceLocked:true,customBrushes:[],layout:lay||'grid',activeTemplate:null,savedPalettes:savedPalettes.map(p=>({id:crypto.randomUUID(),name:p.name,hexes:p.hexes.slice()})),tilePhys:phys||null,repeatPreview:preview||'tiled',savedAt:Date.now()};
 }
 function docCounts(d){const n=j=>{try{return JSON.parse(j||'[]').length;}catch(e){return 0;}};return {strokes:n(d.strokesJSON),motifs:(d.motifs||[]).length};}
 function makeThumb(){
@@ -12824,7 +12857,7 @@ async function applyDocObject(doc,opts){
       if(entry){
         const preview=renderCurrentArtworkPreview();
         if(preview){
-          entry.source={strokesJSON:strokesToJSON(),layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip}))),bounds:preview.bounds};
+          entry.source={strokesJSON:strokesToJSON(),layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip,tpl:l.tpl||0}))),bounds:preview.bounds};
           await new Promise(res=>{const img=new Image();img.onload=()=>{entry.img=img;entry.src=preview.src;placed.forEach(p=>{if(p.motifId===entry.id)p.img=img;});res();};img.onerror=res;img.src=preview.src;});
         }
       }
@@ -13295,6 +13328,393 @@ $('backupsClose').onclick=()=>{$('backupsPanel').style.display='none';};
   // A section the app opens for you (e.g. Selected Stroke) must not stay hidden behind a fold.
   window.__sketchpadUnfold=id=>{const sec=document.getElementById(id);if(sec&&sec.classList.contains('sec-collapsed')){sec.classList.remove('sec-collapsed');save();}};
 })();
+// ======================= Pattern Templates =======================
+// Optional layout guides: coloured OUTLINE-only placeholders (circle, oval, square, rectangle, triangle) plus simple direction arrows.
+// They are ordinary parametric shape strokes (so move / resize / rotate / group / recolour / undo / autosave / repeat wrapping all come from
+// the existing engine) but flagged `tpl` and kept on their own guide layers (layer.tpl 1 = placeholders, 2 = arrows). They have no fill, are
+// never offered for node editing, and are left out of every pattern export. Template data is never mixed into artwork layers.
+const TPL_COLS=['#e8546f','#1fa59a','#e0a100','#7a5cd6','#2f7fd6','#4aa551','#ee7b30'];
+const TPL_KIND_TYPE={circle:'circle',oval:'ellipse',square:'rect',rect:'rect',triangle:'triangle',arrow:'arrow'};
+const TPL_MY_KEY='sp-templates-v1';
+// premade layouts. item = [kind, x%, y%, w%, h%, rotation, colour#]  (c circle, o oval, s square, r rectangle, t triangle, a arrow: w = length)
+// x,y are % of the tile; w,h are % of the tile's shorter side. Every layout is its own composition, with mixed shapes.
+const TPL_PRE=[
+ {id:'scattered-floral',name:'Scattered Floral',items:[['c',27,28,28,0,0,0],['o',74,24,24,14,-28,1],['o',62,70,26,15,32,2],['c',20,74,17,0,0,3],['c',50,48,9,0,0,4],['t',90,55,11,11,14,5],['s',8,50,8,8,22,6],['o',44,10,12,6,62,0],['c',82,92,10,0,0,1]]},
+ {id:'botanical-flow',name:'Botanical Flow',items:[['o',12,88,18,8,-55,1],['o',26,72,20,9,-42,1],['o',41,57,22,10,-30,4],['o',57,43,22,10,-22,1],['c',72,30,13,0,0,0],['t',86,18,11,11,-20,2],['c',38,28,8,0,0,3],['o',80,70,17,7,38,6],['s',15,40,7,7,30,5],['a',24,52,20,-42,3],['a',64,58,20,-30,3]]},
+ {id:'tossed-mixed',name:'Tossed Mixed',items:[['o',20,18,20,11,-35,0],['t',58,12,13,13,20,2],['c',84,26,15,0,0,4],['s',38,40,11,11,35,6],['r',72,52,22,9,-18,1],['o',14,62,17,9,70,3],['c',48,70,12,0,0,5],['t',86,82,12,12,-40,0],['o',30,90,18,8,15,4],['s',62,92,8,8,5,2]]},
+ {id:'geometric',name:'Geometric',items:[['s',17,17,18,18,0,4],['c',50,17,16,0,0,0],['t',83,17,16,16,0,2],['r',17,50,20,12,0,1],['s',50,50,14,14,45,3],['c',83,50,18,0,0,5],['t',17,83,16,16,180,6],['r',50,83,22,11,0,4],['c',83,83,14,0,0,0]]},
+ {id:'half-drop-floral',name:'Half-Drop Floral',layout:'halfDrop',items:[['c',25,28,30,0,0,0],['c',25,70,10,0,0,3],['o',75,62,24,14,-20,1],['t',75,16,13,13,0,2],['s',50,50,9,9,20,6],['o',50,92,16,8,50,4]]},
+ {id:'half-brick-tossed',name:'Half-Brick Tossed',layout:'halfBrick',items:[['o',22,25,24,13,-18,1],['c',70,22,16,0,0,0],['t',46,62,15,15,25,2],['s',85,66,11,11,40,4],['o',15,78,18,9,60,6],['c',62,90,9,0,0,5],['r',88,40,16,8,-70,3]]},
+ {id:'dense-all-over',name:'Dense All-Over',items:[['c',12,12,15,0,0,0],['o',36,10,18,9,-20,1],['t',62,12,13,13,10,2],['s',86,12,11,11,30,3],['o',10,36,14,8,70,4],['c',34,34,13,0,0,5],['r',60,36,17,8,-15,6],['c',86,36,14,0,0,1],['t',14,60,12,12,-25,0],['o',38,58,18,9,40,2],['c',62,60,11,0,0,4],['s',86,60,12,12,10,6],['o',12,86,16,8,-45,3],['c',36,84,12,0,0,0],['r',62,86,16,9,25,5],['t',87,86,12,12,0,1]]},
+ {id:'airy-scattered',name:'Airy Scattered',items:[['c',28,30,26,0,0,0],['o',74,26,20,11,-30,1],['t',68,74,16,16,15,2],['s',22,78,9,9,25,4]]},
+ {id:'decorative-border',name:'Decorative Border',items:[['s',6,6,10,10,45,2],['o',28,7,17,8,0,1],['c',50,6,10,0,0,0],['o',72,7,17,8,0,1],['s',94,6,10,10,45,2],['t',6,50,11,11,-90,3],['t',94,50,11,11,90,3],['s',6,94,10,10,45,2],['o',28,93,17,8,0,4],['c',50,94,10,0,0,5],['o',72,93,17,8,0,4],['s',94,94,10,10,45,2]]},
+ {id:'abstract-layout',name:'Abstract Layout',items:[['r',30,30,34,18,-20,4],['c',66,40,22,0,0,0],['t',24,72,20,20,12,2],['o',70,78,26,10,-45,1],['s',88,14,10,10,30,6],['c',48,58,8,0,0,3],['r',8,52,7,22,0,5]]},
+ {id:'directional-flow',name:'Directional Flow',items:[['o',16,76,20,10,-50,1],['t',34,56,13,13,-50,2],['o',52,40,20,10,-50,4],['c',70,24,15,0,0,0],['s',88,10,9,9,-50,6],['c',70,80,12,0,0,3],['o',90,60,14,7,-50,5],['a',27,64,18,-50,3],['a',45,48,18,-50,3],['a',61,32,18,-50,3],['a',80,70,16,-50,6]]},
+ {id:'blank-custom',name:'Blank Custom',items:[]}
+];
+let tplCur=null,tplTab='pre';
+const tplS=()=>Math.min(TW,TH);
+const tplIsGuide=s=>!!(s&&s.tpl);
+function tplLayers(create){
+  let ph=layers.find(l=>l.tpl===1),ar=layers.find(l=>l.tpl===2);
+  if(create&&(!ph||!ar)){
+    if(!ph){ph=makeLayer('Template guides');ph.tpl=1;layers.push(ph);}
+    if(!ar){ar=makeLayer('Template arrows');ar.tpl=2;layers.push(ar);}
+    renderLayersList();
+  }
+  return {ph,ar};
+}
+function tplSettings(size){
+  const base=BrushEngine.getSettings('smoothPen')||{};
+  return Object.assign({},base,{size:size,opacity:100,smoothing:0,pressureWidth:0,pressureOpacity:0});
+}
+// builds the parametric outline for one placeholder kind inside the box (cx,cy,w,h) turned by rot degrees
+function tplGeometry(kind,cx,cy,w,h,rot){
+  const type=TPL_KIND_TYPE[kind]||'rect';
+  if(kind==='circle'||kind==='square'){const m=Math.sqrt(Math.max(1,w)*Math.max(1,h));w=h=m;}
+  const shape=defaultShapeParams(type);shape.x0=cx-w/2;shape.x1=cx+w/2;shape.y0=cy-h/2;shape.y1=cy+h/2;shape.rotation=rot||0;
+  return {shape,points:shapeToPoints(shape),closed:!!SHAPE_CLOSED[type]};
+}
+function tplMakeStroke(kind,cx,cy,w,h,rot,col,size,layerId){
+  const g=tplGeometry(kind,cx,cy,w,h,rot);
+  return {id:crypto.randomUUID(),brushId:'smoothPen',layerId,color:col,settings:tplSettings(size),points:g.points,nodes:null,closed:g.closed,clipStrokeId:null,shape:g.shape,tpl:kind==='arrow'?2:1,tplKind:kind};
+}
+function tplStrokes(){return strokes.filter(tplIsGuide);}
+// compact, editable description of the guides on the canvas (fractions of the tile, so it survives a different tile size)
+function tplCollect(){
+  const gm=new Map(),out=[];
+  tplStrokes().forEach(s=>{
+    const o={k:s.tpl===2?'ar':'ph',kind:s.tplKind||'rect',col:s.color,size:(s.settings&&s.settings.size)||5};
+    if(s.groupId){if(!gm.has(s.groupId))gm.set(s.groupId,gm.size+1);o.g=gm.get(s.groupId);}
+    const sh=s.shape;
+    if(sh&&shapeInSync(s)){o.type=sh.type;o.x0=(sh.x0-CX)/TW;o.x1=(sh.x1-CX)/TW;o.y0=(sh.y0-CY)/TH;o.y1=(sh.y1-CY)/TH;o.rot=sh.rotation||0;o.fh=!!sh.flipH;o.fv=!!sh.flipV;}
+    else{o.type='fixed';o.closed=!!s.closed;o.pts=s.points.map(p=>[+((p.x-CX)/TW).toFixed(5),+((p.y-CY)/TH).toFixed(5)]);}
+    out.push(o);
+  });
+  return out;
+}
+function tplPresetObjs(p){
+  const S=tplS();
+  return p.items.map(it=>{
+    const [k,x,y,w,h,rot,ci]=it,kindMap={c:'circle',o:'oval',s:'square',r:'rect',t:'triangle',a:'arrow'},kind=kindMap[k];
+    let ww=w/100*S,hh=(h||w)/100*S;
+    if(k==='a'){hh=ww*0.5;}
+    const cx=x/100*TW,cy=y/100*TH,col=TPL_COLS[ci%TPL_COLS.length];
+    return {k:k==='a'?'ar':'ph',kind,col,size:k==='a'?4:5,type:TPL_KIND_TYPE[kind],x0:(cx-ww/2)/TW,x1:(cx+ww/2)/TW,y0:(cy-hh/2)/TH,y1:(cy+hh/2)/TH,rot:rot||0,fh:false,fv:false};
+  });
+}
+function tplObjToStroke(o,lay,gmap){
+  const layerId=(o.k==='ar'?lay.ar:lay.ph).id;let s;
+  if(o.type==='fixed'){
+    const pts=o.pts.map(q=>({x:CX+q[0]*TW,y:CY+q[1]*TH,pressure:0.65,corner:true}));
+    s={id:crypto.randomUUID(),brushId:'smoothPen',layerId,color:o.col,settings:tplSettings(o.size),points:pts,nodes:null,closed:!!o.closed,clipStrokeId:null,shape:null,tpl:o.k==='ar'?2:1,tplKind:o.kind};
+  }else{
+    const shape=defaultShapeParams(o.type);shape.x0=CX+o.x0*TW;shape.x1=CX+o.x1*TW;shape.y0=CY+o.y0*TH;shape.y1=CY+o.y1*TH;shape.rotation=o.rot||0;shape.flipH=!!o.fh;shape.flipV=!!o.fv;
+    s={id:crypto.randomUUID(),brushId:'smoothPen',layerId,color:o.col,settings:tplSettings(o.size),points:shapeToPoints(shape),nodes:null,closed:!!SHAPE_CLOSED[o.type],clipStrokeId:null,shape,tpl:o.k==='ar'?2:1,tplKind:o.kind};
+  }
+  if(o.g){if(!gmap.has(o.g)){const gid=crypto.randomUUID();gmap.set(o.g,gid);groups[gid]={lock:false,scale:true};}s.groupId=gmap.get(o.g);}
+  return s;
+}
+function tplRemoveGuides(){
+  for(let i=strokes.length-1;i>=0;i--)if(strokes[i].tpl)strokes.splice(i,1);
+  const used=new Set();strokes.forEach(s=>{if(s.groupId)used.add(s.groupId);});placed.forEach(p=>{if(p.groupId)used.add(p.groupId);});
+  Object.keys(groups).forEach(g=>{if(!used.has(g))delete groups[g];});
+}
+function tplClearSelection(){selectedStrokeId=null;selected=null;multiSel=null;groupInsideId=null;}
+function tplAfter(msg){
+  const l=tplLayers(false);[l.ph,l.ar].forEach(x=>{if(x)rebuildLayer(x.id);});
+  segVer++;compositeDirty=true;
+  try{renderLayersList();}catch(e){}
+  pushHist();redraw();tplSync();if(msg)setStatus(msg);
+}
+function tplApplyObjs(objs,meta){
+  meta=meta||{};
+  commitPendingEdits&&commitPendingEdits();
+  const lay=tplLayers(true);
+  tplRemoveGuides();tplClearSelection();
+  if(meta.layout&&meta.layout!==layout){const b=document.querySelector('.layout-btn[data-layout="'+meta.layout+'"]');if(b)b.click();}
+  const gmap=new Map();
+  objs.forEach(o=>strokes.push(tplObjToStroke(o,lay,gmap)));
+  const g=meta.guide||{};
+  lay.ph.visible=g.phVisible!==false;lay.ar.visible=g.arVisible!==false;lay.ph.locked=lay.ar.locked=!!g.locked;
+  lay.ph.opacity=lay.ar.opacity=Math.max(10,Math.min(100,g.opacity||100));
+  const art=layers.find(l=>!l.tpl);if(art&&(layers.find(l=>l.id===activeLayerId)||{}).tpl)activeLayerId=art.id;
+  tplCur={id:meta.id||null,name:meta.name||'Template',pre:!!meta.pre};
+  tplAfter();
+}
+function tplLoadPreset(p){
+  const had=tplStrokes().length;
+  tplApplyObjs(tplPresetObjs(p),{name:p.name,pre:true,layout:p.layout});
+  setStatus('📐 '+p.name+' loaded as an editable copy'+(had?' (the previous guides were replaced; Undo brings them back)':'')+'. Your artwork was not touched. Lock the guides, add an artwork layer and draw.');
+}
+// ---------- selection helpers ----------
+function tplSelIds(){
+  const ids=multiSel?multiSel.strokeIds.slice():(selectedStrokeId?[selectedStrokeId]:[]);
+  return ids.filter(id=>{const s=strokes.find(x=>x.id===id);return s&&s.tpl;});
+}
+function tplFreeLayers(){const l=tplLayers(false);[l.ph,l.ar].forEach(x=>{if(x&&x.locked){x.locked=false;}});}
+function tplCentre(){const r=wrap.getBoundingClientRect(),p=screenToCanvas(r.left+r.width/2,r.top+r.height/2);return {x:Math.max(CX,Math.min(CX+TW,p.x)),y:Math.max(CY,Math.min(CY+TH,p.y))};}
+function tplCurCol(){return $('tplColour').value||'#e8546f';}
+function tplCurW(){return +$('tplWidth').value||5;}
+function tplSelectOnly(s){tplClearSelection();selectedStrokeId=s.id;mode='edit';try{syncMode();}catch(e){}try{syncStrokeSelectionUI();}catch(e){}}
+function tplAddShape(kind){
+  const lay=tplLayers(true);if(!tplCur)tplCur={id:null,name:'My layout',pre:false};
+  tplFreeLayers();const c=tplCentre(),S=tplS();
+  let s;
+  if(kind==='arrow')s=tplMakeStroke('arrow',c.x,c.y,S*0.2,S*0.1,0,tplCurCol(),Math.min(tplCurW(),8),lay.ar.id);
+  else{const dims={circle:[.2,.2],oval:[.26,.15],square:[.18,.18],rect:[.26,.14],triangle:[.2,.2]}[kind];s=tplMakeStroke(kind,c.x,c.y,S*dims[0],S*dims[1],0,tplCurCol(),tplCurW(),lay.ph.id);}
+  strokes.push(s);
+  tplAfter();tplSelectOnly(s);redraw();
+  setStatus('📐 Added. Drag to move; use the handles to resize or rotate. Tap another shape button to add more.');
+}
+function tplApplyToSel(fn){
+  const ids=tplSelIds();if(!ids.length)return false;
+  ids.forEach(id=>{const s=strokes.find(x=>x.id===id);if(s)fn(s);});
+  const l=tplLayers(false);[l.ph,l.ar].forEach(x=>{if(x)rebuildLayer(x.id);});
+  segVer++;compositeDirty=true;redraw();return true;
+}
+function tplReplace(kind){
+  const ids=tplSelIds().filter(id=>{const s=strokes.find(x=>x.id===id);return s&&s.tpl===1;});
+  if(!ids.length){setStatus('📐 Select a placeholder first, then choose the shape to replace it with.');return;}
+  tplApplyToSel(s=>{
+    if(s.tpl!==1)return;
+    let cx,cy,w,h,rot=0;
+    if(s.shape&&shapeInSync(s)){const sh=s.shape;cx=(sh.x0+sh.x1)/2;cy=(sh.y0+sh.y1)/2;w=Math.abs(sh.x1-sh.x0);h=Math.abs(sh.y1-sh.y0);rot=sh.rotation||0;}
+    else{const b=strokeBounds([s]);cx=(b.x0+b.x1)/2;cy=(b.y0+b.y1)/2;w=b.x1-b.x0;h=b.y1-b.y0;}
+    const g=tplGeometry(kind,cx,cy,w,h,rot);
+    s.shape=g.shape;s.points=g.points;s.closed=g.closed;s.nodes=null;s.tplKind=kind;
+  });
+  pushHist();tplSync();setStatus('📐 Replaced. Centre, size, turn and colour are kept; nothing else moved.');
+}
+// ---------- appearance ----------
+$('tplColour').oninput=()=>{tplApplyToSel(s=>{s.color=tplCurCol();});};
+$('tplColour').onchange=()=>{if(tplSelIds().length)pushHist();};
+$('tplWidth').oninput=()=>{$('tplWidthV').textContent=tplCurW();tplApplyToSel(s=>{s.settings=Object.assign({},s.settings||tplSettings(5),{size:tplCurW()});});};
+$('tplWidth').onchange=()=>{if(tplSelIds().length)pushHist();};
+$('tplOpacity').oninput=()=>{const v=+$('tplOpacity').value;$('tplOpacityV').textContent=v;const l=tplLayers(false);[l.ph,l.ar].forEach(x=>{if(x)x.opacity=v;});compositeDirty=true;segVer++;redraw();try{renderLayersList();}catch(e){}};
+$('tplOpacity').onchange=()=>{pushHist();};
+$('tplShowBtn').onclick=()=>{const l=tplLayers(false);if(!l.ph)return;l.ph.visible=!l.ph.visible;tplAfter();setStatus(l.ph.visible?'👁 Guides shown.':'🚫 Placeholders hidden.');};
+$('tplArrowsBtn').onclick=()=>{const l=tplLayers(false);if(!l.ar)return;l.ar.visible=!l.ar.visible;tplAfter();setStatus(l.ar.visible?'➜ Arrows shown.':'🚫 Arrows hidden.');};
+$('tplLockBtn').onclick=()=>{const l=tplLayers(false);if(!l.ph)return;const v=!l.ph.locked;l.ph.locked=l.ar.locked=v;if(v)tplClearSelection();tplAfter();setStatus(v?'🔒 Guides locked. They stay put while you draw.':'🔓 Guides unlocked.');};
+$('tplAddRow').querySelectorAll('button[data-k]').forEach(b=>b.onclick=()=>tplAddShape(b.dataset.k));
+$('tplAddArrow').onclick=()=>tplAddShape('arrow');
+$('tplRepRow').querySelectorAll('button[data-k]').forEach(b=>b.onclick=()=>tplReplace(b.dataset.k));
+$('tplClearBtn').onclick=async()=>{
+  if(!tplStrokes().length)return;
+  const r=await projAsk({title:'✕ Remove the guides?',message:'The template placeholders and arrows are taken off the canvas. Your artwork is not touched. Undo brings them back.',ok:'Remove guides',danger:true});
+  if(!r)return;tplRemoveGuides();tplClearSelection();tplCur=null;tplAfter('📐 Guides removed.');
+};
+// ---------- create from the existing artwork ----------
+$('tplBlankBtn').onclick=()=>{tplLoadPreset(TPL_PRE[TPL_PRE.length-1]);};
+$('tplFromSelBtn').onclick=()=>{
+  const ids=multiSel?multiSel.strokeIds.slice():(selectedStrokeId?[selectedStrokeId]:[]);
+  const src=ids.map(id=>strokes.find(s=>s.id===id)).filter(s=>s&&!s.tpl&&!s.text&&s.points&&s.points.length>1&&s.brushId!=='eraser');
+  if(!src.length){setStatus('🧩 Select one or more shapes in Edit mode first.');return;}
+  const lay=tplLayers(true);if(!tplCur)tplCur={id:null,name:'My layout',pre:false};
+  let n=0;
+  src.forEach((s,i)=>{
+    const pts=s.points.map(p=>({x:p.x,y:p.y,pressure:0.65,corner:true}));
+    const n2={id:crypto.randomUUID(),brushId:'smoothPen',layerId:lay.ph.id,color:tplCurCol(),settings:tplSettings(tplCurW()),points:pts,nodes:null,closed:!!s.closed,clipStrokeId:null,shape:null,tpl:1,tplKind:'fixed'};
+    strokes.push(n2);n++;
+  });
+  tplAfter('🧩 '+n+' placeholder'+(n===1?'':'s')+' made from your selection. They are fixed outlines (move, resize, rotate, recolour). The originals are unchanged.');
+};
+// ---------- My Templates ----------
+function tplMyLoad(){try{const o=JSON.parse(localStorage.getItem(TPL_MY_KEY)||'null');return (o&&Array.isArray(o.list))?o.list:[];}catch(e){return [];}}
+function tplMySave(list){try{localStorage.setItem(TPL_MY_KEY,JSON.stringify({v:1,list}));return true;}catch(e){setStatus('⚠️ Could not store the template here (browser storage is full or blocked). Use Export to keep a file.');return false;}}
+function tplDoc(name){
+  const l=tplLayers(false);
+  return {format:'pattern-sketch-template',version:1,name,layout,tile:{w:TW,h:TH},guide:{opacity:l.ph?l.ph.opacity:100,phVisible:l.ph?l.ph.visible:true,arVisible:l.ar?l.ar.visible:true,locked:l.ph?!!l.ph.locked:false},objs:tplCollect()};
+}
+function tplValidate(d){
+  if(!d||typeof d!=='object'||d.format!=='pattern-sketch-template'||!(d.version>=1))throw new Error('This is not a Pattern Sketch template file.');
+  if(!Array.isArray(d.objs)||d.objs.length>500)throw new Error('The template has no objects or too many.');
+  const num=v=>typeof v==='number'&&isFinite(v)&&Math.abs(v)<50;
+  const types=['circle','ellipse','rect','triangle','arrow','fixed'];
+  const objs=d.objs.map(o=>{
+    if(!o||!types.includes(o.type)||!/^#[0-9a-fA-F]{6}$/.test(o.col||'')||!(o.k==='ph'||o.k==='ar'))throw new Error('A placeholder in the file is not valid.');
+    const r={k:o.k,kind:String(o.kind||'rect').slice(0,12),col:o.col,size:Math.max(1,Math.min(40,+o.size||5)),type:o.type};
+    if(o.g)r.g=Math.max(1,Math.min(999,Math.round(+o.g)||1));
+    if(o.type==='fixed'){
+      if(!Array.isArray(o.pts)||o.pts.length<2||o.pts.length>4000||!o.pts.every(q=>Array.isArray(q)&&num(q[0])&&num(q[1])))throw new Error('A fixed outline in the file is not valid.');
+      r.pts=o.pts.map(q=>[q[0],q[1]]);r.closed=!!o.closed;
+    }else{
+      if(![o.x0,o.x1,o.y0,o.y1].every(num)||!(typeof (o.rot||0)==='number'&&isFinite(o.rot||0)&&Math.abs(o.rot||0)<=3600))throw new Error('A placeholder size in the file is not valid.');
+      Object.assign(r,{x0:o.x0,x1:o.x1,y0:o.y0,y1:o.y1,rot:o.rot||0,fh:!!o.fh,fv:!!o.fv});
+    }
+    return r;
+  });
+  const lo=['grid','halfDrop','halfBrick'].includes(d.layout)?d.layout:null;
+  const g=d.guide||{};
+  return {name:String(d.name||'Imported template').slice(0,60),layout:lo,objs,guide:{opacity:Math.max(10,Math.min(100,+g.opacity||100)),phVisible:g.phVisible!==false,arVisible:g.arVisible!==false,locked:!!g.locked}};
+}
+async function tplSaveAs(){
+  if(!tplStrokes().length){setStatus('📐 Load a layout or add a shape first.');return;}
+  const r=await projAsk({title:'💾 Save template',message:'Saved to My Templates on this device. Use Export to keep a file or share it.',fields:[{key:'n',label:'Name',type:'text',value:(tplCur&&!tplCur.pre?tplCur.name:(tplCur?tplCur.name+' (mine)':'My template'))}],ok:'Save'});
+  if(!r)return;const name=String(r.n||'').trim()||'My template';
+  const list=tplMyLoad(),id='t'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+  list.unshift({id,name,doc:tplDoc(name)});
+  if(tplMySave(list)){tplCur={id,name,pre:false};tplSync();tplRenderMy();setStatus('💾 Saved “'+name+'” to My Templates.');}
+}
+function tplSave(){
+  if(tplCur&&tplCur.id&&!tplCur.pre){
+    const list=tplMyLoad(),e=list.find(x=>x.id===tplCur.id);
+    if(e){e.doc=tplDoc(e.name);if(tplMySave(list)){tplRenderMy();setStatus('💾 Saved “'+e.name+'”.');}return;}
+  }
+  tplSaveAs();
+}
+$('tplSaveBtn').onclick=tplSave;
+async function tplRename(id){
+  const list=tplMyLoad(),e=list.find(x=>x.id===id);if(!e)return;
+  const r=await projAsk({title:'✏️ Rename template',fields:[{key:'n',label:'Name',type:'text',value:e.name}],ok:'Rename'});
+  if(!r||!String(r.n).trim())return;e.name=String(r.n).trim();e.doc.name=e.name;tplMySave(list);if(tplCur&&tplCur.id===id)tplCur.name=e.name;tplRenderMy();tplSync();
+}
+function tplDuplicate(id){
+  const list=tplMyLoad(),e=list.find(x=>x.id===id);if(!e)return;
+  const c=JSON.parse(JSON.stringify(e));c.id='t'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);c.name=e.name+' copy';c.doc.name=c.name;
+  list.splice(list.indexOf(e)+1,0,c);tplMySave(list);tplRenderMy();
+}
+async function tplDelete(id){
+  const list=tplMyLoad(),e=list.find(x=>x.id===id);if(!e)return;
+  const r=await projAsk({title:'🗑 Delete this template?',message:'“'+e.name+'” is removed from My Templates. It can’t be undone, so Export it first if you may want it back. Artwork is not affected.',ok:'Delete',danger:true});
+  if(!r)return;tplMySave(list.filter(x=>x.id!==id));if(tplCur&&tplCur.id===id)tplCur.id=null;tplRenderMy();
+}
+function tplOpenMy(id){
+  const e=tplMyLoad().find(x=>x.id===id);if(!e)return;
+  try{const d=tplValidate(e.doc);tplApplyObjs(d.objs,{id:e.id,name:e.name,layout:d.layout,guide:d.guide});setStatus('📐 Opened “'+e.name+'”. Your artwork was not touched.');}
+  catch(err){setStatus('⚠️ '+err.message);}
+}
+function tplDownload(doc){
+  const blob=new Blob([JSON.stringify(doc,null,1)],{type:'application/json'});
+  saveFileBlob(blob,(String(doc.name||'template').replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'-')||'template')+'.patterntemplate.json');
+}
+$('tplImportInput').onchange=e=>{
+  const f=e.target.files&&e.target.files[0];e.target.value='';if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const d=tplValidate(JSON.parse(ev.target.result));
+      const list=tplMyLoad(),id='t'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+      const doc={format:'pattern-sketch-template',version:1,name:d.name,layout:d.layout,tile:{w:TW,h:TH},guide:d.guide,objs:d.objs};
+      list.unshift({id,name:d.name,doc});if(tplMySave(list)){tplRenderMy();setStatus('📥 Imported “'+d.name+'” into My Templates. Open it to use it.');}
+    }catch(err){setStatus('⚠️ Could not import: '+(err&&err.message||err));}
+  };
+  r.readAsText(f);
+};
+// ---------- export ----------
+async function tplRenderPng(w,h,o){
+  const preview=!!o.preview,tw=preview?Math.round(w/3):w,th=preview?Math.round(h/3):h;
+  const k=tw/TW,kk=th/TH;
+  const master=document.createElement('canvas');master.width=tw;master.height=th;const g=master.getContext('2d');
+  const offs=[[0,0]];for(let ix=-1;ix<=1;ix++)for(let iy=-1;iy<=1;iy++){if(ix||iy)offs.push(tilePos(ix,iy));}
+  g.lineJoin='round';g.lineCap='round';g.globalAlpha=Math.max(.1,Math.min(1,o.opacity/100));
+  const items=tplStrokes().filter(s=>(s.tpl===2?o.arrows:o.outlines)&&s.points&&s.points.length>1);
+  offs.forEach(([ox,oy])=>{
+    g.setTransform(k,0,0,kk,(ox-CX)*k,(oy-CY)*kk);
+    items.forEach(s=>{
+      g.strokeStyle=s.color;g.lineWidth=((s.settings&&s.settings.size)||5);
+      g.beginPath();s.points.forEach((p,i)=>{if(i)g.lineTo(p.x,p.y);else g.moveTo(p.x,p.y);});if(s.closed)g.closePath();
+      g.stroke();
+    });
+  });
+  g.setTransform(1,0,0,1,0,0);
+  if(!preview)return master;
+  const out=document.createElement('canvas');out.width=tw*3;out.height=th*3;const og=out.getContext('2d');
+  og.fillStyle='#fff';og.fillRect(0,0,out.width,out.height);
+  cvtArrange(og,master,out.width,out.height,3);
+  master.width=master.height=1;return out;
+}
+async function tplExport(){
+  if(!tplStrokes().length){setStatus('📐 There are no guides to export yet.');return;}
+  const l=tplLayers(false);
+  const r=await projAsk({title:'📤 Export template',message:'The editable template file keeps every placeholder so it can be opened in another Pattern Sketch. A PNG is only a picture of the guides.',fields:[
+    {key:'f',label:'What to export',type:'chips',options:[['png','Guide PNG (transparent)'],['prev','3×3 repeat preview'],['file','Editable template file']],value:'png'},
+    {key:'w',label:'Width (px)',type:'number',value:'3600',min:100,showIf:v=>v.f!=='file'},
+    {key:'h',label:'Height (px)',type:'number',value:String(Math.round(3600*TH/TW)),min:100,showIf:v=>v.f==='png'},
+    {key:'o',label:'Outlines',type:'chips',options:[['1','Include'],['0','Leave out']],value:'1',showIf:v=>v.f!=='file'},
+    {key:'a',label:'Arrows',type:'chips',options:[['1','Include'],['0','Leave out']],value:'1',showIf:v=>v.f!=='file'},
+    {key:'p',label:'Guide opacity %',type:'number',value:String(l.ph?l.ph.opacity:100),min:10,showIf:v=>v.f!=='file'}],ok:'Export'});
+  if(!r)return;
+  const base=(tplCur&&tplCur.name||'template').replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'-')||'template';
+  if(r.f==='file'){tplDownload(tplDoc(tplCur?tplCur.name:'Template'));setStatus('📤 Saved the editable template file.');return;}
+  let w=Math.round(+r.w),h=r.f==='prev'?Math.round(w*TH/TW):Math.round(+r.h);
+  if(r.f==='png'&&!(w>0&&h>0)){setStatus('⚠️ Enter a width and height.');return;}
+  const bad=expCheck(w,h);if(bad){setStatus('⚠️ '+bad);return;}
+  setStatus('📤 Drawing the guides at '+w+' × '+h+' px…');await new Promise(rs=>setTimeout(rs,30));
+  try{
+    const c=await tplRenderPng(w,h,{preview:r.f==='prev',outlines:r.o!=='0',arrows:r.a!=='0',opacity:Math.max(10,Math.min(100,+r.p||100))});
+    const blob=await new Promise(rs=>c.toBlob(rs,'image/png'));if(!blob)throw new Error('the browser could not make an image this big');
+    saveFileBlob(await pngWithDpi(blob,300),base+(r.f==='prev'?'-3x3-preview-':'-guides-')+c.width+'x'+c.height+'.png');c.width=c.height=1;
+    setStatus('📤 Saved '+(r.f==='prev'?'the 3×3 repeat preview (this is NOT the master tile)':'the transparent guide PNG (the master repeat tile)')+'.');
+  }catch(err){console.error(err);setStatus('⚠️ Could not export: '+(err&&err.message||err));}
+}
+$('tplExportBtn').onclick=tplExport;
+// ---------- thumbnails and panel ----------
+function tplThumb(cv,objs,sz){
+  sz=sz||96;cv.width=cv.height=sz;const g=cv.getContext('2d');
+  g.fillStyle='#fff';g.fillRect(0,0,sz,sz);g.strokeStyle='#e4e1ea';g.lineWidth=1;g.strokeRect(.5,.5,sz-1,sz-1);
+  const kx=sz/TW,ky=sz/TH,pad=0;
+  g.lineJoin='round';g.lineCap='round';
+  const draw=(ox,oy)=>objs.forEach(o=>{
+    let pts;
+    if(o.type==='fixed')pts=o.pts.map(q=>({x:q[0]*TW,y:q[1]*TH}));
+    else{const sh=defaultShapeParams(o.type);sh.x0=o.x0*TW;sh.x1=o.x1*TW;sh.y0=o.y0*TH;sh.y1=o.y1*TH;sh.rotation=o.rot||0;sh.flipH=!!o.fh;sh.flipV=!!o.fv;pts=shapeToPoints(sh);}
+    g.strokeStyle=o.col;g.lineWidth=Math.max(1.4,o.size*kx*1.6);
+    g.beginPath();pts.forEach((p,i)=>{const x=(p.x+ox)*kx,y=(p.y+oy)*ky;if(i)g.lineTo(x,y);else g.moveTo(x,y);});g.stroke();
+  });
+  g.save();g.beginPath();g.rect(0,0,sz,sz);g.clip();
+  [-1,0,1].forEach(ix=>[-1,0,1].forEach(iy=>draw(ix*TW,iy*TH)));g.restore();
+}
+function tplRenderPre(){
+  const host=$('tplPre');host.innerHTML='';
+  TPL_PRE.forEach(p=>{
+    const b=document.createElement('button');b.type='button';b.className='tpl-card'+(tplCur&&tplCur.pre&&tplCur.name===p.name?' active':'');
+    const cv=document.createElement('canvas');b.appendChild(cv);const t=document.createElement('span');t.textContent=p.name;b.appendChild(t);
+    b.onclick=()=>tplLoadPreset(p);host.appendChild(b);
+    tplThumb(cv,tplPresetObjs(p),96);
+  });
+}
+function tplRenderMy(){
+  const host=$('tplMyList');host.innerHTML='';
+  const list=tplMyLoad();
+  if(!list.length){host.innerHTML='<div class="hint">Nothing saved yet. Load or build a layout, then tap Save Template.</div>';return;}
+  list.forEach(e=>{
+    const row=document.createElement('div');row.className='tpl-my';
+    const cv=document.createElement('canvas');row.appendChild(cv);
+    try{tplThumb(cv,tplValidate(e.doc).objs,64);}catch(err){}
+    const nm=document.createElement('div');nm.className='nm';nm.textContent=e.name;row.appendChild(nm);
+    const open=document.createElement('button');open.className='tool-btn';open.textContent='Open';open.onclick=()=>tplOpenMy(e.id);row.appendChild(open);
+    const more=document.createElement('button');more.className='tool-btn';more.textContent='⋯';
+    more.onclick=ev=>{ev.stopPropagation();tbMenu(more,[{head:e.name},{label:'✏️ Rename…',run:()=>tplRename(e.id)},{label:'⧉ Duplicate',run:()=>tplDuplicate(e.id)},{label:'📤 Export file',run:()=>tplDownload(e.doc)},{sep:1},{label:'🗑 Delete…',run:()=>tplDelete(e.id)}]);};
+    row.appendChild(more);host.appendChild(row);
+  });
+}
+function tplTabShow(t){
+  tplTab=t;
+  document.querySelectorAll('#tplTabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));
+  $('tplPre').style.display=t==='pre'?'':'none';$('tplMy').style.display=t==='my'?'':'none';$('tplNew').style.display=t==='new'?'':'none';
+  if(t==='my')tplRenderMy();if(t==='pre')tplRenderPre();
+}
+document.querySelectorAll('#tplTabs button').forEach(b=>b.onclick=()=>tplTabShow(b.dataset.tab));
+function tplSync(){
+  const has=tplStrokes().length>0||!!tplCur,l=tplLayers(false);
+  const t=$('tplTools');if(!t)return;t.style.display=has?'':'none';if(!has)return;
+  $('tplCurName').textContent=tplCur?('📐 '+tplCur.name+(tplCur.pre?' (editable copy)':'')):'';
+  if(l.ph){
+    $('tplShowBtn').classList.toggle('active',!!l.ph.visible);$('tplArrowsBtn').classList.toggle('active',!!(l.ar&&l.ar.visible));
+    $('tplLockBtn').textContent=l.ph.locked?'🔒 Locked':'🔓 Lock';$('tplLockBtn').classList.toggle('active',!!l.ph.locked);
+    const v=Math.round(l.ph.opacity);if(+$('tplOpacity').value!==v&&document.activeElement!==$('tplOpacity')){$('tplOpacity').value=v;$('tplOpacityV').textContent=v;}
+  }
+  const sel=tplSelIds().map(id=>strokes.find(s=>s.id===id)).filter(Boolean);
+  $('tplRepRow').querySelectorAll('button').forEach(b=>b.disabled=!sel.some(s=>s.tpl===1));
+  if(sel.length&&document.activeElement!==$('tplColour')&&document.activeElement!==$('tplWidth')){
+    $('tplColour').value=sel[0].color;const w=Math.round((sel[0].settings&&sel[0].settings.size)||5);$('tplWidth').value=w;$('tplWidthV').textContent=w;
+  }
+}
+// a project that already has guides (reopened, or switched to in the filmstrip) shows the tools straight away
+setInterval(()=>{try{const sec=$('tplSection');if(sec&&sec.offsetParent!==null){if(!tplCur&&tplStrokes().length)tplCur={id:null,name:'Template guides',pre:false};if(tplCur&&!tplStrokes().length&&!layers.some(l=>l.tpl))tplCur=null;tplSync();}}catch(e){}},500);
+tplRenderPre();
+window.__sketchpadTemplates={select:id=>{const s=strokes.find(x=>x.id===id);if(s)tplSelectOnly(s);},presets:TPL_PRE,load:tplLoadPreset,loadById:id=>tplLoadPreset(TPL_PRE.find(p=>p.id===id)),add:tplAddShape,replace:tplReplace,collect:tplCollect,apply:tplApplyObjs,validate:tplValidate,doc:tplDoc,saveAs:tplSaveAs,render:tplRenderPng,cur:()=>tplCur,strokes:tplStrokes};
 // Edit button (top bar) stays in step with the Draw/Edit switch.
 (function(){
   const eb=document.getElementById('editModeBtn'),tb=document.getElementById('tbEditBtn');if(!eb||!tb)return;
@@ -13586,6 +14006,7 @@ function penFlatten(A,closed){
 }
 function penClone(A){return A.map(a=>({x:a.x,y:a.y,hi:a.hi?{x:a.hi.x,y:a.hi.y}:null,ho:a.ho?{x:a.ho.x,y:a.ho.y}:null}));}
 function penBezValid(stroke){
+  if(stroke&&stroke.tpl)return false;
   try{
     if(!stroke||!stroke.bez||!Array.isArray(stroke.bez.a)||stroke.bez.a.length<2||stroke.nodes||stroke.regions||stroke.shape)return false;
     const f=penFlatten(stroke.bez.a,!!stroke.bez.closed),P=stroke.points;
@@ -13722,6 +14143,7 @@ function penSet(on){
   }
 }
 function penEditStroke(stroke){
+  if(stroke&&stroke.tpl)return;
   if(!penBezValid(stroke)){setStatus('This path was moved or reshaped, so its curve points are gone — use Edit Path instead.');return;}
   const s=stroke;
   $('drawModeBtn').onclick();
@@ -15151,7 +15573,7 @@ boot();
 // Seamlessly Creative suite integration (see the bottom of this file once frozen into the
 // suite), just exposed unconditionally here since it's harmless and useful standalone too.
 $('tbTimelapseBtn').onclick=()=>{if(window.SPTimelapse)SPTimelapse.open();else setStatus('Timelapse is still loading — try again in a moment.');};
-window.__sketchpadGetState=()=>({strokeCount:strokes.length,strokes,placed,motifs,activeBrushId,eraserActive,selectedStrokeId,groups,multiSel,groupInsideId,selAddArmed,histLen:history.length,hIndex,layout,layers:layers.map(l=>({id:l.id,name:l.name,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip})),activeLayerId,pathEditStrokeId,pathEditNodes,pathEditClosed,selectedNodeIndex,pathEditTool,copiedBrushStyle,continueStrokeId,joinPendingStrokeId,paintMode,paintInsideTargetId,armedShapeType,constrainShape,holdTriggered,holdCorrectedShape,currentPointsLength:currentPoints.length,zoom,panX,panY,baseScale,renderScale,rot,canvasBackingWidth:canvas.width,displayBackingWidth:displayCanvas.width,sidebarCollapsed});
+window.__sketchpadGetState=()=>({strokeCount:strokes.length,strokes,placed,motifs,activeBrushId,eraserActive,selectedStrokeId,groups,multiSel,groupInsideId,selAddArmed,histLen:history.length,hIndex,layout,layers:layers.map(l=>({id:l.id,name:l.name,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip,tpl:l.tpl||0})),activeLayerId,pathEditStrokeId,pathEditNodes,pathEditClosed,selectedNodeIndex,pathEditTool,copiedBrushStyle,continueStrokeId,joinPendingStrokeId,paintMode,paintInsideTargetId,armedShapeType,constrainShape,holdTriggered,holdCorrectedShape,currentPointsLength:currentPoints.length,zoom,panX,panY,baseScale,renderScale,rot,canvasBackingWidth:canvas.width,displayBackingWidth:displayCanvas.width,sidebarCollapsed});
 // Test-only: exposes the app's own screen<->canvas coordinate mapping directly, so a test can
 // place a real pointer event at the exact screen position corresponding to a given canvas-space
 // point (or vice versa) at whatever zoom/pan/rotation is currently active, without having to
@@ -16926,6 +17348,7 @@ SPFonts.init().then(()=>{txRefreshMissing();});
     adjust:'<path d="M5 5v14M12 5v14M19 5v14"/><circle cx="5" cy="14" r="2.2"/><circle cx="12" cy="8" r="2.2"/><circle cx="19" cy="15" r="2.2"/>',
     contour:'<rect x="3.5" y="3.5" width="17" height="17" rx="5"/><rect x="8" y="8" width="8" height="8" rx="2.5"/>',
     bool:'<circle cx="9" cy="10" r="5.5"/><circle cx="15" cy="14" r="5.5"/>',
+    tpl:'<rect x="3.5" y="3.5" width="17" height="17" rx="2.5"/><circle cx="9" cy="9" r="2.6"/><rect x="13.5" y="12.5" width="4.5" height="4.5" rx="0.6"/><path d="M7 17.5l2.5-3 2.5 3z"/>',
     rotate:'<path d="M20 12a8 8 0 10-2.6 5.9"/><path d="M20 4.5V10h-5.5"/>',
     pin:'<path d="M9 3.5h6l-1 5.5 3 3.2H7l3-3.2z"/><path d="M12 12.5v8"/>',
     dock:'<rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M15 4.5v15"/>',
@@ -16943,13 +17366,14 @@ SPFonts.init().then(()=>{txRefreshMissing();});
     text:{title:'Text',icon:'text',get:()=>[$('textSection')]},
     selection:{title:'Selection',icon:'select',get:()=>[secByTitle(/selected motif/i),$('alignSection'),$('strokeSelectSection')]},
     layers:{title:'Layers',icon:'layers',pin:true,get:()=>[$('layersSection')]},
-    library:{title:'Motifs & library',icon:'library',get:()=>[...upl,secByTitle(/motif tray/i),secByTitle(/svg tray/i),secByTitle(/background pattern/i),secByTitle(/templates/i),secByTitle(/trace reference/i)]},
+    library:{title:'Motifs & library',icon:'library',get:()=>[...upl,secByTitle(/motif tray/i),secByTitle(/svg tray/i),secByTitle(/background pattern/i),secByTitle(/^\W*Templates\s*$/i),secByTitle(/trace reference/i)]},
     boolean:{title:'Shape builder',icon:'bool',pin:true,get:()=>[$('booleanSection')]},
     contour:{title:'Contour & corners',icon:'contour',pin:true,get:()=>[$('contourSection')]},
     gradient:{title:'Gradient',icon:'gradient',pin:true,get:()=>[$('gradientSection')]},
     adjust:{title:'Colour tools',icon:'adjust',pin:true,get:()=>[$('adjustSection'),$('recolourSection')]},
     brushmaker:{title:'Pattern brush',icon:'pbrush',get:()=>[$('brushMakerSection'),$('brushSetSection')]},
-    repeat:{title:'Repeat & tiling',icon:'repeat',get:()=>[secByTitle(/repeat layouts/i)]}
+    repeat:{title:'Repeat & tiling',icon:'repeat',get:()=>[secByTitle(/repeat layouts/i)]},
+    templates:{title:'Pattern Templates',icon:'tpl',get:()=>[$('tplSection')]}
   };
   // ---- rail buttons: proxy = the existing top-bar button that actually selects the tool ----
   const TOOLS=[
@@ -16959,6 +17383,7 @@ SPFonts.init().then(()=>{txRefreshMissing();});
     {id:'colour',label:'Colour',icon:'palette',panel:'colour',swatch:1},
     {id:'layers',label:'Layers',icon:'layers',panel:'layers'},
     {id:'repeat',label:'Repeat & tiling',icon:'repeat',panel:'repeat'},
+    {id:'templates',label:'Pattern Templates (layout guides)',icon:'tpl',panel:'templates'},
     {sep:1},
     {id:'select',label:'Select & edit',icon:'select',proxy:'tbEditBtn',panel:'selection'},
     {id:'shapes',label:'Shapes',icon:'shapes',panel:'shapes'},
