@@ -1329,7 +1329,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v314'; // keep in step with CACHE in sw.js
+const APP_V='v315'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -7093,7 +7093,9 @@ wrap.addEventListener('pointerdown',e=>{
 // Linked radial copies: the original keeps {cx,cy,step,sig}; each copy keeps radialOf (the original's id) and radialK. When the original
 // changes (shape, colour, size, brush) every copy is rebuilt from it, so editing one petal updates the whole flower.
 function radialSig(st){
-  const t=JSON.stringify([st.points,st.nodes,st.color,st.settings,st.brushId,st.closed,st.shape,st.regions,st.cuts,st.fillColor]);
+  // everything about the petal except who it is: geometry AND appearance (fill on/off, fill colour, opacity, gradient, brush...), so no change is missed
+  const o={};Object.keys(st).forEach(k=>{if(k!=='id'&&k!=='radial'&&k!=='radialOf'&&k!=='radialK'&&k!=='layerId'&&k!=='groupId'&&k!=='_sig')o[k]=st[k];});
+  const t=JSON.stringify(o);
   let h=5381;for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))|0;return h+':'+t.length;
 }
 // Rebuilds every linked copy of one source from the source's CURRENT geometry and appearance, turned about the stored centre.
@@ -7121,6 +7123,7 @@ function radialSync(){
       radialRebuild(src).forEach(id=>layers2.add(id));
     });
     layers2.forEach(id=>{try{rebuildLayer(id);}catch(e){}});
+    if(layers2.size&&pathEditStrokeId){try{schedulePathLivePreview();}catch(e){}} // the petal being edited is re-drawn with its current fill too
   }finally{window.__radialBusy=false;}
 }
 // The source of the flower for any selected petal (the original itself, or one of its linked copies).
@@ -7137,6 +7140,7 @@ function radialLiveFollow(){
     const keep={id:c.id,layerId:c.layerId,radialOf:c.radialOf,radialK:c.radialK};Object.keys(c).forEach(k=>delete c[k]);Object.assign(c,fresh,keep);L.add(c.layerId);
   });
   window.__radialLive=true;
+  try{fillSync();}catch(e){} // each copy's fill shape follows its outline (and is created / removed with it)
   L.forEach(id=>{try{rebuildLayerDimmed(id,stroke.id,0,true);}catch(e){}});
   radialLiveAt=performance.now();radialLiveCost=radialLiveAt-t0;
 }
