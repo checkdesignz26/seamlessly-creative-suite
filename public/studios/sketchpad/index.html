@@ -1346,7 +1346,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v327'; // keep in step with CACHE in sw.js
+const APP_V='v328'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -13623,7 +13623,7 @@ function penOverlayRender(){
   });
 }
 function penBarSync(){
-  $('penBar').style.display=penOn?'flex':'none';
+  $('penBar').style.display=(penOn&&(penA.length||penEdit))?'flex':'none'; // only in the way while a path is actually being drawn
   $('tbPenBtn').classList.toggle('active',penOn);try{tbToolSync();}catch(e){}
   $('penHint').textContent=penA.length?(penA.length+' point'+(penA.length>1?'s':'')+' · drag a point to move · double-tap = smooth/corner'):'Tap to place a point · drag to curve · tap the pink first point to close';
   $('penDoneBtn').disabled=penA.length<2;$('penCloseBtn').disabled=penA.length<2||penClosed;$('penUndoBtn').disabled=!penA.length;
