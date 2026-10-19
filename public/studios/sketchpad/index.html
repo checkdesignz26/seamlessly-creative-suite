@@ -1343,7 +1343,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v316'; // keep in step with CACHE in sw.js
+const APP_V='v317'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -2695,8 +2695,8 @@ function applyLayerMeta(layerMeta,wantActiveId){
   strokes.forEach(s=>{if(!s.layerId||!layers.find(l=>l.id===s.layerId))s.layerId=fallback.id;});
   activeLayerId=(wantActiveId&&layers.find(l=>l.id===wantActiveId))?wantActiveId:fallback.id;
 }
-function undo(){if(hIndex>0){hIndex--;restore(history[hIndex]);try{if(window.SPTimelapse)SPTimelapse.afterRestore('undo');}catch(e){}setStatus('↩️ Undo');scheduleAutosave();}}
-function redo(){if(hIndex<history.length-1){hIndex++;restore(history[hIndex]);try{if(window.SPTimelapse)SPTimelapse.afterRestore('redo');}catch(e){}setStatus('↪️ Redo');scheduleAutosave();}}
+function undo(){if(hIndex>0){hIndex--;restore(history[hIndex]);try{radialSync();}catch(e){}try{if(window.SPTimelapse)SPTimelapse.afterRestore('undo');}catch(e){}setStatus('↩️ Undo');scheduleAutosave();}}
+function redo(){if(hIndex<history.length-1){hIndex++;restore(history[hIndex]);try{radialSync();}catch(e){}try{if(window.SPTimelapse)SPTimelapse.afterRestore('redo');}catch(e){}setStatus('↪️ Redo');scheduleAutosave();}}
 // Resizes every render target's BACKING STORE (physical pixels) to the current renderScale,
 // without touching its on-screen CSS size — canvas.style.width/height keep it at logical W x H
 // so nothing about layout, pan or the existing zoom/rotate CSS transform math changes; only the
@@ -8174,7 +8174,18 @@ function csClose(){const p=$('colourStudio');if(p)p.style.display='none';CS.ctx=
 // A native colour input becomes a button that opens the Studio instead of the bare system picker (which stays inside Custom).
 function csBindInput(el,mk){
   if(!el||el._csBound)return;el._csBound=true;
-  el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();csOpen(mk());},true);
+  // iPad Safari opens its own colour sheet from the input's own tap however the click is handled, so the input stops taking
+  // touches and its parent catches taps that land on it instead (the native sheet then only lives inside Custom).
+  el.style.pointerEvents='none';
+  const open=e=>{e.preventDefault();e.stopPropagation();csOpen(mk());};
+  el.addEventListener('click',open,true);
+  const par=el.parentElement;if(!par)return;
+  (par._csIns=par._csIns||[]).push({el,mk});
+  if(!par._csHooked){par._csHooked=true;
+    par.addEventListener('click',e=>{
+      for(const it of par._csIns){const r=it.el.getBoundingClientRect();
+        if(r.width&&e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom){e.preventDefault();e.stopPropagation();csOpen(it.mk());return;}}
+    },true);}
 }
 // Contexts ----------------------------------------------------------------------------------------------------------------
 function csCtxDraw(){return {title:'🎨 Drawing colour',targets:null,none:false,get:()=>currentColor,
@@ -14765,11 +14776,21 @@ function quickDuplicate(){
   if(selected&&placed.find(p=>p.id===selected)){duplicateMotifInstance();return true;}
   if(multiSel&&(multiSel.strokeIds.length||multiSel.placedIds.length)){
     const ns=[],np=[];
-    multiSel.strokeIds.forEach(id=>{const o=strokes.find(x=>x.id===id);if(!o)return;const c=JSON.parse(JSON.stringify(o));c.id=crypto.randomUUID();delete c.groupId;
+    // Every copy gets a new id, and the links BETWEEN copies (petal -> source petal, generated fill -> its outline) are re-pointed at
+    // the new ids. The flower's centre travels with the copy too; otherwise the next sync rebuilds the petals around the OLD flower.
+    const inSel=new Set(multiSel.strokeIds),idMap=new Map();
+    multiSel.strokeIds.forEach(id=>{if(strokes.find(x=>x.id===id))idMap.set(id,crypto.randomUUID());});
+    multiSel.strokeIds.forEach(id=>{const o=strokes.find(x=>x.id===id);if(!o)return;
+      if(o.fillOf&&!inSel.has(o.fillOf))return; // a generated fill is rebuilt from its outline
+      const c=JSON.parse(JSON.stringify(o));c.id=idMap.get(id);delete c.groupId;
+      if(c.fillOf)c.fillOf=idMap.get(c.fillOf);
+      if(c.radialOf){if(idMap.has(c.radialOf))c.radialOf=idMap.get(c.radialOf);else{delete c.radialOf;delete c.radialK;}}
+      if(c.radial){c.radial.cx+=OFF;c.radial.cy+=OFF;}
       c.points=c.points.map(p=>({...p,x:p.x+OFF,y:p.y+OFF}));if(c.cuts)c.cuts=c.cuts.map(q=>({...q,x:q.x+OFF,y:q.y+OFF}));if(c.nodes)c.nodes=c.nodes.map(n=>({...n,x:n.x+OFF,y:n.y+OFF}));
       if(c.shape){c.shape.x0+=OFF;c.shape.y0+=OFF;c.shape.x1+=OFF;c.shape.y1+=OFF;}
       strokes.push(c);appendStrokeToLayer(c);ns.push(c.id);});
     multiSel.placedIds.forEach(id=>{const o=placed.find(x=>x.id===id);if(!o)return;const c={...o,id:crypto.randomUUID(),x:o.x+OFF,y:o.y+OFF};delete c.groupId;placed.push(c);np.push(c.id);});
+    try{radialSync();fillSync();}catch(e){}
     setMulti(ns,np,null);pushHist();redraw();try{syncStrokeSelectionUI();updateSelectedControls();}catch(e){}
     setStatus('⧉ Duplicated '+(ns.length+np.length)+' items — drag the copies where you want them.');return true;
   }
