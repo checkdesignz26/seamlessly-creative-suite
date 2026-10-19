@@ -1256,7 +1256,7 @@
       if (dw * dh > 8e6) { S.fallback = true; return; }
       const img = ctx.getImageData(ox, oy, dw, dh);
       S.I0 = new Uint8ClampedArray(img.data); // the picture as it was when the stroke began
-      if (wrap) { S.cur = img.data; S.curImg = img; }
+      S.cur = img.data; S.curImg = img; // the live copy of the picture is kept here, so a step never has to read pixels back from the canvas (slow on iPad)
       S.D = new Float32Array(dw * dh * 2);
       S.ox = ox; S.oy = oy; S.dw = dw; S.dh = dh;
     } catch (e) { S.fallback = true; }
@@ -1274,7 +1274,7 @@
     const n4 = w * h * 4;
     // where the new colours go: the tile cell itself when wrapping, else the pixels of the canvas under the brush
     let dst, patch = null;
-    if (wrap) dst = S.cur; else { patch = ctx.getImageData(x0, y0, w, h); dst = patch.data; }
+    dst = S.cur;
     if (!_lqSD || _lqSD.length < w * h * 2) _lqSD = new Float32Array(w * h * 2);
     if (!_lqSRow || _lqSRow.length < h * 2) _lqSRow = new Int32Array(h * 2);
     const nD = _lqSD, rows = _lqSRow;
@@ -1302,7 +1302,7 @@
       const Y = y0 + py;
       for (let px = pxs; px <= pxe; px++) {
         const gx = x0 + px + 0.5 - cx, d2 = gx * gx + gy2;
-        const o4 = ((wrap ? md(Y, dh) : Y - y0) * (wrap ? dw : w) + (wrap ? md(x0 + px, dw) : px)) * 4;
+        const o4 = ((wrap ? md(Y, dh) : Y) * dw + (wrap ? md(x0 + px, dw) : x0 + px)) * 4;
         if (d2 >= R2) { nD[(py * w + px) * 2] = NaN; continue; }
         const u = 1 - d2 / R2, u2 = u * u, k = u2 * strength;
         let sx, sy;
@@ -1359,7 +1359,7 @@
         D[di] = v; D[di + 1] = nD[(py * w + px) * 2 + 1];
       }
     }
-    if (!wrap) { ctx.putImageData(patch, x0, y0); if (x0 === 0 && y0 === 0) lqSentinel(ctx); return true; }
+    if (!wrap) { ctx.putImageData(S.curImg, 0, 0, x0, y0, w, h); if (x0 === 0 && y0 === 0) lqSentinel(ctx); return true; }
     // wrapping: only the tile cell holds the picture (the app repeats it on screen), so write the changed part of the cell back
     const xa = md(x0, dw), ya = md(y0, dh);
     const xr = xa + w <= dw ? [[xa, w]] : [[xa, dw - xa], [0, w - (dw - xa)]];

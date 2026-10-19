@@ -1328,7 +1328,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v311'; // keep in step with CACHE in sw.js
+const APP_V='v312'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -13559,13 +13559,13 @@ function warpDown(e){
   if(warpPaint){
     if(!layer||layer.locked||layer.asleep){warpDrag=null;return;}
     const d=warpDrag;
-    if(warpMode!=='push'){const tick=()=>{if(warpDrag!==d)return;const now=performance.now();if(now-d.lastT>=Math.max(16,d.gap)){const mult=d.lastT?Math.max(0.5,Math.min(6,(now-d.lastT)/50)):1;warpPaintRun(d,d.last.x,d.last.y,0,0,mult);}d.hold=requestAnimationFrame(tick);};d.hold=requestAnimationFrame(tick);}
+    if(warpMode!=='push'){const tick=()=>{if(warpDrag!==d)return;const now=performance.now();if(now-d.lastT>=Math.max(16,d.gap)){const mult=d.lastS?Math.max(0.2,Math.min(6,(now-d.lastS)/50)):1;warpPaintRun(d,d.last.x,d.last.y,0,0,mult);}d.hold=requestAnimationFrame(tick);};d.hold=requestAnimationFrame(tick);}
     return;
   }
   if(warpMode!=='push'){const d=warpDrag;const tick=()=>{if(warpDrag!==d)return;warpApply(d.last.x,d.last.y,0,0);d.hold=requestAnimationFrame(tick);};d.hold=requestAnimationFrame(tick);}
 }
 function warpPaintRun(d,x,y,dx,dy,mult){
-  const t0=performance.now();warpPaintStep(d,x,y,dx,dy,mult);d.ax=0;d.ay=0;
+  const t0=performance.now();d.lastS=t0;warpPaintStep(d,x,y,dx,dy,mult);d.ax=0;d.ay=0;
   const t1=performance.now();d.lastT=t1;d.gap=Math.min(120,(t1-t0)*0.6); // slow device or big brush: leave breathing room so the app stays responsive
 }
 function warpPaintStep(d,x,y,dx,dy,mult){
