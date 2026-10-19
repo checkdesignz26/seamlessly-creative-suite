@@ -496,6 +496,7 @@ html.in-suite .suite-only{display:block!important}
 .rc-pick input[type=color]{width:44px;height:40px;border:0;background:none;padding:0}
 .ef-seg{display:flex;gap:4px;flex:1}.ef-seg .btn{flex:1;padding:6px 4px}
 .pal-sw-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.cs-grid{display:grid;grid-template-columns:22px 1fr 46px;gap:4px 6px;align-items:center;margin-top:6px;font-size:12px}.cs-grid input[type=number]{width:46px;padding:3px;border-radius:6px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text)}.cs-mixed{outline:2px dashed var(--pink);outline-offset:2px}
 .pal-sw{width:30px;height:30px;border-radius:50%;border:2px solid var(--btnBorder);position:relative;padding:0;cursor:pointer;flex:none}
 .pal-sw.none{background:#fff linear-gradient(to top right,transparent calc(50% - 1.6px),#e5484d calc(50% - 1.6px),#e5484d calc(50% + 1.6px),transparent calc(50% + 1.6px));border-radius:7px}
 .pat-btn{width:100%;margin-top:8px;min-height:38px;font-weight:800}
@@ -1174,6 +1175,19 @@ html.in-suite .suite-only{display:block!important}
     <div class="row" style="margin-top:6px;gap:6px;"><button type="button" class="btn mini xfOpenBtn" style="flex:1" title="Exact size, position, fit and align in pixels">📐 Transform…</button></div><div class="row" style="margin-top:6px;gap:6px;"><button id="grpBlendBtn" class="btn mini" style="flex:1" title="Select two motifs or two groups, then Blend to make steps between them">🌀 Blend two…</button></div>
     <div class="row" style="margin-top:6px;gap:6px;"><button id="grpDeleteBtn" class="btn mini danger" style="flex:1">✕ Delete selection</button></div>
   </div>
+  <div class="float-panel" id="colourStudio" style="display:none;width:304px;z-index:95;">
+    <div class="float-panel-handle" id="colourStudioHandle"><span id="csTitle">🎨 Colour</span><span class="float-panel-handle-actions"><button id="csDoneBtn" class="btn mini primary float-panel-done">✓ Done</button><span class="float-panel-grip" title="Drag to move">⠿</span></span></div>
+    <div id="csTargetRow" class="ef-row" style="margin:0 0 6px;"><span class="ef-lbl">Colour goes to</span><div class="ef-seg"><button type="button" class="btn mini" data-cst="stroke">Stroke</button><button type="button" class="btn mini" data-cst="fill">Fill</button><button type="button" class="btn mini" data-cst="both">Both</button></div></div>
+    <div class="ef-seg" id="csTabs" style="margin-bottom:6px;"><button type="button" class="btn mini" data-cstab="adaptive">Adaptive</button><button type="button" class="btn mini" data-cstab="mine">My palettes</button><button type="button" class="btn mini" data-cstab="custom">Custom</button></div>
+    <div id="csAdaptive"><div class="pal-sw-row" id="csAdSw"></div><div class="hint" style="margin-top:4px;">Suggestions only: use Custom for any colour you like. Choosing a tab never changes your artwork.</div></div>
+    <div id="csMine" style="display:none;"></div>
+    <div id="csCustom" style="display:none;">
+      <div class="ef-row"><input id="csHex" type="text" maxlength="7" spellcheck="false" autocapitalize="off" style="width:84px;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-family:monospace;" aria-label="Hex colour"><input id="csNative" type="color" title="System colour picker" style="width:44px;height:34px;padding:0;border:none;background:none;"><button type="button" id="csSampleBtn" class="btn mini" style="flex:1" title="Then tap the artwork to pick up a colour from it">🔍 Sample artwork</button></div>
+      <div class="cs-grid" id="csSliders"></div>
+      <div class="ef-row" style="margin-top:6px;"><button type="button" id="csAddBtn" class="btn mini" style="flex:1" title="Add this colour to your saved palette">＋ Add to palette</button><button type="button" id="csDrawBtn" class="btn mini" style="flex:1" title="Use this colour for new strokes">✏️ Draw with it</button></div>
+    </div>
+    <div class="ef-row" style="margin-top:8px;"><span id="csPrev" style="width:34px;height:26px;border-radius:8px;border:2px solid var(--btnBorder);flex:none;"></span><span id="csNote" class="hint" style="margin:0;flex:1;"></span></div>
+  </div>
   <button id="sidebarToggleBtn" class="sidebar-toggle" title="Hide tools panel">‹</button>
   <main class="workspace">
     <div class="toolbar tb2" id="toolbar">
@@ -1329,7 +1343,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v315'; // keep in step with CACHE in sw.js
+const APP_V='v316'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -5778,6 +5792,7 @@ function selBBox(){
 function setMulti(strokeIds,placedIds,gid){
   selected=null;selectedStrokeId=null;
   multiSel=(strokeIds.length||placedIds.length)?{strokeIds,placedIds,groupId:gid||null}:null;
+  try{grpColourSync();}catch(e){}
 }
 function grpSnapshotOf(st,pl){
   const cl=a=>a.map(p=>({...p}));
@@ -7993,7 +8008,7 @@ $('acPalDownAll').onclick=()=>palDownload(savedPalettes);
 // ======== Project palette + easy fill ========================================================
 // One palette is "the project palette" (saved with the project): the adaptive palette by default, or any palette you made or saved.
 // Palettes can also be put in your library (kept in this browser, shared by all projects) and added to any other project from there.
-let projectPaletteId=null;
+let projectPaletteId=null,palAddColour=null; // palAddColour: while the Colour Studio is open, "＋ Colour" adds the colour shown there
 const PAL_LIB_KEY='sp-paletteLib';
 function libGet(){try{return (JSON.parse(localStorage.getItem(PAL_LIB_KEY)||'[]')||[]).filter(p=>p&&Array.isArray(p.hexes));}catch(e){return [];}}
 function libSet(a){try{localStorage.setItem(PAL_LIB_KEY,JSON.stringify(a));}catch(e){}}
@@ -8033,7 +8048,7 @@ function mountPalette(host,editor,onPick,withNone){
     mk('＋ Colour','Add the colour you are drawing with to this palette',()=>{
       let p=savedPalettes.find(x=>x.id===projectPaletteId);
       if(!p)p=palNewCustom('My palette '+(savedPalettes.length+1),adaptiveHexes());
-      const c=palHex(currentColor)||'#000000';if(!p.hexes.includes(c))p.hexes.push(c);
+      const c=palHex(palAddColour?palAddColour():currentColor)||'#000000';if(!p.hexes.includes(c))p.hexes.push(c);
       scheduleAutosave();palRefresh();setStatus('🎨 Added '+c+' to “'+p.name+'”.');});
     const eb=mk('✎ Edit','Show a ✕ on each colour so you can remove it',()=>{editing=!editing;eb.classList.toggle('active',editing);render();});
     mk('Rename','Rename this palette',async()=>{const p=savedPalettes.find(x=>x.id===projectPaletteId);if(!p){setStatus('The adaptive palette can\'t be renamed — use ＋ New or ＋ Colour to make your own.');return;}const n=await palAskName('Rename palette',p.name);if(n){p.name=n;scheduleAutosave();palRefresh();try{renderSavedPalettesList();}catch(e){}}});
@@ -8056,6 +8071,171 @@ function mountPalette(host,editor,onPick,withNone){
   sel.onchange=()=>palOnSelect(sel.value);
   palInst.push(render);render();
 }
+// ---- Colour Studio: ONE shared colour chooser (Adaptive / My palettes / Custom) opened by the colour buttons everywhere ----
+// It owns no colour data. Adaptive swatches come from the Colour panel's adaptive palette, My palettes is the existing project palette
+// component (mountPalette: new / rename / edit / library / delete / saved with the project), Custom is HEX / RGB / HSB / system picker /
+// sampling from the artwork. Each opener hands it a context {get, apply(hex|null,target,commit), targets, none}; opening the Studio,
+// switching tab and switching palette never touch the artwork - only choosing a colour does.
+const CS={ctx:null,hex:'#000000',target:'stroke',tab:'adaptive',sampling:false,ready:false};
+(function(){try{const t=localStorage.getItem('sp-csTab');if(t==='mine'||t==='custom'||t==='adaptive')CS.tab=t;}catch(e){}})();
+function csRgb(h){h=palHex(h)||'#000000';return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];}
+function csToHex(r,g,b){return '#'+[r,g,b].map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');}
+function csHsb([r,g,b]){r/=255;g/=255;b/=255;const mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn;let h=0;if(d){h=mx===r?((g-b)/d+(g<b?6:0)):mx===g?(b-r)/d+2:(r-g)/d+4;h*=60;}return [h,mx?d/mx*100:0,mx*100];}
+function csFromHsb(h,s,v){h=((h%360)+360)%360;s/=100;v/=100;const f=n=>{const k=(n+h/60)%6;return v-v*s*Math.max(0,Math.min(k,4-k,1));};return csToHex(f(5)*255,f(3)*255,f(1)*255);}
+function csBuild(){
+  if(CS.ready)return;CS.ready=true;
+  const sl=$('csSliders');
+  const rows=[['R','csR',0,255,'rgb',0],['G','csG',0,255,'rgb',1],['B','csB',0,255,'rgb',2],['H','csH',0,360,'hsb',0],['S','csS',0,100,'hsb',1],['V','csV',0,100,'hsb',2]];
+  rows.forEach(([l,id,mn,mx,kind,i])=>{
+    sl.insertAdjacentHTML('beforeend','<span>'+l+'</span><input type="range" id="'+id+'" min="'+mn+'" max="'+mx+'" step="1"><input type="number" id="'+id+'N" min="'+mn+'" max="'+mx+'" step="1">');
+    const rg=$(id),nm=$(id+'N');
+    const read=el=>{const v=+el.value;const rgb=kind==='rgb'?[+$('csR').value,+$('csG').value,+$('csB').value]:null;
+      if(kind==='rgb'){rgb[i]=v;return csToHex(rgb[0],rgb[1],rgb[2]);}
+      return csFromHsb(+$('csH').value,+$('csS').value,+$('csV').value);};
+    const sync=(el,other)=>{other.value=el.value;};
+    rg.addEventListener('input',()=>{sync(rg,nm);csSet(read(rg),false,kind==='hsb'?{keepHsb:true}:null);});
+    rg.addEventListener('change',()=>csSet(read(rg),true,kind==='hsb'?{keepHsb:true}:null));
+    nm.addEventListener('input',()=>{if(nm.value==='')return;sync(nm,rg);csSet(read(nm),false,kind==='hsb'?{keepHsb:true}:null);});
+    nm.addEventListener('change',()=>{sync(nm,rg);csSet(read(nm),true,kind==='hsb'?{keepHsb:true}:null);});
+  });
+  const hx=$('csHex');
+  hx.addEventListener('input',()=>{const h=palHex(hx.value);if(h&&/^#?[0-9a-f]{6}$/i.test(hx.value.trim()))csSet(h,false,{keepHex:true});});
+  hx.addEventListener('change',()=>{const h=palHex(hx.value);if(h)csSet(h,true);else csShow();});
+  $('csNative').addEventListener('input',e=>csSet(e.target.value,false));$('csNative').addEventListener('change',e=>csSet(e.target.value,true));
+  $('csTabs').querySelectorAll('[data-cstab]').forEach(b=>b.onclick=()=>csTab(b.dataset.cstab));
+  $('csTargetRow').querySelectorAll('[data-cst]').forEach(b=>b.onclick=()=>{CS.target=b.dataset.cst;try{localStorage.setItem('sp-csTarget',CS.target);}catch(e){}csShow();});
+  $('csDoneBtn').onclick=csClose;
+  $('csSampleBtn').onclick=()=>{CS.sampling=!CS.sampling;csShow();setStatus(CS.sampling?'🔍 Tap the artwork to pick up a colour from it.':'Sampling cancelled.');};
+  $('csAddBtn').onclick=()=>{
+    let pl=savedPalettes.find(x=>x.id===projectPaletteId);
+    if(!pl)pl=palNewCustom('My palette '+(savedPalettes.length+1),[]);
+    if(!pl.hexes.includes(CS.hex))pl.hexes.push(CS.hex);
+    scheduleAutosave();palRefresh();setStatus('🎨 Added '+CS.hex+' to “'+pl.name+'”.');
+  };
+  $('csDrawBtn').onclick=()=>{const b=$('brushColor');b.value=CS.hex;b.dispatchEvent(new Event('input',{bubbles:true}));try{tbColorSync();}catch(e){}setStatus('✏️ Drawing colour '+CS.hex+'.');};
+  makeFloatPanelDraggable('colourStudio','colourStudioHandle');
+  mountPalette($('csMine'),true,hex=>csPick(hex),true);
+  // sampling: the next tap on the artwork reads the pixel under it
+  wrap.addEventListener('pointerdown',e=>{
+    if(!CS.sampling||(e.target!==canvas&&e.target!==wrap))return;
+    e.preventDefault();e.stopPropagation();
+    const pt=screenToCanvas(e.clientX,e.clientY);let got=null;
+    try{const g=canvas.getContext('2d'),rs=(typeof renderScale==='number'&&renderScale)||1,d=g.getImageData(Math.max(0,Math.floor(pt.x*rs)),Math.max(0,Math.floor(pt.y*rs)),1,1).data;if(d[3]>8)got=csToHex(d[0],d[1],d[2]);}catch(x){}
+    CS.sampling=false;
+    if(!got){setStatus('🔍 Nothing there to sample. Try a spot with colour.');csShow();return;}
+    csSet(got,true);setStatus('🔍 Sampled '+got+'. Add it to a palette with ＋ Add to palette.');
+  },true);
+}
+function csTab(t){CS.tab=t;try{localStorage.setItem('sp-csTab',t);}catch(e){}csShow();}
+function csShow(){
+  const c=CS.ctx;if(!c)return;
+  $('csTitle').textContent=c.title||'🎨 Colour';
+  const tr=$('csTargetRow');tr.style.display=c.targets?'':'none';
+  tr.querySelectorAll('[data-cst]').forEach(b=>{b.style.display=c.targets&&c.targets.includes(b.dataset.cst)?'':'none';b.classList.toggle('active',b.dataset.cst===CS.target);});
+  $('csTabs').querySelectorAll('[data-cstab]').forEach(b=>b.classList.toggle('active',b.dataset.cstab===CS.tab));
+  $('csAdaptive').style.display=CS.tab==='adaptive'?'':'none';$('csMine').style.display=CS.tab==='mine'?'':'none';$('csCustom').style.display=CS.tab==='custom'?'':'none';
+  if(CS.tab==='adaptive'){
+    const sw=$('csAdSw');sw.innerHTML='';
+    if(c.none){const nb=document.createElement('button');nb.type='button';nb.className='pal-sw none';nb.title='None (transparent)';nb.onclick=()=>csPick(null);sw.appendChild(nb);}
+    const hexes=adaptiveHexes();
+    if(!hexes.length){const h=document.createElement('div');h.className='hint';h.textContent='No adaptive colours yet. Open the Colour panel to generate some, or use Custom.';sw.appendChild(h);}
+    hexes.forEach(hex=>{const b=document.createElement('button');b.type='button';b.className='pal-sw';b.style.background=hex;b.title=hex;b.onclick=()=>csPick(hex);sw.appendChild(b);});
+  }
+  const rgb=csRgb(CS.hex),hsb=csHsb(rgb);
+  const setV=(id,v)=>{const a=$(id),b=$(id+'N');if(document.activeElement!==a)a.value=Math.round(v);if(document.activeElement!==b)b.value=Math.round(v);};
+  if(!CS.keepHsb){setV('csH',hsb[0]);setV('csS',hsb[1]);setV('csV',hsb[2]);}
+  setV('csR',rgb[0]);setV('csG',rgb[1]);setV('csB',rgb[2]);
+  if(!CS.keepHex&&document.activeElement!==$('csHex'))$('csHex').value=CS.hex;
+  $('csNative').value=CS.hex;$('csPrev').style.background=CS.hex;
+  $('csSampleBtn').classList.toggle('active',CS.sampling);
+  $('csNote').textContent=c.note||'';
+}
+// hex: the colour; commit: this is a finished choice (one undo step); opt: keep the slider/box the user is dragging as it is
+function csSet(hex,commit,opt){
+  hex=palHex(hex);if(!hex||!CS.ctx)return;
+  CS.hex=hex;CS.keepHsb=!!(opt&&opt.keepHsb);CS.keepHex=!!(opt&&opt.keepHex);
+  csShow();CS.keepHsb=false;CS.keepHex=false;
+  try{CS.ctx.apply(hex,CS.target,!!commit);}catch(e){console.warn('[sketchpad] colour apply failed',e);}
+}
+function csPick(hex){
+  if(hex===null){try{CS.ctx.apply(null,CS.target,true);}catch(e){}return;}
+  csSet(hex,true);
+}
+function csOpen(ctx){
+  csBuild();
+  CS.ctx=ctx;CS.target=ctx.target||'stroke';
+  if(ctx.targets&&!ctx.targets.includes(CS.target))CS.target=ctx.targets[0];
+  CS.hex=palHex(ctx.get&&ctx.get())||'#000000';CS.sampling=false;palAddColour=()=>CS.hex;
+  const p=$('colourStudio'),was=p.style.display==='none';p.style.display='block';
+  if(was){const vr=viewportOuter.getBoundingClientRect();positionFloatPanel('colourStudio',vr.left+16,vr.top+70);}
+  csShow();try{palRefresh();}catch(e){}
+}
+function csClose(){const p=$('colourStudio');if(p)p.style.display='none';CS.ctx=null;CS.sampling=false;palAddColour=null;}
+// A native colour input becomes a button that opens the Studio instead of the bare system picker (which stays inside Custom).
+function csBindInput(el,mk){
+  if(!el||el._csBound)return;el._csBound=true;
+  el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();csOpen(mk());},true);
+}
+// Contexts ----------------------------------------------------------------------------------------------------------------
+function csCtxDraw(){return {title:'🎨 Drawing colour',targets:null,none:false,get:()=>currentColor,
+  note:'New strokes use this colour. Selected shapes are not changed.',
+  apply:(hex,t,commit)=>{const b=$('brushColor');b.value=hex;b.dispatchEvent(new Event('input',{bubbles:true}));try{tbColorSync();}catch(e){}}};}
+function csCtxSingle(def){return {title:'🎨 Colour',targets:['stroke','fill','both'],target:def,none:true,
+  note:'Applies to the selected shape. Linked copies follow.',
+  get:()=>{const s=efOutline();if(!s)return currentColor;return (def==='fill'&&s.fill&&s.fill.on&&s.fill.color)||s.color||currentColor;},
+  apply:(hex,t,commit)=>{
+    if(!efOutline()){setStatus('Select a shape or stroke first, then choose a colour for it.');return;}
+    if(hex===null){if(commit)efApply(t,null);return;}
+    efApply(t,hex,!commit);
+  }};}
+function grpOutlines(){const {st}=selMembers();return st;}
+// Recolour everything selected, explicitly, for the chosen property. Groups, linked copies and vector editability are untouched.
+function grpApplyColour(hex,target,commit){
+  if(!multiSel)return;const {st,pl}=selMembers();if(!st.length){setStatus('Nothing selected that can take a colour.');return;}
+  let n=0,skipped=0;const layersT=new Set();
+  st.forEach(x=>{
+    if(x.fillOf||x.text||x.patFill)return; // a generated fill follows its outline; text and clipped patterns keep their own colours
+    layersT.add(x.layerId);
+    if(x.fillColor){ // a solid "Fill Shape" stroke: its colour is its fill
+      if(target!=='stroke'){if(hex===null){x.noFill=true;}else{x.fillColor=hex;x.color=hex;delete x.noFill;}n++;}
+      return;
+    }
+    if(target!=='fill'){if(hex===null)x.noStroke=true;else{x.color=hex;delete x.noStroke;delete x.strokeGradient;if(x.fill&&x.fill.same)x.fill.color=hex;}n++;}
+    if(target!=='stroke'){
+      if(hex===null){if(x.fill&&x.fill.on){x.fill.on=false;n++;}}
+      else if(efEligible(x)){x.fill=Object.assign({opacity:1},x.fill||{},{on:true,same:false,color:hex,gradient:null});n++;}
+      else skipped++;
+    }
+  });
+  try{radialSync();}catch(e){}try{fillSync();}catch(e){}
+  layersT.forEach(id=>{try{rebuildLayer(id);}catch(e){}});
+  st.filter(x=>x.radialOf||x.radial).forEach(x=>layersT.add(x.layerId));
+  if(commit){pushHist();scheduleAutosave();}
+  redraw();try{efRefresh();}catch(e){}
+  if(commit)setStatus((hex===null?'⌧ Cleared the ':'🎨 Recoloured the ')+(target==='both'?'stroke and fill':target)+' of '+n+' part'+(n===1?'':'s')+(skipped?' ('+skipped+' open line'+(skipped===1?'':'s')+' cannot hold a fill)':'')+(pl.length?'; '+pl.length+' picture'+(pl.length===1?'':'s')+' left as they are':'')+'. Undo brings the old colours back.');
+}
+function csCtxGroup(def){return {title:'🎨 Selection colour',targets:['stroke','fill','both'],target:def,none:true,
+  note:'Choosing a colour recolours everything selected, for the property above.',
+  get:()=>{const {st}=selMembers();const o=st.find(x=>!x.fillOf&&!x.fillColor);if(def==='fill'){const f=st.find(x=>!x.fillOf&&!x.fillColor&&x.fill&&x.fill.on);return (f&&f.fill.color)||$('grpFillColour').value;}return (o&&o.color)||$('grpColour').value;},
+  apply:(hex,t,commit)=>{
+    if(hex!==null){if(t!=='fill')$('grpColour').value=hex;if(t!=='stroke')$('grpFillColour').value=hex;}
+    grpApplyColour(hex,t,commit);
+  }};}
+// "mixed" marker: the group's colour buttons say when the parts differ instead of pretending they match
+function grpColourSync(){
+  if(!multiSel){return;}
+  const {st}=selMembers(),outs=st.filter(x=>!x.fillOf&&!x.fillColor&&!x.text&&!x.patFill);
+  const sc=new Set(outs.map(x=>(palHex(x.color)||'').toLowerCase())),fc=new Set(outs.filter(x=>x.fill&&x.fill.on).map(x=>(palHex(x.fill.color)||'').toLowerCase()));
+  const a=$('grpColour'),b=$('grpFillColour');
+  if(a){a.classList.toggle('cs-mixed',sc.size>1);a.title=sc.size>1?'The selected parts have different line colours. Tap to choose one colour for all of them.':'Line colour of the selection (opens the Colour Studio)';if(sc.size===1)a.value=[...sc][0]||a.value;}
+  if(b){b.classList.toggle('cs-mixed',fc.size>1);b.title=fc.size>1?'The selected parts have different fill colours. Tap to choose one colour for all of them.':'Fill colour of the selection (opens the Colour Studio)';if(fc.size===1)b.value=[...fc][0]||b.value;}
+}
+(function(){
+  csBindInput($('tbColor'),csCtxDraw);
+  csBindInput($('grpColour'),()=>csCtxGroup('stroke'));
+  csBindInput($('grpFillColour'),()=>csCtxGroup('fill'));
+  document.querySelectorAll('.sel-colour').forEach(e=>csBindInput(e,()=>csCtxSingle('stroke')));
+})();
 // ---- Clip a pattern inside a shape ------------------------------------------------------------------------------------
 // The pattern is a stroke of its own ({patFill:{motifId,x,y,s,r}, clipStrokeId:<shape>}) on its own layer, drawn at render time inside the
 // shape's GEOMETRY (nodes/points). It never reads the shape's fill or stroke colour, so setting them to None can't remove the clip, and the
@@ -8215,7 +8395,7 @@ canvas.addEventListener('pointermove',e=>{
 const patUp=e=>{if(!patDrag)return;const d=patDrag;patDrag=null;e.stopImmediatePropagation&&e.stopImmediatePropagation();if(d.moved)pushHist();};
 canvas.addEventListener('pointerup',patUp,true);canvas.addEventListener('pointercancel',patUp,true);
 // ---- easy fill: a live fill under a closed outline that follows it ----
-const efInst=[];
+const efInst=[grpColourSync];
 function efOutline(){const id=pathEditStrokeId||selectedStrokeId;const s=strokes.find(x=>x.id===id);return s&&!s.fillOf?s:null;}
 function efEligible(s){return !!(s&&(s.closed||((s.points||[]).length>=3&&!s.shape))&&!s.fillColor&&!s.clipStrokeId&&!s.regions&&!s.text&&!s.outlined);}
 function efGeom(s){const src=s.nodes?nodesToPoints(s.nodes,true):s.points;return (src||[]).map(p=>({x:p.x,y:p.y,pressure:p.pressure==null?0.5:p.pressure}));}
@@ -8245,12 +8425,12 @@ function fillSync(){
     touched.forEach(id=>{try{rebuildLayer(id);}catch(e){}});
   }finally{window.__fillBusy=false;}
 }
-function efApply(target,hex){
+function efApply(target,hex,quiet){
   const s=efOutline();if(!s){setStatus('Select a stroke or shape first.');return;}
   if(hex===null){ // None = transparent (not white). Only the visible styling goes; the shape's geometry (and any clip boundary) stays.
     if(target!=='fill'){s.noStroke=true;}
     if(target!=='stroke'&&s.fill&&s.fill.on)s.fill.on=false;
-    fillSync();rebuildLayer(s.layerId);rebuildLayersClippedBy(s.id);pushHist();redraw();efRefresh();try{syncStrokeSelectionUI();}catch(e){}
+    fillSync();rebuildLayer(s.layerId);rebuildLayersClippedBy(s.id);if(!quiet)pushHist();redraw();efRefresh();try{syncStrokeSelectionUI();}catch(e){}
     setStatus('⌧ '+(target==='both'?'Fill and stroke are now None (transparent).':target==='fill'?'Fill is now None (transparent).':'Stroke is now None (transparent) — the shape is still there and still selectable.'));
     return;
   }
@@ -8258,14 +8438,14 @@ function efApply(target,hex){
   if(target!=='fill'){s.color=hex;delete s.noStroke;delete s.strokeGradient;}
   if(target!=='stroke'){s.fill=Object.assign({on:true,same:false,opacity:1},s.fill||{});s.fill.on=true;s.fill.color=hex;s.fill.gradient=null;if(s.fill.same&&target==='fill')s.color=hex;}
   else if(s.fill&&s.fill.same)s.fill.color=hex;
-  fillSync();rebuildLayer(s.layerId);pushHist();redraw();efRefresh();try{syncStrokeSelectionUI();}catch(e){}
+  fillSync();rebuildLayer(s.layerId);if(quiet){try{radialSync();fillSync();}catch(e){}}else pushHist();redraw();efRefresh();try{syncStrokeSelectionUI();}catch(e){}
 }
 function efRefresh(){efInst.forEach(f=>{try{f();}catch(e){}});}
 function mountEasyFill(host){
   host.innerHTML='';host.classList.add('ef-box');
   const r1=document.createElement('div');r1.className='ef-row';
   const tg=document.createElement('button');tg.type='button';tg.className='btn mini';tg.style.minWidth='96px';
-  const ci=document.createElement('input');ci.type='color';ci.title='Fill colour';
+  const ci=document.createElement('input');ci.type='color';ci.title='Fill colour (opens the Colour Studio)';csBindInput(ci,()=>csCtxSingle('fill'));
   const sameL=document.createElement('label');sameL.className='ef-lbl';const same=document.createElement('input');same.type='checkbox';sameL.appendChild(same);sameL.appendChild(document.createTextNode('Same colour as stroke'));
   r1.appendChild(tg);r1.appendChild(ci);r1.appendChild(sameL);
   const r2=document.createElement('div');r2.className='ef-row';
