@@ -609,10 +609,10 @@ html.in-suite .suite-only{display:block!important}
       <div id="tplTools" style="display:none;margin-top:12px;border-top:1px solid var(--btnBorder);padding-top:10px;">
         <div id="tplCurName" class="hint" style="font-weight:850;margin:0 0 6px;"></div>
         <div class="hint" style="margin:0 0 4px;">Add shape</div>
-        <div class="row tpl-shapes" id="tplAddRow"><button class="tool-btn" data-k="circle" title="Circle">⚪</button><button class="tool-btn" data-k="oval" title="Oval">⬭</button><button class="tool-btn" data-k="square" title="Square">⬜</button><button class="tool-btn" data-k="rect" title="Rectangle">▭</button><button class="tool-btn" data-k="triangle" title="Triangle">△</button><button class="tool-btn" id="tplAddArrow" title="Direction arrow">➜</button></div>
+        <div class="row tpl-shapes" id="tplAddRow"><button class="tool-btn" data-k="circle" title="Circle">⚪</button><button class="tool-btn" data-k="oval" title="Oval">⬭</button><button class="tool-btn" data-k="square" title="Square">⬜</button><button class="tool-btn" data-k="rect" title="Rectangle">▭</button><button class="tool-btn" data-k="triangle" title="Triangle">△</button></div>
         <div class="hint" style="margin:8px 0 4px;">Replace selected with</div>
         <div class="row tpl-shapes" id="tplRepRow"><button class="tool-btn" data-k="circle" title="Circle">⚪</button><button class="tool-btn" data-k="oval" title="Oval">⬭</button><button class="tool-btn" data-k="square" title="Square">⬜</button><button class="tool-btn" data-k="rect" title="Rectangle">▭</button><button class="tool-btn" data-k="triangle" title="Triangle">△</button></div>
-        <div class="slider-row" style="grid-template-columns:78px 1fr 40px;"><label>Outline</label><input id="tplColour" type="color" value="#e8546f" style="width:100%;height:34px;padding:0;"><span></span></div>
+        <div class="row" style="gap:6px;margin-top:8px;"><button id="tplArrowToggle" class="tool-btn" style="flex:1" title="Adds or removes a small direction arrow inside the selected shapes">➜ Arrow in shape</button></div><div class="slider-row" style="grid-template-columns:78px 1fr 40px;"><label>Arrow turn</label><input id="tplArrowAng" type="range" min="-180" max="180" step="5" value="0"><span id="tplArrowAngV">0</span></div><div class="slider-row" style="grid-template-columns:78px 1fr 40px;"><label>Outline</label><input id="tplColour" type="color" value="#ec5fa0" style="width:100%;height:34px;padding:0;"><span></span></div><div class="row" style="gap:6px;"><button id="tplColourAllBtn" class="tool-btn" style="flex:1" title="Give every placeholder of the same shape the colour above">🎨 Colour all of this shape</button></div>
         <div class="slider-row" style="grid-template-columns:78px 1fr 40px;"><label>Thickness</label><input id="tplWidth" type="range" min="1" max="24" step="1" value="5"><span id="tplWidthV">5</span></div>
         <div class="slider-row" style="grid-template-columns:78px 1fr 40px;"><label>Guide opacity</label><input id="tplOpacity" type="range" min="10" max="100" step="5" value="100"><span id="tplOpacityV">100</span></div>
         <div class="row" style="gap:6px;margin-top:6px;"><button id="tplShowBtn" class="tool-btn" style="flex:1">👁 Guides</button><button id="tplArrowsBtn" class="tool-btn" style="flex:1">➜ Arrows</button><button id="tplLockBtn" class="tool-btn" style="flex:1">🔓 Lock</button></div>
@@ -1375,7 +1375,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v329'; // keep in step with CACHE in sw.js
+const APP_V='v330'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -2570,6 +2570,7 @@ function renderStrokeClipped(ctx,stroke,brush,settings,alphaMul){
 }
 function rebuildLayer(layerId){
   const layer=layers.find(l=>l.id===layerId);if(!layer)return;
+  if(layer.tpl===1&&!tplArrowSync._b){try{tplArrowSync();}catch(e){}} // arrows inside placeholders follow their shape
   // Any geometry change (joined ends, closed gaps, moved nodes) reaches the linked fill here, so it can never keep an older shape.
   if(!window.__fillBusy&&strokes.some(o=>o.fill&&o.fill.on&&o.layerId===layerId)){try{fillSync();}catch(e){}}
   if(layer.asleep){
@@ -2680,7 +2681,7 @@ function snapshot(){
 // so the oldest steps are dropped once they pass a size budget (always keeping the last few).
 function histSize(){let n=0;history.forEach(h=>{n+=(h.strokesJSON||'').length+(h.placed||'').length+(h.groupsJSON||'').length+(h.layersJSON||'').length;});return n;}
 function histTrim(){while(history.length>4&&histSize()>24e6)history.shift();}
-function pushHist(){try{radialSync();}catch(e){console.warn('[sketchpad] radial sync failed',e);}try{fillSync();}catch(e){console.warn('[sketchpad] fill sync failed',e);}try{ctSync();}catch(e){console.warn('[sketchpad] contour sync failed',e);}crumb('pushHist '+strokes.length+' strokes');try{pruneGroups();}catch(e){}try{symSync();}catch(e){console.warn('[sketchpad] symmetry sync failed',e);}try{txRefresh();}catch(e){}try{if(window.SPTimelapse)SPTimelapse.onPush();}catch(e){}try{if(typeof refreshBlends==='function')refreshBlends();if(typeof refreshObjBlends==='function')refreshObjBlends();}catch(e){console.warn('[sketchpad] blend refresh failed',e);}history=history.slice(0,hIndex+1);history.push(snapshot());if(history.length>40)history.shift();histTrim();hIndex=history.length-1;try{if(window.SPTimelapse)SPTimelapse.afterPush();}catch(e){}scheduleAutosave();}
+function pushHist(){try{tplArrowSync();}catch(e){}try{radialSync();}catch(e){console.warn('[sketchpad] radial sync failed',e);}try{fillSync();}catch(e){console.warn('[sketchpad] fill sync failed',e);}try{ctSync();}catch(e){console.warn('[sketchpad] contour sync failed',e);}crumb('pushHist '+strokes.length+' strokes');try{pruneGroups();}catch(e){}try{symSync();}catch(e){console.warn('[sketchpad] symmetry sync failed',e);}try{txRefresh();}catch(e){}try{if(window.SPTimelapse)SPTimelapse.onPush();}catch(e){}try{if(typeof refreshBlends==='function')refreshBlends();if(typeof refreshObjBlends==='function')refreshObjBlends();}catch(e){console.warn('[sketchpad] blend refresh failed',e);}history=history.slice(0,hIndex+1);history.push(snapshot());if(history.length>40)history.shift();histTrim();hIndex=history.length-1;try{if(window.SPTimelapse)SPTimelapse.afterPush();}catch(e){}scheduleAutosave();}
 // Synchronous now (no more toDataURL()/Image round-trip for the drawing layer) — cheaper AND
 // simpler: JSON-serialised stroke points are far smaller than a full 1800x1800 PNG snapshot per
 // undo step, and replaying them is deterministic so this never has to wait on an image decode.
@@ -2851,8 +2852,9 @@ function cvtArrange(g,img,fw,fh,n){
     let x=ix*cw,y=iy*ch;
     if(lay==='halfDrop'&&(ix&1))y+=ch/2;
     if(lay==='halfBrick'&&(iy&1))x+=cw/2;
-    for(const yy of [y,y-ch]){ if(yy>=fh||yy+ch<=0||x>=fw||x+cw<=0)continue;
-      const dx=Math.round(x),dy=Math.round(yy);g.drawImage(img,0,0,iw,ih,dx,dy,Math.round(x+cw)-dx,Math.round(yy+ch)-dy);}
+    // a half-drop column also needs its copy one cell up; a half-brick row needs its copy one cell to the left
+    for(const yy of (lay==='halfDrop'?[y,y-ch]:[y]))for(const xx of (lay==='halfBrick'?[x,x-cw]:[x])){ if(yy>=fh||yy+ch<=0||xx>=fw||xx+cw<=0)continue;
+      const dx=Math.round(xx),dy=Math.round(yy);g.drawImage(img,0,0,iw,ih,dx,dy,Math.round(xx+cw)-dx,Math.round(yy+ch)-dy);}
   }
 }
 // Real, independent vector copies of the tiled picture: every object is copied n x n times, scaled to 1/n about the tile corner and moved into its cell
@@ -8636,7 +8638,7 @@ canvas.addEventListener('pointerup',patUp,true);canvas.addEventListener('pointer
 // ---- easy fill: a live fill under a closed outline that follows it ----
 const efInst=[grpColourSync];
 function efOutline(){const id=pathEditStrokeId||selectedStrokeId;const s=strokes.find(x=>x.id===id);return s&&!s.fillOf?s:null;}
-function efEligible(s){return !!(s&&(s.closed||((s.points||[]).length>=3&&!s.shape))&&!s.fillColor&&!s.clipStrokeId&&!s.regions&&!s.text&&!s.outlined);}
+function efEligible(s){return !!(s&&(s.closed||((s.points||[]).length>=3&&!s.shape))&&!s.fillColor&&!s.clipStrokeId&&!s.regions&&!s.text&&!s.outlined&&!s.tpl);}
 function efGeom(s){const src=s.nodes?nodesToPoints(s.nodes,true):s.points;return (src||[]).map(p=>({x:p.x,y:p.y,pressure:p.pressure==null?0.5:p.pressure}));}
 function efSig(s,f){let t='';try{t=JSON.stringify([s.nodes||s.points,s.closed,f.color,f.opacity,f.gradient||null,s.layerId,s.brushId]);}catch(e){}let h=5381;for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))|0;return h+':'+t.length;}
 function fillSync(){
@@ -8719,12 +8721,12 @@ function mountEasyFill(host){
   same.onchange=()=>{const s=efOutline();if(!s)return;s.fill=Object.assign({on:false,opacity:1,color:s.color},s.fill||{});s.fill.same=same.checked;if(same.checked&&s.fill.on)s.fill.color=s.color;fillSync();rebuildLayer(s.layerId);pushHist();redraw();efRefresh();};
   efInst.push(()=>{
     const s=efOutline(),ok=efEligible(s),on=!!(s&&s.fill&&s.fill.on);
-    tg.textContent=on?'🎨 Fill: On':'🎨 Fill: Off';tg.classList.toggle('active',on);tg.disabled=!s;
+    tg.textContent=on?'🎨 Fill: On':'🎨 Fill: Off';tg.classList.toggle('active',on);tg.disabled=!s||!!s.tpl;
     ci.value=(on&&(s.fill.same?s.color:s.fill.color))||(s&&s.fill&&s.fill.color)||'#ffd166';ci.disabled=!ok;
-    same.checked=!!(s&&s.fill&&s.fill.same);same.disabled=!s;
+    same.checked=!!(s&&s.fill&&s.fill.same);same.disabled=!s||!!s.tpl;
     Object.keys(segB).forEach(k=>segB[k].classList.toggle('active',k===target));
     patBtn.textContent=(s&&strokes.some(q=>q.patFill&&q.clipStrokeId===s.id))?'🧩 Edit pattern inside':'🧩 Clip a pattern inside';
-    hint.textContent=!s?'':!ok?'Select a line or shape to give it a fill (an open line is filled as if its ends were joined).':on?'The fill follows the outline when you edit it.':'';
+    hint.textContent=!s?'':(s.tpl)?'Template guides are outline-only, so they have no fill.':!ok?'Select a line or shape to give it a fill (an open line is filled as if its ends were joined).':on?'The fill follows the outline when you edit it.':'';
   });
   efRefresh();
 }
@@ -13333,23 +13335,25 @@ $('backupsClose').onclick=()=>{$('backupsPanel').style.display='none';};
 // They are ordinary parametric shape strokes (so move / resize / rotate / group / recolour / undo / autosave / repeat wrapping all come from
 // the existing engine) but flagged `tpl` and kept on their own guide layers (layer.tpl 1 = placeholders, 2 = arrows). They have no fill, are
 // never offered for node editing, and are left out of every pattern export. Template data is never mixed into artwork layers.
-const TPL_COLS=['#e8546f','#1fa59a','#e0a100','#7a5cd6','#2f7fd6','#4aa551','#ee7b30'];
+// one default outline colour per shape type, used everywhere (all circles start pink, all ovals teal, ...). Users can still recolour one or all of a type.
+const TPL_TYPE_COL={circle:'#ec5fa0',oval:'#1fa59a',square:'#ee7b30',rect:'#7a5cd6',triangle:'#4aa551'};
 const TPL_KIND_TYPE={circle:'circle',oval:'ellipse',square:'rect',rect:'rect',triangle:'triangle',arrow:'arrow'};
 const TPL_MY_KEY='sp-templates-v1';
-// premade layouts. item = [kind, x%, y%, w%, h%, rotation, colour#]  (c circle, o oval, s square, r rectangle, t triangle, a arrow: w = length)
-// x,y are % of the tile; w,h are % of the tile's shorter side. Every layout is its own composition, with mixed shapes.
+// Premade layouts. item = [kind, x%, y%, w%, h%, rotation, arrowAngle?]; kind c circle, o oval, s square, r rectangle, t triangle.
+// x,y are % of the tile and are the CENTRE of the shape; w,h are % of the tile's shorter side. A shape whose centre is near 0 or 100 crosses that
+// edge on purpose: the existing repeat wraps the rest of it round to the other side. arrowAngle (degrees, turned with the shape) adds a small arrow inside.
 const TPL_PRE=[
- {id:'scattered-floral',name:'Scattered Floral',items:[['c',27,28,28,0,0,0],['o',74,24,24,14,-28,1],['o',62,70,26,15,32,2],['c',20,74,17,0,0,3],['c',50,48,9,0,0,4],['t',90,55,11,11,14,5],['s',8,50,8,8,22,6],['o',44,10,12,6,62,0],['c',82,92,10,0,0,1]]},
- {id:'botanical-flow',name:'Botanical Flow',items:[['o',12,88,18,8,-55,1],['o',26,72,20,9,-42,1],['o',41,57,22,10,-30,4],['o',57,43,22,10,-22,1],['c',72,30,13,0,0,0],['t',86,18,11,11,-20,2],['c',38,28,8,0,0,3],['o',80,70,17,7,38,6],['s',15,40,7,7,30,5],['a',24,52,20,-42,3],['a',64,58,20,-30,3]]},
- {id:'tossed-mixed',name:'Tossed Mixed',items:[['o',20,18,20,11,-35,0],['t',58,12,13,13,20,2],['c',84,26,15,0,0,4],['s',38,40,11,11,35,6],['r',72,52,22,9,-18,1],['o',14,62,17,9,70,3],['c',48,70,12,0,0,5],['t',86,82,12,12,-40,0],['o',30,90,18,8,15,4],['s',62,92,8,8,5,2]]},
- {id:'geometric',name:'Geometric',items:[['s',17,17,18,18,0,4],['c',50,17,16,0,0,0],['t',83,17,16,16,0,2],['r',17,50,20,12,0,1],['s',50,50,14,14,45,3],['c',83,50,18,0,0,5],['t',17,83,16,16,180,6],['r',50,83,22,11,0,4],['c',83,83,14,0,0,0]]},
- {id:'half-drop-floral',name:'Half-Drop Floral',layout:'halfDrop',items:[['c',25,28,30,0,0,0],['c',25,70,10,0,0,3],['o',75,62,24,14,-20,1],['t',75,16,13,13,0,2],['s',50,50,9,9,20,6],['o',50,92,16,8,50,4]]},
- {id:'half-brick-tossed',name:'Half-Brick Tossed',layout:'halfBrick',items:[['o',22,25,24,13,-18,1],['c',70,22,16,0,0,0],['t',46,62,15,15,25,2],['s',85,66,11,11,40,4],['o',15,78,18,9,60,6],['c',62,90,9,0,0,5],['r',88,40,16,8,-70,3]]},
- {id:'dense-all-over',name:'Dense All-Over',items:[['c',12,12,15,0,0,0],['o',36,10,18,9,-20,1],['t',62,12,13,13,10,2],['s',86,12,11,11,30,3],['o',10,36,14,8,70,4],['c',34,34,13,0,0,5],['r',60,36,17,8,-15,6],['c',86,36,14,0,0,1],['t',14,60,12,12,-25,0],['o',38,58,18,9,40,2],['c',62,60,11,0,0,4],['s',86,60,12,12,10,6],['o',12,86,16,8,-45,3],['c',36,84,12,0,0,0],['r',62,86,16,9,25,5],['t',87,86,12,12,0,1]]},
- {id:'airy-scattered',name:'Airy Scattered',items:[['c',28,30,26,0,0,0],['o',74,26,20,11,-30,1],['t',68,74,16,16,15,2],['s',22,78,9,9,25,4]]},
- {id:'decorative-border',name:'Decorative Border',items:[['s',6,6,10,10,45,2],['o',28,7,17,8,0,1],['c',50,6,10,0,0,0],['o',72,7,17,8,0,1],['s',94,6,10,10,45,2],['t',6,50,11,11,-90,3],['t',94,50,11,11,90,3],['s',6,94,10,10,45,2],['o',28,93,17,8,0,4],['c',50,94,10,0,0,5],['o',72,93,17,8,0,4],['s',94,94,10,10,45,2]]},
- {id:'abstract-layout',name:'Abstract Layout',items:[['r',30,30,34,18,-20,4],['c',66,40,22,0,0,0],['t',24,72,20,20,12,2],['o',70,78,26,10,-45,1],['s',88,14,10,10,30,6],['c',48,58,8,0,0,3],['r',8,52,7,22,0,5]]},
- {id:'directional-flow',name:'Directional Flow',items:[['o',16,76,20,10,-50,1],['t',34,56,13,13,-50,2],['o',52,40,20,10,-50,4],['c',70,24,15,0,0,0],['s',88,10,9,9,-50,6],['c',70,80,12,0,0,3],['o',90,60,14,7,-50,5],['a',27,64,18,-50,3],['a',45,48,18,-50,3],['a',61,32,18,-50,3],['a',80,70,16,-50,6]]},
+ {id:'scattered-floral',name:'Scattered Floral',items:[['c',30,30,30,0,0,0],['c',98,62,24,0,0,90],['o',72,22,24,13,-28,0],['o',6,88,22,12,40,0],['c',58,97,16,0,0,45],['t',50,3,14,14,0,0],['s',2,2,12,12,25],['c',62,52,9,0,0,-60],['o',20,56,12,7,-60],['s',44,76,9,9,15]]},
+ {id:'botanical-flow',name:'Botanical Flow',items:[['o',0,70,22,10,-50,0],['o',14,52,22,10,-45,0],['o',30,36,24,11,-40,0],['c',48,24,14,0,0,-40],['o',64,12,24,11,-35,0],['o',84,0,24,11,-30,0],['t',78,56,13,13,20,-60],['c',58,74,11,0,0,-50],['s',90,86,9,9,35],['o',40,99,18,8,10,0],['r',100,30,10,22,-10]]},
+ {id:'tossed-mixed',name:'Tossed Mixed',items:[['o',12,20,22,12,-35,0],['t',52,2,14,14,20,-90],['c',86,30,16,0,0,60],['s',36,44,11,11,35],['r',70,58,22,9,-18,0],['o',3,66,17,9,70,0],['c',46,74,12,0,0,-30],['t',96,90,13,13,-40],['o',24,98,18,8,15,0],['s',64,99,9,9,5],['c',1,1,12,0,0,20]]},
+ {id:'geometric',name:'Geometric',items:[['s',0,0,14,14,45],['c',33,0,16,0,0,90],['t',67,0,16,16,0,0],['c',0,33,16,0,0,0],['r',33,33,22,12,0,0],['s',67,33,14,14,0],['t',0,67,16,16,180,0],['s',33,67,14,14,45],['c',67,67,16,0,0,-90]]},
+ {id:'half-drop-floral',name:'Half-Drop Floral',layout:'halfDrop',items:[['c',0,50,26,0,0,90],['c',50,15,28,0,0,0],['o',50,80,22,12,25,0],['t',25,62,14,14,0,0],['s',75,32,10,10,20],['c',75,76,10,0,0,-45],['o',25,100,16,9,-50,0]]},
+ {id:'half-brick-tossed',name:'Half-Brick Tossed',layout:'halfBrick',items:[['o',20,0,24,13,-18,0],['c',70,22,17,0,0,30],['t',40,60,15,15,25,0],['s',88,66,11,11,40],['o',2,80,18,9,60,0],['c',60,100,12,0,0,0],['r',96,38,16,8,-70,0]]},
+ {id:'dense-all-over',name:'Dense All-Over',items:(()=>{const kinds=['c','o','t','s','r','c','o','s'],sz=[16,18,14,12,17,14,16,13],rt=[0,-20,15,30,-35,0,25,10],o=[];let k=0;for(let r=0;r<4;r++)for(let c=0;c<4;c++,k++){const kd=kinds[k%8],x=c*25+(r%2?12.5:0),y=r*25;o.push([kd,x,y,kd==='r'?sz[k%8]+4:sz[k%8],kd==='o'?sz[k%8]*0.5:(kd==='r'?sz[k%8]*0.5:sz[k%8]),rt[k%8],kd==='c'?(k*40)%360-180:(kd==='o'?0:undefined)]);}return o;})()},
+ {id:'airy-scattered',name:'Airy Scattered',items:[['c',30,30,28,0,0,0],['o',78,2,22,12,-30,0],['t',72,72,16,16,15,0],['s',0,66,10,10,25],['c',48,98,12,0,0,60]]},
+ {id:'decorative-border',name:'Decorative Border',items:[['s',0,0,11,11,45],['o',25,0,18,8,0,0],['c',50,0,10,0,0,0],['o',75,0,18,8,0,0],['t',0,25,11,11,90,0],['c',0,50,9,0,0,90],['t',0,75,11,11,90,0],['o',25,100,18,8,0,0],['c',50,100,10,0,0,0],['o',75,100,18,8,0,0]]},
+ {id:'abstract-layout',name:'Abstract Layout',items:[['r',30,30,34,18,-20,0],['c',66,40,22,0,0,45],['t',24,78,20,20,12,0],['o',80,82,26,10,-45,0],['s',100,14,10,10,30],['c',46,100,18,0,0,-30],['r',0,50,7,22,0,0]]},
+ {id:'directional-flow',name:'Directional Flow',items:[['o',0,80,20,10,-50,0],['t',18,60,13,13,-50,0],['o',36,42,20,10,-50,0],['c',56,26,15,0,0,-50],['s',74,10,9,9,-50],['c',70,80,12,0,0,-50],['o',92,60,14,7,-50,0],['t',48,98,12,12,-50,0],['c',100,34,12,0,0,-50]]},
  {id:'blank-custom',name:'Blank Custom',items:[]}
 ];
 let tplCur=null,tplTab='pre';
@@ -13384,23 +13388,24 @@ function tplStrokes(){return strokes.filter(tplIsGuide);}
 function tplCollect(){
   const gm=new Map(),out=[];
   tplStrokes().forEach(s=>{
+    if(s.tplOf)return; // an arrow that belongs to a placeholder is rebuilt from the placeholder, never saved on its own
     const o={k:s.tpl===2?'ar':'ph',kind:s.tplKind||'rect',col:s.color,size:(s.settings&&s.settings.size)||5};
     if(s.groupId){if(!gm.has(s.groupId))gm.set(s.groupId,gm.size+1);o.g=gm.get(s.groupId);}
     const sh=s.shape;
     if(sh&&shapeInSync(s)){o.type=sh.type;o.x0=(sh.x0-CX)/TW;o.x1=(sh.x1-CX)/TW;o.y0=(sh.y0-CY)/TH;o.y1=(sh.y1-CY)/TH;o.rot=sh.rotation||0;o.fh=!!sh.flipH;o.fv=!!sh.flipV;}
     else{o.type='fixed';o.closed=!!s.closed;o.pts=s.points.map(p=>[+((p.x-CX)/TW).toFixed(5),+((p.y-CY)/TH).toFixed(5)]);}
+    if(s.tplArrow&&s.tplArrow.on)o.ar=s.tplArrow.a||0;
     out.push(o);
   });
   return out;
 }
 function tplPresetObjs(p){
-  const S=tplS();
+  const S=tplS(),kindMap={c:'circle',o:'oval',s:'square',r:'rect',t:'triangle'};
   return p.items.map(it=>{
-    const [k,x,y,w,h,rot,ci]=it,kindMap={c:'circle',o:'oval',s:'square',r:'rect',t:'triangle',a:'arrow'},kind=kindMap[k];
-    let ww=w/100*S,hh=(h||w)/100*S;
-    if(k==='a'){hh=ww*0.5;}
-    const cx=x/100*TW,cy=y/100*TH,col=TPL_COLS[ci%TPL_COLS.length];
-    return {k:k==='a'?'ar':'ph',kind,col,size:k==='a'?4:5,type:TPL_KIND_TYPE[kind],x0:(cx-ww/2)/TW,x1:(cx+ww/2)/TW,y0:(cy-hh/2)/TH,y1:(cy+hh/2)/TH,rot:rot||0,fh:false,fv:false};
+    const [k,x,y,w,h,rot,ang]=it,kind=kindMap[k],ww=w/100*S,hh=(h||w)/100*S,cx=x/100*TW,cy=y/100*TH;
+    const o={k:'ph',kind,col:TPL_TYPE_COL[kind],size:5,type:TPL_KIND_TYPE[kind],x0:(cx-ww/2)/TW,x1:(cx+ww/2)/TW,y0:(cy-hh/2)/TH,y1:(cy+hh/2)/TH,rot:rot||0,fh:false,fv:false};
+    if(typeof ang==='number')o.ar=ang;
+    return o;
   });
 }
 function tplObjToStroke(o,lay,gmap){
@@ -13412,6 +13417,7 @@ function tplObjToStroke(o,lay,gmap){
     const shape=defaultShapeParams(o.type);shape.x0=CX+o.x0*TW;shape.x1=CX+o.x1*TW;shape.y0=CY+o.y0*TH;shape.y1=CY+o.y1*TH;shape.rotation=o.rot||0;shape.flipH=!!o.fh;shape.flipV=!!o.fv;
     s={id:crypto.randomUUID(),brushId:'smoothPen',layerId,color:o.col,settings:tplSettings(o.size),points:shapeToPoints(shape),nodes:null,closed:!!SHAPE_CLOSED[o.type],clipStrokeId:null,shape,tpl:o.k==='ar'?2:1,tplKind:o.kind};
   }
+  if(typeof o.ar==='number'&&o.k==='ph')s.tplArrow={on:true,a:o.ar};
   if(o.g){if(!gmap.has(o.g)){const gid=crypto.randomUUID();gmap.set(o.g,gid);groups[gid]={lock:false,scale:true};}s.groupId=gmap.get(o.g);}
   return s;
 }
@@ -13436,10 +13442,12 @@ function tplApplyObjs(objs,meta){
   const gmap=new Map();
   objs.forEach(o=>strokes.push(tplObjToStroke(o,lay,gmap)));
   const g=meta.guide||{};
-  lay.ph.visible=g.phVisible!==false;lay.ar.visible=g.arVisible!==false;lay.ph.locked=lay.ar.locked=!!g.locked;
+  lay.ph.visible=g.phVisible!==false;lay.ar.visible=g.arVisible!==false;lay.ph.locked=!!g.locked;
   lay.ph.opacity=lay.ar.opacity=Math.max(10,Math.min(100,g.opacity||100));
+  {const b=$('tilingBtn');if(meta.pre&&b&&!showTiling)b.click();} // show the surrounding repeat so the edge-crossing shapes are visible
   const art=layers.find(l=>!l.tpl);if(art&&(layers.find(l=>l.id===activeLayerId)||{}).tpl)activeLayerId=art.id;
   tplCur={id:meta.id||null,name:meta.name||'Template',pre:!!meta.pre};
+  tplArrowSync();tplArLock();
   tplAfter();
 }
 function tplLoadPreset(p){
@@ -13447,12 +13455,72 @@ function tplLoadPreset(p){
   tplApplyObjs(tplPresetObjs(p),{name:p.name,pre:true,layout:p.layout});
   setStatus('📐 '+p.name+' loaded as an editable copy'+(had?' (the previous guides were replaced; Undo brings them back)':'')+'. Your artwork was not touched. Lock the guides, add an artwork layer and draw.');
 }
+// ---------- arrows that belong to a placeholder ----------
+// A placeholder with stroke.tplArrow={on,a} owns one small arrow drawn inside it, centred, turning with the shape and scaled to it. The arrow stroke is
+// derived (stroke.tplOf = the placeholder's id): moving, resizing, rotating, recolouring, replacing or deleting the placeholder updates or removes it,
+// so there are never stray copies. Arrows are guides only; they never touch the artwork.
+function tplArrowGeom(cx,cy,w,h,rot,kind,ang){
+  const a=(ang||0)*Math.PI/180,ca=Math.abs(Math.cos(a)),sa=Math.abs(Math.sin(a)),hw=w/2,hh=h/2;
+  let r;
+  if(kind==='circle'||kind==='oval')r=(hw*hh)/Math.sqrt((hh*ca)*(hh*ca)+(hw*sa)*(hw*sa)||1e-6);
+  else{r=Math.min(ca>1e-6?hw/ca:1e9,sa>1e-6?hh/sa:1e9);if(kind==='triangle')r*=0.7;}
+  const len=Math.max(14,r*2*0.56);
+  const shape=defaultShapeParams('arrow');shape.x0=cx-len/2;shape.x1=cx+len/2;shape.y0=cy-len*0.22;shape.y1=cy+len*0.22;shape.rotation=(rot||0)+(ang||0);
+  return {shape,points:shapeToPoints(shape),len};
+}
+function tplParentBox(p){
+  if(p.shape&&shapeInSync(p)){const sh=p.shape;return {cx:(sh.x0+sh.x1)/2,cy:(sh.y0+sh.y1)/2,w:Math.abs(sh.x1-sh.x0),h:Math.abs(sh.y1-sh.y0),rot:sh.rotation||0};}
+  const b=strokeBounds([p]);return {cx:(b.x0+b.x1)/2,cy:(b.y0+b.y1)/2,w:b.x1-b.x0,h:b.y1-b.y0,rot:0};
+}
+function tplArrowSync(){
+  if(tplArrowSync._b)return;tplArrowSync._b=1;
+  try{
+    const owners=strokes.filter(s=>s.tpl===1&&s.tplArrow&&s.tplArrow.on),ids=new Set(owners.map(s=>s.id));
+    let lay=tplLayers(false),changed=false;
+    for(let i=strokes.length-1;i>=0;i--){const q=strokes[i];if(q.tplOf&&!ids.has(q.tplOf)){strokes.splice(i,1);changed=true;}}
+    if(owners.length&&!(lay.ar)){lay=tplLayers(true);}
+    if(!lay.ar&&!changed)return;
+    const have=new Map();strokes.forEach(q=>{if(q.tplOf)have.set(q.tplOf,q);});
+    owners.forEach(p=>{
+      const b=tplParentBox(p),g=tplArrowGeom(b.cx,b.cy,b.w,b.h,b.rot,p.tplKind,p.tplArrow.a),size=Math.max(2.5,((p.settings&&p.settings.size)||5)*0.7);
+      let q=have.get(p.id);
+      if(!q){q={id:crypto.randomUUID(),brushId:'smoothPen',layerId:lay.ar.id,color:p.color,settings:Object.assign(tplSettings(size),{opacity:60}),points:g.points,nodes:null,closed:false,clipStrokeId:null,shape:g.shape,tpl:2,tplKind:'arrow',tplOf:p.id};strokes.push(q);changed=true;}
+      else{
+        const same=q.color===p.color&&q.points.length===g.points.length&&q.points.every((pt,i)=>Math.abs(pt.x-g.points[i].x)<0.01&&Math.abs(pt.y-g.points[i].y)<0.01)&&((q.settings&&q.settings.size)||0)===size;
+        if(!same){q.color=p.color;q.points=g.points;q.shape=g.shape;q.settings=Object.assign(tplSettings(size),{opacity:60});q.layerId=lay.ar.id;changed=true;}
+      }
+    });
+    if(changed&&lay.ar){const ar=lay.ar;tplArrowSync._b=0;try{rebuildLayer(ar.id);}finally{tplArrowSync._b=1;}segVer++;compositeDirty=true;}
+  }finally{tplArrowSync._b=0;}
+}
+function tplToggleArrow(){
+  const ids=tplSelIds().filter(id=>{const s=strokes.find(x=>x.id===id);return s&&s.tpl===1;});
+  if(!ids.length){setStatus('➜ Select a placeholder first, then tap Arrow in shape.');return;}
+  const owners=ids.map(id=>strokes.find(x=>x.id===id)),turnOn=!owners.every(s=>s.tplArrow&&s.tplArrow.on);
+  owners.forEach(s=>{s.tplArrow={on:turnOn,a:(s.tplArrow&&s.tplArrow.a)||0};});
+  tplArrowSync();tplArLock();tplAfter(turnOn?'➜ Arrow added inside. Use Arrow turn to point it; it moves, resizes and rotates with the shape.':'Arrow removed.');
+}
+function tplArrowTurn(v){
+  const ids=tplSelIds().filter(id=>{const s=strokes.find(x=>x.id===id);return s&&s.tpl===1&&s.tplArrow&&s.tplArrow.on;});
+  if(!ids.length)return false;
+  ids.forEach(id=>{strokes.find(x=>x.id===id).tplArrow.a=v;});
+  tplArrowSync();redraw();return true;
+}
+function tplColourAll(){
+  const ids=tplSelIds().map(id=>strokes.find(x=>x.id===id)).filter(s=>s&&s.tpl===1);
+  if(!ids.length){setStatus('🎨 Select a placeholder first. Every shape of the same type will take the colour.');return;}
+  const kinds=new Set(ids.map(s=>s.tplKind));let n=0;
+  strokes.forEach(s=>{if(s.tpl===1&&kinds.has(s.tplKind)){s.color=tplCurCol();n++;}});
+  tplArrowSync();tplAfter('🎨 '+n+' '+[...kinds].join('/')+' placeholder'+(n===1?'':'s')+' recoloured.');
+}
 // ---------- selection helpers ----------
 function tplSelIds(){
   const ids=multiSel?multiSel.strokeIds.slice():(selectedStrokeId?[selectedStrokeId]:[]);
   return ids.filter(id=>{const s=strokes.find(x=>x.id===id);return s&&s.tpl;});
 }
-function tplFreeLayers(){const l=tplLayers(false);[l.ph,l.ar].forEach(x=>{if(x&&x.locked){x.locked=false;}});}
+function tplFreeLayers(){const l=tplLayers(false);if(l.ph)l.ph.locked=false;tplArLock();}
+// arrows that belong to a placeholder are never picked or dragged on their own, so their layer stays locked; loose (older) arrows follow the guide lock
+function tplArLock(){const l=tplLayers(false);if(!l.ar||!l.ph)return;const loose=strokes.some(s=>s.tpl===2&&!s.tplOf);l.ar.locked=loose?!!l.ph.locked:true;}
 function tplCentre(){const r=wrap.getBoundingClientRect(),p=screenToCanvas(r.left+r.width/2,r.top+r.height/2);return {x:Math.max(CX,Math.min(CX+TW,p.x)),y:Math.max(CY,Math.min(CY+TH,p.y))};}
 function tplCurCol(){return $('tplColour').value||'#e8546f';}
 function tplCurW(){return +$('tplWidth').value||5;}
@@ -13461,8 +13529,7 @@ function tplAddShape(kind){
   const lay=tplLayers(true);if(!tplCur)tplCur={id:null,name:'My layout',pre:false};
   tplFreeLayers();const c=tplCentre(),S=tplS();
   let s;
-  if(kind==='arrow')s=tplMakeStroke('arrow',c.x,c.y,S*0.2,S*0.1,0,tplCurCol(),Math.min(tplCurW(),8),lay.ar.id);
-  else{const dims={circle:[.2,.2],oval:[.26,.15],square:[.18,.18],rect:[.26,.14],triangle:[.2,.2]}[kind];s=tplMakeStroke(kind,c.x,c.y,S*dims[0],S*dims[1],0,tplCurCol(),tplCurW(),lay.ph.id);}
+  {const dims={circle:[.2,.2],oval:[.26,.15],square:[.18,.18],rect:[.26,.14],triangle:[.2,.2]}[kind];s=tplMakeStroke(kind,c.x,c.y,S*dims[0],S*dims[1],0,TPL_TYPE_COL[kind],tplCurW(),lay.ph.id);}
   strokes.push(s);
   tplAfter();tplSelectOnly(s);redraw();
   setStatus('📐 Added. Drag to move; use the handles to resize or rotate. Tap another shape button to add more.');
@@ -13487,7 +13554,7 @@ function tplReplace(kind){
   pushHist();tplSync();setStatus('📐 Replaced. Centre, size, turn and colour are kept; nothing else moved.');
 }
 // ---------- appearance ----------
-$('tplColour').oninput=()=>{tplApplyToSel(s=>{s.color=tplCurCol();});};
+$('tplColour').oninput=()=>{tplApplyToSel(s=>{s.color=tplCurCol();});tplArrowSync();};
 $('tplColour').onchange=()=>{if(tplSelIds().length)pushHist();};
 $('tplWidth').oninput=()=>{$('tplWidthV').textContent=tplCurW();tplApplyToSel(s=>{s.settings=Object.assign({},s.settings||tplSettings(5),{size:tplCurW()});});};
 $('tplWidth').onchange=()=>{if(tplSelIds().length)pushHist();};
@@ -13495,9 +13562,12 @@ $('tplOpacity').oninput=()=>{const v=+$('tplOpacity').value;$('tplOpacityV').tex
 $('tplOpacity').onchange=()=>{pushHist();};
 $('tplShowBtn').onclick=()=>{const l=tplLayers(false);if(!l.ph)return;l.ph.visible=!l.ph.visible;tplAfter();setStatus(l.ph.visible?'👁 Guides shown.':'🚫 Placeholders hidden.');};
 $('tplArrowsBtn').onclick=()=>{const l=tplLayers(false);if(!l.ar)return;l.ar.visible=!l.ar.visible;tplAfter();setStatus(l.ar.visible?'➜ Arrows shown.':'🚫 Arrows hidden.');};
-$('tplLockBtn').onclick=()=>{const l=tplLayers(false);if(!l.ph)return;const v=!l.ph.locked;l.ph.locked=l.ar.locked=v;if(v)tplClearSelection();tplAfter();setStatus(v?'🔒 Guides locked. They stay put while you draw.':'🔓 Guides unlocked.');};
+$('tplLockBtn').onclick=()=>{const l=tplLayers(false);if(!l.ph)return;const v=!l.ph.locked;l.ph.locked=v;tplArLock();if(v)tplClearSelection();tplAfter();setStatus(v?'🔒 Guides locked. They stay put while you draw.':'🔓 Guides unlocked.');};
+$('tplArrowToggle').onclick=tplToggleArrow;
+$('tplColourAllBtn').onclick=tplColourAll;
+$('tplArrowAng').oninput=()=>{const v=+$('tplArrowAng').value;$('tplArrowAngV').textContent=v;tplArrowTurn(v);};
+$('tplArrowAng').onchange=()=>{if(tplSelIds().length)pushHist();};
 $('tplAddRow').querySelectorAll('button[data-k]').forEach(b=>b.onclick=()=>tplAddShape(b.dataset.k));
-$('tplAddArrow').onclick=()=>tplAddShape('arrow');
 $('tplRepRow').querySelectorAll('button[data-k]').forEach(b=>b.onclick=()=>tplReplace(b.dataset.k));
 $('tplClearBtn').onclick=async()=>{
   if(!tplStrokes().length)return;
@@ -13535,6 +13605,7 @@ function tplValidate(d){
     if(!o||!types.includes(o.type)||!/^#[0-9a-fA-F]{6}$/.test(o.col||'')||!(o.k==='ph'||o.k==='ar'))throw new Error('A placeholder in the file is not valid.');
     const r={k:o.k,kind:String(o.kind||'rect').slice(0,12),col:o.col,size:Math.max(1,Math.min(40,+o.size||5)),type:o.type};
     if(o.g)r.g=Math.max(1,Math.min(999,Math.round(+o.g)||1));
+    if(o.ar!=null){if(typeof o.ar!=='number'||!isFinite(o.ar)||Math.abs(o.ar)>3600)throw new Error('An arrow direction in the file is not valid.');r.ar=o.ar;}
     if(o.type==='fixed'){
       if(!Array.isArray(o.pts)||o.pts.length<2||o.pts.length>4000||!o.pts.every(q=>Array.isArray(q)&&num(q[0])&&num(q[1])))throw new Error('A fixed outline in the file is not valid.');
       r.pts=o.pts.map(q=>[q[0],q[1]]);r.closed=!!o.closed;
@@ -13612,7 +13683,7 @@ async function tplRenderPng(w,h,o){
   offs.forEach(([ox,oy])=>{
     g.setTransform(k,0,0,kk,(ox-CX)*k,(oy-CY)*kk);
     items.forEach(s=>{
-      g.strokeStyle=s.color;g.lineWidth=((s.settings&&s.settings.size)||5);
+      g.strokeStyle=s.color;g.lineWidth=((s.settings&&s.settings.size)||5);g.globalAlpha=Math.max(.1,Math.min(1,o.opacity/100))*(((s.settings&&s.settings.opacity)||100)/100);
       g.beginPath();s.points.forEach((p,i)=>{if(i)g.lineTo(p.x,p.y);else g.moveTo(p.x,p.y);});if(s.closed)g.closePath();
       g.stroke();
     });
@@ -13661,6 +13732,10 @@ function tplThumb(cv,objs,sz){
     else{const sh=defaultShapeParams(o.type);sh.x0=o.x0*TW;sh.x1=o.x1*TW;sh.y0=o.y0*TH;sh.y1=o.y1*TH;sh.rotation=o.rot||0;sh.flipH=!!o.fh;sh.flipV=!!o.fv;pts=shapeToPoints(sh);}
     g.strokeStyle=o.col;g.lineWidth=Math.max(1.4,o.size*kx*1.6);
     g.beginPath();pts.forEach((p,i)=>{const x=(p.x+ox)*kx,y=(p.y+oy)*ky;if(i)g.lineTo(x,y);else g.moveTo(x,y);});g.stroke();
+    if(typeof o.ar==='number'&&o.type!=='fixed'){
+      const w=Math.abs(o.x1-o.x0)*TW,h=Math.abs(o.y1-o.y0)*TH,ag=tplArrowGeom((o.x0+o.x1)/2*TW,(o.y0+o.y1)/2*TH,w,h,o.rot||0,o.kind,o.ar);
+      g.globalAlpha=.6;g.lineWidth=Math.max(1.1,o.size*kx*1.1);g.beginPath();ag.points.forEach((p,i)=>{const x=(p.x+ox)*kx,y=(p.y+oy)*ky;if(i)g.lineTo(x,y);else g.moveTo(x,y);});g.stroke();g.globalAlpha=1;
+    }
   });
   g.save();g.beginPath();g.rect(0,0,sz,sz);g.clip();
   [-1,0,1].forEach(ix=>[-1,0,1].forEach(iy=>draw(ix*TW,iy*TH)));g.restore();
@@ -13706,7 +13781,7 @@ function tplSync(){
     const v=Math.round(l.ph.opacity);if(+$('tplOpacity').value!==v&&document.activeElement!==$('tplOpacity')){$('tplOpacity').value=v;$('tplOpacityV').textContent=v;}
   }
   const sel=tplSelIds().map(id=>strokes.find(s=>s.id===id)).filter(Boolean);
-  $('tplRepRow').querySelectorAll('button').forEach(b=>b.disabled=!sel.some(s=>s.tpl===1));
+  {const own=sel.filter(s=>s.tpl===1),withA=own.filter(s=>s.tplArrow&&s.tplArrow.on);$('tplArrowToggle').classList.toggle('active',!!own.length&&withA.length===own.length);if(withA.length&&document.activeElement!==$('tplArrowAng')){const v=Math.round(withA[0].tplArrow.a||0);$('tplArrowAng').value=v;$('tplArrowAngV').textContent=v;}}
   if(sel.length&&document.activeElement!==$('tplColour')&&document.activeElement!==$('tplWidth')){
     $('tplColour').value=sel[0].color;const w=Math.round((sel[0].settings&&sel[0].settings.size)||5);$('tplWidth').value=w;$('tplWidthV').textContent=w;
   }
@@ -13714,7 +13789,17 @@ function tplSync(){
 // a project that already has guides (reopened, or switched to in the filmstrip) shows the tools straight away
 setInterval(()=>{try{const sec=$('tplSection');if(sec&&sec.offsetParent!==null){if(!tplCur&&tplStrokes().length)tplCur={id:null,name:'Template guides',pre:false};if(tplCur&&!tplStrokes().length&&!layers.some(l=>l.tpl))tplCur=null;tplSync();}}catch(e){}},500);
 tplRenderPre();
-window.__sketchpadTemplates={select:id=>{const s=strokes.find(x=>x.id===id);if(s)tplSelectOnly(s);},presets:TPL_PRE,load:tplLoadPreset,loadById:id=>tplLoadPreset(TPL_PRE.find(p=>p.id===id)),add:tplAddShape,replace:tplReplace,collect:tplCollect,apply:tplApplyObjs,validate:tplValidate,doc:tplDoc,saveAs:tplSaveAs,render:tplRenderPng,cur:()=>tplCur,strokes:tplStrokes};
+// self-check helper: draws the guides straight onto a 3x3-tile region using the repeat engine's own lattice (no master tile), to prove the exported master tile reproduces it
+function tplTruth(w,h){
+  const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d'),kx=w/(3*TW),ky=h/(3*TH);
+  g.lineJoin='round';g.lineCap='round';
+  for(let ix=-5;ix<=5;ix++)for(let iy=-5;iy<=5;iy++){
+    const [ox,oy]=tilePos(ix,iy);g.setTransform(kx,0,0,ky,(ox-CX)*kx,(oy-CY)*ky);
+    tplStrokes().forEach(s=>{if(!s.points||s.points.length<2)return;g.strokeStyle=s.color;g.lineWidth=(s.settings&&s.settings.size)||5;g.globalAlpha=(((s.settings&&s.settings.opacity)||100)/100);g.beginPath();s.points.forEach((p,i)=>{if(i)g.lineTo(p.x,p.y);else g.moveTo(p.x,p.y);});if(s.closed)g.closePath();g.stroke();});
+  }
+  return c;
+}
+window.__sketchpadTemplates={truth:tplTruth,select:id=>{const s=strokes.find(x=>x.id===id);if(s)tplSelectOnly(s);},presets:TPL_PRE,load:tplLoadPreset,loadById:id=>tplLoadPreset(TPL_PRE.find(p=>p.id===id)),add:tplAddShape,replace:tplReplace,collect:tplCollect,apply:tplApplyObjs,validate:tplValidate,doc:tplDoc,saveAs:tplSaveAs,render:tplRenderPng,cur:()=>tplCur,strokes:tplStrokes};
 // Edit button (top bar) stays in step with the Draw/Edit switch.
 (function(){
   const eb=document.getElementById('editModeBtn'),tb=document.getElementById('tbEditBtn');if(!eb||!tb)return;
