@@ -782,7 +782,7 @@ html.in-suite .suite-only{display:block!important}
       </div>
       <div class="hint">New strokes go onto the active (highlighted) layer. Tap a row to make it active, tap its name (or ✎ Rename) to rename it. Every layer works the same way: the names are just labels.</div>
     </section>
-    <section class="section"><div class="section-title">📐 Repeat Layouts</div><div id="tileShapeNote" class="hint" style="margin:-2px 0 8px;"></div><button id="tilePhysBtn" class="tool-btn" style="width:100%;margin-bottom:8px;" title="Give the tile a real size (inches, cm, mm or pixels) and a dpi">📏 Tile size &amp; dpi…</button><div class="grid"><button class="layout-btn active" data-layout="grid">Grid</button><button class="layout-btn" data-layout="halfDrop">Half Drop</button><button class="layout-btn" data-layout="halfBrick">Half Brick</button><button class="layout-btn" data-layout="diamond">Diamond</button><button class="layout-btn" data-layout="ogee">Ogee</button><button class="layout-btn" data-layout="tossed">Tossed</button></div><div style="margin:14px 0 4px;font-weight:850;font-size:14px;">🔲 Canvas Tiling</div><div class="hint" style="margin:0 0 6px;">Shrinks the pattern so it repeats 2×2 or 3×3 inside the tile frame. Your artwork is not changed; 1×1 puts it back exactly.</div><div class="row" id="cvtRow"><button class="tool-btn cvt-n active" data-n="1">1×1</button><button class="tool-btn cvt-n" data-n="2">2×2</button><button class="tool-btn cvt-n" data-n="3">3×3</button></div><div id="cvtNote" class="hint" style="margin:6px 0 6px;"></div><button id="cvtSaveBtn" class="tool-btn" style="width:100%;" title="Saves the tile frame exactly as the canvas shows it, same pixel size as the normal export">📸 Save canvas as shown (PNG)</button><div class="hint" style="margin:4px 0 0;">Different from <b>Tiled Export</b>, which makes a bigger picture out of the 1× pattern.</div></section>
+    <section class="section"><div class="section-title">📐 Repeat Layouts</div><div id="tileShapeNote" class="hint" style="margin:-2px 0 8px;"></div><button id="tilePhysBtn" class="tool-btn" style="width:100%;margin-bottom:8px;" title="Give the tile a real size (inches, cm, mm or pixels) and a dpi">📏 Tile size &amp; dpi…</button><div class="grid"><button class="layout-btn active" data-layout="grid">Grid</button><button class="layout-btn" data-layout="halfDrop">Half Drop</button><button class="layout-btn" data-layout="halfBrick">Half Brick</button><button class="layout-btn" data-layout="diamond">Diamond</button><button class="layout-btn" data-layout="ogee">Ogee</button><button class="layout-btn" data-layout="tossed">Tossed</button></div><div style="margin:14px 0 4px;font-weight:850;font-size:14px;">🔲 Canvas Tiling</div><div class="hint" style="margin:0 0 6px;">Shrinks the pattern so it repeats 2×2 or 3×3 inside the tile frame. Your artwork is not changed; 1×1 puts it back exactly.</div><div class="row" id="cvtRow"><button class="tool-btn cvt-n active" data-n="1">1×1</button><button class="tool-btn cvt-n" data-n="2">2×2</button><button class="tool-btn cvt-n" data-n="3">3×3</button></div><div id="cvtNote" class="hint" style="margin:6px 0 6px;"></div><button id="cvtNewBtn" class="tool-btn" style="width:100%;margin-bottom:6px;" title="Adds the tiled arrangement to the filmstrip as a new pattern you can edit on its own">➕ Save as New Pattern</button><button id="cvtSaveBtn" class="tool-btn" style="width:100%;" title="Saves the tile frame exactly as the canvas shows it, same pixel size as the normal export">📸 Save canvas as shown (PNG)</button><div class="hint" style="margin:4px 0 0;">Different from <b>Tiled Export</b>, which makes a bigger picture out of the 1× pattern.</div></section>
     <section class="section"><div class="section-title">🔧 Selected Motif</div><div class="row" style="margin-bottom:8px;gap:6px;"><button type="button" class="btn mini xfOpenBtn" style="flex:1" title="Exact size, position, fit and align in pixels">📐 Transform…</button></div><div class="slider-row"><label>Size</label><input id="motifScale" type="range" min="10" max="600" value="100"><span id="motifScaleVal">100%</span></div><div class="slider-row"><label>Opacity</label><input id="motifAlpha" type="range" min="5" max="100" value="100"><span id="motifAlphaVal">100%</span></div><div class="row"><button id="rotL" class="btn mini">↺</button><button id="rotR" class="btn mini">↻</button><button id="flipH" class="btn mini">Flip H</button><button id="flipV" class="btn mini">Flip V</button><button id="deleteSel" class="btn mini danger">Delete</button></div><div class="row" style="margin-top:6px;"><button id="editMotifBtn" class="btn mini primary" style="flex:1 1 100%;display:none;">✏️ Edit Motif</button><button id="recolourBtn" class="btn mini" style="flex:1 1 100%;display:none;">🎨 Recolour Parts</button></div><div class="row" style="margin-top:6px;"><button id="blendMotifBtn" class="btn mini" style="flex:1 1 100%;" title="Blend this motif into another motif or group">🌀 Blend with another…</button></div><div class="row" style="margin-top:6px;"><button id="duplicateMotifBtn" class="btn mini" style="flex:1 1 45%;display:none;">⧉ Duplicate</button><button id="makeIndependentBtn" class="btn mini" style="flex:1 1 45%;display:none;">🔓 Make Independent</button></div><div class="row" style="margin-top:6px;"><button id="releaseMotifBtn" class="btn mini" style="flex:1 1 100%;display:none;" title="Turn this motif back into its original vector strokes as a group, which you can resize at any size without blur">⤴ Release to Vectors (group)</button></div></section>
     <section class="section" id="alignSection">
       <div class="section-title">📐 Align Motifs</div>
@@ -1350,7 +1350,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v323'; // keep in step with CACHE in sw.js
+const APP_V='v324'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -2822,16 +2822,78 @@ async function cvtBuildPng(transparent){
   const tile=await buildTileHi(k,transparent);
   const out=document.createElement('canvas');out.width=TW;out.height=TH;const g=out.getContext('2d');
   if(!transparent){g.fillStyle='#fff';g.fillRect(0,0,TW,TH);}
-  const cw=TW/n,ch=TH/n,lay=layout;
+  cvtArrange(g,tile,TW,TH,n);
+  tile.width=tile.height=1;
+  return out;
+}
+// lays n x n small copies of `img` into a frame of fw x fh on the active layout, exactly as the canvas shows them (a crop of the repeating lattice)
+function cvtArrange(g,img,fw,fh,n){
+  const cw=fw/n,ch=fh/n,lay=layout,iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height;
   for(let ix=-1;ix<=n;ix++)for(let iy=-1;iy<=n+1;iy++){
     let x=ix*cw,y=iy*ch;
     if(lay==='halfDrop'&&(ix&1))y+=ch/2;
     if(lay==='halfBrick'&&(iy&1))x+=cw/2;
-    for(const yy of [y,y-ch]){ if(yy>=TH||yy+ch<=0||x>=TW||x+cw<=0)continue;
-      const dx=Math.round(x),dy=Math.round(yy);g.drawImage(tile,0,0,tile.width,tile.height,dx,dy,Math.round(x+cw)-dx,Math.round(yy+ch)-dy);}
+    for(const yy of [y,y-ch]){ if(yy>=fh||yy+ch<=0||x>=fw||x+cw<=0)continue;
+      const dx=Math.round(x),dy=Math.round(yy);g.drawImage(img,0,0,iw,ih,dx,dy,Math.round(x+cw)-dx,Math.round(yy+ch)-dy);}
   }
-  tile.width=tile.height=1;
-  return out;
+}
+// Real, independent vector copies of the tiled picture: every object is copied n x n times, scaled to 1/n about the tile corner and moved into its cell
+// on the layout lattice. Uses the same scale/move code as the group transform, so shapes, petals, fills, motifs and brush sizes follow. Ids, groups
+// and links are all re-made per copy (nothing is shared with the original or with another copy). Nothing is drawn to a picture.
+function cvtMaterialise(live,n){
+  const S=JSON.parse(live.strokesJSON||'[]'),P=JSON.parse(live.placedJSON||'[]'),G=JSON.parse(live.groupsJSON||'{}');
+  const outS=[],outP=[],outG={},k=1/n;
+  for(let a=0;a<n;a++)for(let b=0;b<n;b++){
+    const off=tilePos(a,b),op={ax:CX,ay:CY,sx:k,sy:k,rot:0,dx:off[0]*k,dy:off[1]*k};
+    const idm=new Map(),gm=new Map(),bm=new Map();
+    S.forEach(o=>idm.set(o.id,crypto.randomUUID()));
+    const mapG=g=>{if(!g)return g;if(!gm.has(g)){const ng=crypto.randomUUID();gm.set(g,ng);if(G[g])outG[ng]=JSON.parse(JSON.stringify(G[g]));}return gm.get(g);};
+    const mapB=v=>{if(!v)return v;if(!bm.has(v))bm.set(v,crypto.randomUUID());return bm.get(v);};
+    const cs=S.map(o=>{
+      const c=JSON.parse(JSON.stringify(o));c.id=idm.get(o.id);
+      ['fillOf','radialOf','contourOf','clipStrokeId'].forEach(f=>{if(c[f])c[f]=idm.has(c[f])?idm.get(c[f]):c[f];});
+      if(c.groupId)c.groupId=mapG(c.groupId);if(c.blendId)c.blendId=mapB(c.blendId);if(c.oblendId)c.oblendId=mapB(c.oblendId);
+      return c;});
+    const cp=P.map(o=>{const c=JSON.parse(JSON.stringify(o));c.id=crypto.randomUUID();if(c.groupId)c.groupId=mapG(c.groupId);if(c.oblendId)c.oblendId=mapB(c.oblendId);return c;});
+    grpApply(grpSnapshotOf(cs,cp),op,true);
+    cs.forEach(c=>{
+      if(c.patFill){const t=op,u=(c.patFill.x-t.ax)*k,v=(c.patFill.y-t.ay)*k;c.patFill=Object.assign({},c.patFill,{x:t.ax+u+t.dx,y:t.ay+v+t.dy,s:(c.patFill.s||1)*k});}
+      if(c.contour){c.contour=Object.assign({},c.contour,{gap:c.contour.gap*k,size:c.contour.size*k,sig:null});}
+    });
+    outS.push(...cs);outP.push(...cp);
+  }
+  const st=colState(live);
+  st.strokesJSON=JSON.stringify(outS);st.placedJSON=JSON.stringify(outP);st.groupsJSON=JSON.stringify(outG);st.canvasTiling=1;
+  return colClone(st);
+}
+async function cvtThumb(n){
+  const url=makeThumb();if(!url)return null;
+  const img=new Image();img.src=url;try{await img.decode();}catch(e){return url;}
+  const c=document.createElement('canvas');c.width=img.width;c.height=img.height;const g=c.getContext('2d');
+  g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);cvtArrange(g,img,c.width,c.height,n);
+  return c.toDataURL('image/jpeg',0.82);
+}
+// Save as New Pattern: adds ONE independent, fully editable pattern to the filmstrip. The current pattern is left exactly as it is.
+async function cvtSaveAsPattern(){
+  const btn=$('cvtNewBtn');if(btn._busy)return;
+  if(!activeProject){setStatus('🗂 Open a project first.');return;}
+  if(typeof patBusy!=='undefined'&&patBusy)return;
+  const n=ctN();if(n<2){setStatus('🔲 Pick 2×2 or 3×3 first, then save it as a new pattern.');return;}
+  btn._busy=true;
+  try{
+    collEnsure();commitPendingEdits();
+    const cur=colActive(),live=buildDocObject();
+    if(JSON.parse(live.strokesJSON||'[]').length*n*n>20000){setStatus('⚠️ That would make too many objects. Remove some artwork or use 2×2.');return;}
+    setStatus('🔲 Making an editable '+n+'×'+n+' copy…');await new Promise(r=>setTimeout(r,30));
+    const st=cvtMaterialise(live,n),id=colUid();
+    const name=colUniqueName(String(cur.name||'Pattern').replace(/ \d{2,3}$/,'')+' – '+n+'×'+n);
+    const entry={id,name,thumb:await cvtThumb(n),state:st,tl:activeProject.id+'~'+id};
+    coll.list.splice(coll.list.indexOf(cur)+1,0,entry);
+    try{colSetOpen(true);}catch(e){}
+    colFlag(id);colStripRender();scheduleAutosave();
+    setStatus('➕ Saved “'+name+'” to the filmstrip. Tap it to edit; tap its name to rename. Your current pattern is unchanged.');
+  }catch(err){console.error(err);setStatus('⚠️ Could not save the new pattern: '+(err&&err.message||err));}
+  finally{btn._busy=false;}
 }
 function cvtSync(){
   document.querySelectorAll('#cvtRow .cvt-n').forEach(b=>b.classList.toggle('active',+b.dataset.n===canvasTiling));
@@ -2841,7 +2903,7 @@ function cvtSync(){
   else if(canvasTiling>1&&!cvtLayoutOK())t='Canvas Tiling works with Grid, Half Drop and Half Brick. It is paused for this layout.';
   else if(canvasTiling>1&&layout!=='grid'&&canvasTiling%2)t='Showing '+canvasTiling+'×'+canvasTiling+' copies. With an odd count the frame itself is not seamless in this layout.';
   else if(canvasTiling>1)t='Showing '+canvasTiling+'×'+canvasTiling+' copies inside the tile frame. The frame stays the same size.';
-  note.textContent=t;
+  note.textContent=t;try{$('cvtNewBtn').disabled=!(ctN()>1);}catch(e){}
 }
 function setCanvasTiling(n,quiet){
   n=(n===2||n===3)?n:1;canvasTiling=n;cvtSync();
@@ -2853,6 +2915,7 @@ document.querySelectorAll('#cvtRow .cvt-n').forEach(b=>b.onclick=()=>{setCanvasT
 window.addEventListener('pointerdown',e=>{if(e.isPrimary&&ctN()>1){const p=screenToCanvasRaw(e.clientX,e.clientY);cvtAnchor=cvtCellAt(p.x,p.y,ctN());}},true);
 ['pointerup','pointercancel'].forEach(t=>window.addEventListener(t,e=>{if(e.isPrimary)cvtAnchor=null;},true));
 window.addEventListener('blur',()=>{cvtAnchor=null;});
+$('cvtNewBtn').onclick=cvtSaveAsPattern;
 $('cvtSaveBtn').onclick=async()=>{
   const b=$('cvtSaveBtn');if(b._busy)return;b._busy=true;
   try{
@@ -2865,7 +2928,7 @@ $('cvtSaveBtn').onclick=async()=>{
   }catch(err){console.error(err);setStatus('⚠️ Could not save: '+(err&&err.message||err));}
   b._busy=false;
 };
-window.__sketchpadCanvasTiling={set:setCanvasTiling,get:()=>canvasTiling,n:ctN,fold:cvtFold,png:cvtBuildPng};
+window.__sketchpadCanvasTiling={save:cvtSaveAsPattern,materialise:()=>cvtMaterialise(buildDocObject(),ctN()),set:setCanvasTiling,get:()=>canvasTiling,n:ctN,fold:cvtFold,png:cvtBuildPng};
 
 function screenToCanvas(x,y){const p=screenToCanvasRaw(x,y);return ctN()>1?cvtFold(p):p;}
 function screenToCanvasRaw(x,y){const r=canvas.getBoundingClientRect();const cx=x-(r.left+r.width/2),cy=y-(r.top+r.height/2);const a=-rot*Math.PI/180;const s=zoom*baseScale;const ux=(cx*Math.cos(a)-cy*Math.sin(a))/s+W/2;const uy=(cx*Math.sin(a)+cy*Math.cos(a))/s+H/2;return {x:ux,y:uy};}
@@ -2961,22 +3024,23 @@ function paintFabric(){
   fabricCanvas.style.display='block';fabricShown=true;
   const dpr=Math.min(window.devicePixelRatio||1,2),pw=Math.round(vw*dpr),ph=Math.round(vh*dpr);
   if(fabricCanvas.width!==pw||fabricCanvas.height!==ph){fabricCanvas.width=pw;fabricCanvas.height=ph;}
-  const s=zoom*baseScale,want=fabricSnapPx(TILE*s*dpr);
+  const cvn=ctN(),s=zoom*baseScale,want=fabricSnapPx(TILE*s*dpr/cvn); // Canvas Tiling: the surrounding repeats use the same smaller copies
   if(fabricTileDirty||want!==fabricTilePx)rebuildFabricTile(want);
   const a=rot*Math.PI/180,cos=Math.cos(a),sin=Math.sin(a);
   fctx.setTransform(1,0,0,1,0,0);fctx.clearRect(0,0,pw,ph);
   fctx.setTransform(dpr*s*cos,dpr*s*sin,-dpr*s*sin,dpr*s*cos,dpr*(vw/2+panX-s*(cos*W/2-sin*H/2)),dpr*(vh/2+panY-s*(sin*W/2+cos*H/2)));
   fctx.imageSmoothingEnabled=true;
   const eps=.5/(s*dpr); // overlap neighbouring tiles by half a device pixel so no hairline seams show
-  const iyLo=Math.floor((minY-CY)/TH)-2,iyHi=Math.ceil((maxY-CY)/TH)+2;
+  const TWn=TW/cvn,THn=TH/cvn,cap=cvn>1?2600:900;
+  const iyLo=Math.floor((minY-CY)/THn)-2,iyHi=Math.ceil((maxY-CY)/THn)+2;
   let drawn=0;
-  for(let iy=iyLo;iy<=iyHi&&drawn<900;iy++){
-    const rowShift=(layout==='halfBrick'&&iy%2)?TW/2:0; // Diamond: the tile is periodic under the diamond lattice, so it can simply be laid out as a plain grid here
-    const ixLo=Math.floor((minX-CX-rowShift)/TW)-1,ixHi=Math.ceil((maxX-CX-rowShift)/TW)+1;
-    for(let ix=ixLo;ix<=ixHi&&drawn<900;ix++){
-      const [ox,oy]=layout==='diamond'?[ix*TW,iy*TH]:tilePos(ix,iy),x=CX+ox,y=CY+oy;
-      if(x>maxX||x+TW<minX||y>maxY||y+TH<minY)continue;
-      fctx.drawImage(fabricTile,x-eps,y-eps,TW+2*eps,TH+2*eps);drawn++;
+  for(let iy=iyLo;iy<=iyHi&&drawn<cap;iy++){
+    const rowShift=(layout==='halfBrick'&&iy%2)?TWn/2:0; // Diamond: the tile is periodic under the diamond lattice, so it can simply be laid out as a plain grid here
+    const ixLo=Math.floor((minX-CX-rowShift)/TWn)-1,ixHi=Math.ceil((maxX-CX-rowShift)/TWn)+1;
+    for(let ix=ixLo;ix<=ixHi&&drawn<cap;ix++){
+      const [ox,oy]=layout==='diamond'?[ix*TW,iy*TH]:tilePos(ix,iy),x=CX+ox/cvn,y=CY+oy/cvn;
+      if(x>maxX||x+TWn<minX||y>maxY||y+THn<minY)continue;
+      fctx.drawImage(fabricTile,x-eps,y-eps,TWn+2*eps,THn+2*eps);drawn++;
     }
   }
   fabricLast=performance.now();
