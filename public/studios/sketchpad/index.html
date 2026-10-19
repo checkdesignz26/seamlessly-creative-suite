@@ -1343,7 +1343,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v320'; // keep in step with CACHE in sw.js
+const APP_V='v321'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -5448,7 +5448,7 @@ $('duplicateLayerBtn').onclick=()=>{
   renderLayersList();rebuildAllLayers();pushHist();redraw();
   setStatus('⧉ Duplicated "'+src.name+'".');
 };
-let dragMotif=null,dragStroke=null,quickMoveOn=false;
+let dragMotif=null,dragStroke=null,quickMoveOn=false,flowerDragArm=null;
 canvas.addEventListener('pointerdown',e=>{
   if(mode!=='edit'||!isPen(e))return;
   if(captureAreaArmed)return;
@@ -5470,11 +5470,10 @@ canvas.addEventListener('pointerdown',e=>{
     const p=screenToCanvas(e.clientX,e.clientY),m=getSel();
     dragMotif={dx:p.x-m.x,dy:p.y-m.y,sx:e.clientX,sy:e.clientY,moved:false};try{canvas.setPointerCapture(e.pointerId);}catch(err){}
   }else if(selectedStrokeId&&(selectedStrokeId===prevSelectedStrokeId||quickMoveOn)&&flowerFamilyIds([selectedStrokeId])){
-    // A petal of a linked flower can't travel on its own (the others would pull it straight back), so a drag on it takes the whole
-    // flower: it becomes one selection with the usual move / resize / turn box.
-    const fam=flowerFamilyIds([selectedStrokeId]);setMulti(fam,[],null);
-    try{syncStrokeSelectionUI();updateSelectedControls();}catch(err){}redraw();
-    setStatus('🌸 Whole flower selected. Drag inside the box to move it. Select a single petal again and use Edit Path to change its shape.');
+    // A petal of a linked flower can't travel on its own (the others would pull it straight back). A plain tap keeps the petal
+    // selected (so Edit Path, colour and the rest still work on it); a DRAG on it takes the whole flower instead.
+    flowerDragArm={id:selectedStrokeId,sx:e.clientX,sy:e.clientY};
+    try{canvas.setPointerCapture(e.pointerId);}catch(err){}
   }else if(selectedStrokeId&&(selectedStrokeId===prevSelectedStrokeId||quickMoveOn)){
     const p=screenToCanvas(e.clientX,e.clientY);
     dragStroke={strokeId:selectedStrokeId,startX:p.x,startY:p.y,totalDx:0,totalDy:0,moved:false};
@@ -5483,6 +5482,13 @@ canvas.addEventListener('pointerdown',e=>{
 });
 canvas.addEventListener('pointermove',e=>{
   if(mode!=='edit')return;
+  if(flowerDragArm){
+    if(Math.hypot(e.clientX-flowerDragArm.sx,e.clientY-flowerDragArm.sy)<9)return;
+    const fam=flowerFamilyIds([flowerDragArm.id]);flowerDragArm=null;
+    if(fam){setMulti(fam,[],null);try{syncStrokeSelectionUI();updateSelectedControls();}catch(err){}redraw();
+      setStatus('🌸 Whole flower selected. Drag inside the box to move it. Tap a single petal again to edit just that petal.');}
+    return;
+  }
   if(dragMotif){if(!dragMotif.moved){if(Math.hypot(e.clientX-dragMotif.sx,e.clientY-dragMotif.sy)<9)return;dragMotif.moved=true;} // a tap (or a wobbling finger) only selects; it never nudges the motif
     const p=screenToCanvas(e.clientX,e.clientY),m=getSel();if(m){m.x=p.x-dragMotif.dx;m.y=p.y-dragMotif.dy;try{xfSnapMotif(m);}catch(err){}redraw();}return;}
   if(dragStroke){
@@ -5571,7 +5577,7 @@ canvas.addEventListener('pointermove',e=>{
     redraw();
   }
 });
-['pointerup','pointercancel'].forEach(ev=>canvas.addEventListener(ev,()=>{
+['pointerup','pointercancel'].forEach(ev=>canvas.addEventListener(ev,()=>{flowerDragArm=null;
   if(dragMotif){const mv=dragMotif.moved;dragMotif=null;if(mv)pushHist();}
   if(dragStroke){
     if(dragStroke.moved&&dragStroke.guide){
@@ -5929,9 +5935,14 @@ function grpBindHandle(el,kind){
     const corner=kind.length===2,lock=!!opts.lock;
     const hp=(kind!=='move'&&kind!=='rot')?grpHandlePos(kind,bb):null,an=hp?grpHandlePos(grpOpposite(kind),bb):null;
     const pv=grpPivot(bb),baseAngle=Math.atan2(start.y-pv.y,start.x-pv.x);
-    let base=null,moved=false,lastOp=null;
+    let base=null,moved=false,lastOp=null,failed=false;
     const onMove=ev=>{
-      if(!moved){if(Math.hypot(ev.clientX-sx0,ev.clientY-sy0)<8)return;moved=true;base=grpDragBegin();}
+      if(failed)return;
+      if(!moved){if(Math.hypot(ev.clientX-sx0,ev.clientY-sy0)<8)return;moved=true;
+        try{base=grpDragBegin();}
+        catch(err){ // e.g. the iPad ran out of canvas memory: put everything back instead of leaving strokes hidden and the app stuck
+          console.warn('[sketchpad] group drag could not start',err);failed=true;grpPrev=null;hiddenStrokeIds.clear();hiddenPlacedIds.clear();liveActive=false;
+          try{liveOvHide();lctx.clearRect(0,0,W,H);}catch(e2){}grpOv=null;try{rebuildAllLayers();}catch(e3){}redraw();setStatus('Could not move that many parts at once. Nothing was changed. Try a smaller selection.');return;}}
       const p=screenToCanvas(ev.clientX,ev.clientY);let op;
       if(kind==='move'){op={ax:bb.cx,ay:bb.cy,sx:1,sy:1,rot:0,dx:p.x-start.x,dy:p.y-start.y};grpOv={x0:bb.x0+op.dx,x1:bb.x1+op.dx,y0:bb.y0+op.dy,y1:bb.y1+op.dy,deg:0};}
       else if(kind==='rot'){
@@ -5956,10 +5967,12 @@ function grpBindHandle(el,kind){
     const finish=ev=>{
       el.removeEventListener('pointermove',onMove);el.removeEventListener('pointerup',finish);el.removeEventListener('pointercancel',finish);
       {const chip=$('rotateChip');if(chip)chip.textContent='Canvas '+Math.round(rot)+'°';}
+      if(failed)return;
       if(moved){
         // pointercancel keeps what was done so far, like the other handles
         if(lastOp&&multiSel)multiSel.pivot=opPoint(lastOp,pv.x,pv.y);
-        grpDragEnd(base,true);
+        try{grpDragEnd(base,true);}
+        catch(err){console.warn('[sketchpad] group drag finish failed',err);grpPrev=null;hiddenStrokeIds.clear();hiddenPlacedIds.clear();liveActive=false;try{liveOvHide();lctx.clearRect(0,0,W,H);rebuildAllLayers();}catch(e2){}grpOv=null;redraw();}
         setStatus(kind==='move'?'Moved. Undo returns it.':kind==='rot'?'Turned. Undo returns it.':'Resized'+(opts.lock?' with proportions kept.':'.')+' Vectors are redrawn sharp at the new size.');
         return;
       }
