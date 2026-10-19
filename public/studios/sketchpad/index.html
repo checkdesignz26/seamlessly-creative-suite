@@ -1092,6 +1092,8 @@ html.in-suite .suite-only{display:block!important}
       <div class="row" style="align-items:center;gap:6px;margin-top:6px;"><span style="font-size:12.5px;opacity:.8;flex:1;">Angle between copies &deg;</span><input id="repeatAngle" type="number" step="0.5" value="60" style="width:64px;flex:none;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);"></div>
       <div class="row" style="align-items:center;gap:6px;margin-top:6px;"><span style="font-size:12.5px;opacity:.8;flex:none;">Centre</span><select id="repeatPivot" style="flex:1;min-width:0;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);"><option value="start">Start of the stroke</option><option value="end">End of the stroke</option><option value="centre">Middle of the stroke</option><option value="canvas">Middle of the canvas</option><option value="custom">&#128205; Tap a point on the canvas&hellip;</option></select></div>
       <button id="repeatMakeBtn" class="btn mini primary" style="width:100%;margin-top:8px;">&#127800; Make copies</button>
+      <button id="repeatUnlinkBtn" class="btn mini" style="width:100%;margin-top:6px;" title="Turns the petals into independent shapes. They stay grouped.">&#9986;&#65039; Unlink repeats</button>
+      <div class="hint" style="margin:4px 0 0;">Make copies groups the flower. Ungroup keeps the petals linked; Unlink repeats keeps them grouped.</div>
     </details>
     <div style="margin-top:10px;font-size:13px;font-weight:600;">&#128257; Duplicate and repeat</div>
     <div class="row" style="margin-top:6px;align-items:center;gap:6px;"><button id="repeatDupBtn" class="btn mini" style="flex:1" title="Tap Duplicate, then move, turn or resize the copy. Repeat does the same again and again.">&#128257; Repeat last move</button><span style="flex:none;opacity:.8;">&times;</span><input id="repeatDupTimes" type="number" min="1" max="100" step="1" value="1" title="How many times" style="width:54px;flex:none;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);"></div>
@@ -1350,7 +1352,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v325'; // keep in step with CACHE in sw.js
+const APP_V='v326'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -6265,7 +6267,7 @@ function selectAt(x,y){
       setMulti(ns,np,null);
     }else{selected=null;selectedStrokeId=null;}
   }else if(hit){
-    if(gid&&groupInsideId!==gid){const m=groupMembersOf(gid);setMulti(m.strokeIds,m.placedIds,gid);groupInsideId=null;}
+    if(gid&&groupInsideId!==gid){const m=groupMembersOf(gid);setMulti(m.strokeIds,m.placedIds,gid);groupInsideId=null;window.__grpTap={t:performance.now(),x,y,g:gid};} // this tap is the first half of a double-tap: tap again quickly to pick just the part under the finger
     else{multiSel=null;if(groupInsideId&&gid!==groupInsideId)groupInsideId=null;}
   }else{multiSel=null;groupInsideId=null;}
   syncStrokeSelectionUI();updateSelectedControls();redraw();
@@ -7375,8 +7377,27 @@ $('repeatMakeBtn').onclick=()=>{
     strokes.push(copy);appendStrokeToLayer(copy);made++;
   }
   stroke.radial={cx:pv.x,cy:pv.y,step:ang,n,even,sig:radialSig(stroke)};
+  // The finished flower becomes ONE group (petals, linked copies and their fills): tap = the whole flower, double-tap = one petal. Grouping and the repeat link
+  // are separate things: ungrouping keeps the petals linked, and Unlink repeats keeps them grouped. A source that is already in a group keeps that group
+  // (its copies were cloned with it), so nobody else's groups are touched.
+  let gnote='';
+  if(!stroke.groupId){
+    const ids=flowerFamilyIds([stroke.id])||[stroke.id],gid=crypto.randomUUID();
+    ids.forEach(id=>{const o=strokes.find(x=>x.id===id);if(o)o.groupId=gid;});
+    groups[gid]={lock:selOpts.lock,scale:selOpts.scale};
+    groupInsideId=gid; // the petal you were working on stays selected so Edit Path / Fill carry on as before; tap empty canvas, then tap the flower to grab it whole
+    gnote=' The flower is now one group: tap it to move, resize or turn it whole; double-tap a petal to edit just that one.';
+  }
   pushHist();redraw();updatePaintBBoxOverlay();
-  setStatus('🌸 '+(old.length?'Replaced the earlier copies: ':'')+'made '+made+' linked copies ('+(made+1)+' in total), '+ang+'° apart. Edit the original and the copies follow. Undo takes them all back.');
+  setStatus('🌸 '+(old.length?'Replaced the earlier copies: ':'')+'made '+made+' linked copies ('+(made+1)+' in total), '+ang+'° apart. Edit the original and the copies follow.'+gnote+' Undo takes it all back.');
+};
+$('repeatUnlinkBtn').onclick=()=>{
+  const pool=multiSel?strokes.filter(x=>multiSel.strokeIds.includes(x.id)):strokes.filter(x=>x.id===selectedStrokeId);
+  const srcIds=new Set();pool.forEach(x=>{if(x.radial)srcIds.add(x.id);else if(x.radialOf)srcIds.add(x.radialOf);});
+  if(!srcIds.size){setStatus('Select a flower made with Make copies first.');return;}
+  let n=0;strokes.forEach(x=>{if(srcIds.has(x.id)&&x.radial){delete x.radial;n++;}if(srcIds.has(x.radialOf)){delete x.radialOf;delete x.radialK;n++;}});
+  pushHist();redraw();try{syncStrokeSelectionUI();}catch(e){}
+  setStatus('✂️ Unlinked '+n+' petals. They are now independent shapes (still grouped if they were).');
 };
 $('shapeFlipHBtn').onclick=()=>flipSelectedStroke('h');
 $('shapeFlipVBtn').onclick=()=>flipSelectedStroke('v');
@@ -8624,8 +8645,8 @@ function fillSync(){
       const sig=efSig(o,want);
       if(f&&f._sig===sig&&f.layerId===o.layerId)return;
       const pts=efGeom(o);if(pts.length<3)return;
-      if(!f){f={id:crypto.randomUUID(),brushId:o.brushId,layerId:o.layerId,color:col,fillColor:col,settings:null,points:pts,nodes:null,closed:true,clipStrokeId:null,shape:null,fillOf:o.id};strokes.splice(Math.max(0,strokes.indexOf(o)),0,f);}
-      else{f.points=pts;f.color=col;f.fillColor=col;f.layerId=o.layerId;}
+      if(!f){f={id:crypto.randomUUID(),brushId:o.brushId,layerId:o.layerId,color:col,fillColor:col,settings:null,points:pts,nodes:null,closed:true,clipStrokeId:null,shape:null,fillOf:o.id};if(o.groupId)f.groupId=o.groupId;strokes.splice(Math.max(0,strokes.indexOf(o)),0,f);}
+      else{f.points=pts;f.color=col;f.fillColor=col;f.layerId=o.layerId;if(o.groupId)f.groupId=o.groupId;else delete f.groupId;}
       if(want.gradient)f.fillGradient=JSON.parse(JSON.stringify(want.gradient));else delete f.fillGradient;
       if(want.gradient)f.fillGradient=JSON.parse(JSON.stringify(want.gradient));else delete f.fillGradient;f.fillOpacity=want.opacity;f._sig=sig;touched.add(o.layerId);
     });
@@ -15167,20 +15188,21 @@ function quickDuplicate(){
     const ns=[],np=[];
     // Every copy gets a new id, and the links BETWEEN copies (petal -> source petal, generated fill -> its outline) are re-pointed at
     // the new ids. The flower's centre travels with the copy too; otherwise the next sync rebuilds the petals around the OLD flower.
-    const inSel=new Set(dupIds),idMap=new Map();
+    const inSel=new Set(dupIds),idMap=new Map(),gmap=new Map();
+    const mg=g=>{if(!g)return g;if(!gmap.has(g)){const n=crypto.randomUUID();gmap.set(g,n);groups[n]=Object.assign({},groups[g]);}return gmap.get(g);}; // a duplicated group is a NEW group of the copies
     dupIds.forEach(id=>{if(strokes.find(x=>x.id===id))idMap.set(id,crypto.randomUUID());});
     dupIds.forEach(id=>{const o=strokes.find(x=>x.id===id);if(!o)return;
       if(o.fillOf&&!inSel.has(o.fillOf))return; // a generated fill is rebuilt from its outline
-      const c=JSON.parse(JSON.stringify(o));c.id=idMap.get(id);delete c.groupId;
+      const c=JSON.parse(JSON.stringify(o));c.id=idMap.get(id);if(c.groupId)c.groupId=mg(c.groupId);
       if(c.fillOf)c.fillOf=idMap.get(c.fillOf);
       if(c.radialOf){if(idMap.has(c.radialOf))c.radialOf=idMap.get(c.radialOf);else{delete c.radialOf;delete c.radialK;}}
       if(c.radial){c.radial.cx+=OFF;c.radial.cy+=OFF;}
       c.points=c.points.map(p=>({...p,x:p.x+OFF,y:p.y+OFF}));if(c.cuts)c.cuts=c.cuts.map(q=>({...q,x:q.x+OFF,y:q.y+OFF}));if(c.nodes)c.nodes=c.nodes.map(n=>({...n,x:n.x+OFF,y:n.y+OFF}));
       if(c.shape){c.shape.x0+=OFF;c.shape.y0+=OFF;c.shape.x1+=OFF;c.shape.y1+=OFF;}
       strokes.push(c);appendStrokeToLayer(c);ns.push(c.id);});
-    dupPlaced.forEach(id=>{const o=placed.find(x=>x.id===id);if(!o)return;const c={...o,id:crypto.randomUUID(),x:o.x+OFF,y:o.y+OFF};delete c.groupId;placed.push(c);np.push(c.id);});
+    dupPlaced.forEach(id=>{const o=placed.find(x=>x.id===id);if(!o)return;const c={...o,id:crypto.randomUUID(),x:o.x+OFF,y:o.y+OFF};if(c.groupId)c.groupId=mg(c.groupId);placed.push(c);np.push(c.id);});
     try{radialSync();fillSync();}catch(e){}
-    setMulti(ns,np,null);pushHist();redraw();try{syncStrokeSelectionUI();updateSelectedControls();}catch(e){}
+    {const all=new Set([...ns.map(i=>strokes.find(x=>x.id===i)),...np.map(i=>placed.find(x=>x.id===i))].map(x=>x&&x.groupId));setMulti(ns,np,(all.size===1&&[...all][0])||null);}pushHist();redraw();try{syncStrokeSelectionUI();updateSelectedControls();}catch(e){}
     setStatus('⧉ Duplicated '+(ns.length+np.length)+' items — drag the copies where you want them.');return true;
   }
   setStatus('⧉ Select something first (Edit mode), then Duplicate.');return false;
