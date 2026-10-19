@@ -471,6 +471,10 @@ html.in-suite .suite-only{display:block!important}
 #zoomPopover,#viewPopover,#svgPopover,#hiPopover,#tilePopover{left:auto;right:12px;top:12px}
 #zoomPopover:before,#viewPopover:before,#svgPopover:before,#hiPopover:before,#tilePopover:before{display:none}
 #tilePopover{position:fixed;z-index:130;top:74px;right:12px;max-height:calc(100vh - 90px);overflow:auto}
+#tilePopover #tilePrevBox{border:1px solid var(--btnBorder);border-radius:12px;padding:6px;background:var(--btnBg);min-height:60px}
+#tilePopover #tilePrevWrap{position:relative;width:fit-content;max-width:100%;margin:0 auto;line-height:0;background:conic-gradient(#d9d9e4 25%,#f6f6fb 0 50%,#d9d9e4 0 75%,#f6f6fb 0) 0 0/14px 14px}
+#tilePopover #tilePrev,#tilePopover #tilePrevG{display:block;max-width:100%;max-height:clamp(120px,30vh,230px);width:auto;height:auto}
+#tilePopover #tilePrevG{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
 #tilePopover .tx-bar{height:8px;border-radius:6px;background:var(--btnBg);border:1px solid var(--btnBorder);overflow:hidden;margin-top:8px;display:none}#tilePopover .tx-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--purple),var(--pink))}#tilePopover .tx-warn{color:#b3261e;font-weight:600}
 @media (max-width:600px){.tb-row{padding:6px 8px;gap:6px}}
 
@@ -778,7 +782,7 @@ html.in-suite .suite-only{display:block!important}
       </div>
       <div class="hint">New strokes go onto the active (highlighted) layer. Tap a row to make it active, tap its name (or ✎ Rename) to rename it. Every layer works the same way: the names are just labels.</div>
     </section>
-    <section class="section"><div class="section-title">📐 Repeat Layouts</div><div id="tileShapeNote" class="hint" style="margin:-2px 0 8px;"></div><button id="tilePhysBtn" class="tool-btn" style="width:100%;margin-bottom:8px;" title="Give the tile a real size (inches, cm, mm or pixels) and a dpi">📏 Tile size &amp; dpi…</button><div class="grid"><button class="layout-btn active" data-layout="grid">Grid</button><button class="layout-btn" data-layout="halfDrop">Half Drop</button><button class="layout-btn" data-layout="halfBrick">Half Brick</button><button class="layout-btn" data-layout="diamond">Diamond</button><button class="layout-btn" data-layout="ogee">Ogee</button><button class="layout-btn" data-layout="tossed">Tossed</button></div></section>
+    <section class="section"><div class="section-title">📐 Repeat Layouts</div><div id="tileShapeNote" class="hint" style="margin:-2px 0 8px;"></div><button id="tilePhysBtn" class="tool-btn" style="width:100%;margin-bottom:8px;" title="Give the tile a real size (inches, cm, mm or pixels) and a dpi">📏 Tile size &amp; dpi…</button><div class="grid"><button class="layout-btn active" data-layout="grid">Grid</button><button class="layout-btn" data-layout="halfDrop">Half Drop</button><button class="layout-btn" data-layout="halfBrick">Half Brick</button><button class="layout-btn" data-layout="diamond">Diamond</button><button class="layout-btn" data-layout="ogee">Ogee</button><button class="layout-btn" data-layout="tossed">Tossed</button></div><div style="margin:14px 0 4px;font-weight:850;font-size:14px;">🔲 Canvas Tiling</div><div class="hint" style="margin:0 0 6px;">Shrinks the pattern so it repeats 2×2 or 3×3 inside the tile frame. Your artwork is not changed; 1×1 puts it back exactly.</div><div class="row" id="cvtRow"><button class="tool-btn cvt-n active" data-n="1">1×1</button><button class="tool-btn cvt-n" data-n="2">2×2</button><button class="tool-btn cvt-n" data-n="3">3×3</button></div><div id="cvtNote" class="hint" style="margin:6px 0 6px;"></div><button id="cvtSaveBtn" class="tool-btn" style="width:100%;" title="Saves the tile frame exactly as the canvas shows it, same pixel size as the normal export">📸 Save canvas as shown (PNG)</button><div class="hint" style="margin:4px 0 0;">Different from <b>Tiled Export</b>, which makes a bigger picture out of the 1× pattern.</div></section>
     <section class="section"><div class="section-title">🔧 Selected Motif</div><div class="row" style="margin-bottom:8px;gap:6px;"><button type="button" class="btn mini xfOpenBtn" style="flex:1" title="Exact size, position, fit and align in pixels">📐 Transform…</button></div><div class="slider-row"><label>Size</label><input id="motifScale" type="range" min="10" max="600" value="100"><span id="motifScaleVal">100%</span></div><div class="slider-row"><label>Opacity</label><input id="motifAlpha" type="range" min="5" max="100" value="100"><span id="motifAlphaVal">100%</span></div><div class="row"><button id="rotL" class="btn mini">↺</button><button id="rotR" class="btn mini">↻</button><button id="flipH" class="btn mini">Flip H</button><button id="flipV" class="btn mini">Flip V</button><button id="deleteSel" class="btn mini danger">Delete</button></div><div class="row" style="margin-top:6px;"><button id="editMotifBtn" class="btn mini primary" style="flex:1 1 100%;display:none;">✏️ Edit Motif</button><button id="recolourBtn" class="btn mini" style="flex:1 1 100%;display:none;">🎨 Recolour Parts</button></div><div class="row" style="margin-top:6px;"><button id="blendMotifBtn" class="btn mini" style="flex:1 1 100%;" title="Blend this motif into another motif or group">🌀 Blend with another…</button></div><div class="row" style="margin-top:6px;"><button id="duplicateMotifBtn" class="btn mini" style="flex:1 1 45%;display:none;">⧉ Duplicate</button><button id="makeIndependentBtn" class="btn mini" style="flex:1 1 45%;display:none;">🔓 Make Independent</button></div><div class="row" style="margin-top:6px;"><button id="releaseMotifBtn" class="btn mini" style="flex:1 1 100%;display:none;" title="Turn this motif back into its original vector strokes as a group, which you can resize at any size without blur">⤴ Release to Vectors (group)</button></div></section>
     <section class="section" id="alignSection">
       <div class="section-title">📐 Align Motifs</div>
@@ -1323,7 +1327,7 @@ html.in-suite .suite-only{display:block!important}
 </div>
     <div id="backupsPanel" style="display:none;position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:90;background:var(--sideBg);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:0 18px 50px rgba(0,0,0,.35);font-size:13.5px;max-width:min(560px,calc(100vw - 24px));max-height:70vh;overflow:auto;"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;font-weight:800;margin-bottom:6px;">🕘 Earlier saves<button id="backupsClose" class="btn mini">Close</button></div><div id="backupsList"></div><div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line);"><button id="newBlankBtn" class="btn mini" style="width:100%;">➕ New Project</button><div class="hint">Your current project is saved first, then a fresh one opens. Find every project under 📁 Projects.</div></div></div>
     <div id="restoreBanner" style="display:none;"><span id="restoreBannerText">📂 Autosaved session found from </span><span id="restoreBannerTime"></span> <button id="restoreAcceptBtn" class="btn mini primary">Restore</button><button id="restoreDeclineBtn" class="btn mini">Start Fresh</button><button id="restoreOkBtn" class="btn mini primary" style="display:none;">OK</button></div>
-    <div id="canvasViewportOuter" class="canvas-viewport-outer"><div id="canvasWrap" class="canvas-wrap"><div id="viewPopover" class="sym-pop"><div class="section-title">🧭 Canvas / View</div><div class="row" style="margin-bottom:10px;align-items:center;gap:8px;"><div id="viewRotVal" class="pill" style="flex:1;text-align:center;">Rotation 0°</div><button id="viewRotResetBtn" class="tool-btn" style="flex:1" title="Turn the canvas back upright">Reset to 0°</button></div><button id="viewLockBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">&#128274; Lock view (no pan / zoom): Off</button><button id="viewRotLockBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">🔒 Lock rotation: On</button><button id="viewSharpBtn" class="tool-btn" style="width:100%;margin-bottom:10px;" title="How crisp the picture on screen is. Sharper uses more of the iPad memory.">🔍 Sharpness: Normal</button><button id="viewGuidesBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">📐 Guides: Off</button><button id="viewCursorBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">⭕ Brush cursor: On</button><button id="viewResetBtn" class="tool-btn" style="width:100%;margin-bottom:10px;" title="0°, centred and fitted">🔍 Reset view (0°, fit)</button><button id="symToggle" class="tool-btn" style="width:100%;margin-bottom:10px;">🦋 Symmetry Off</button><div class="row" style="margin-bottom:10px;"><button id="tilingBtn" class="tool-btn active" style="flex:1">Tiling On</button><div id="layoutPill" class="pill">📍 Grid Mode</div></div><button id="themeToggle" class="tool-btn" style="width:100%;margin-bottom:10px;">☀️ Light Mode</button><button id="clearDrawing" class="btn mini danger" style="width:100%;margin-bottom:10px;">Clear Drawing &amp; Motifs</button><button id="clearAllDrawing" class="btn mini danger" style="width:100%;margin-bottom:10px;">Clear All Layers &amp; Motifs</button><label class="row" style="gap:8px;align-items:center;margin:6px 0;font-size:13px;"><input type="checkbox" id="dblDupChk" checked> Double-tap a selected item to duplicate it (a motif opens for editing instead)</label><button id="viewCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="zoomPopover" class="sym-pop"><div class="section-title">🔍 View <span id="zoomPopPct" class="small"></span></div><div class="zoom-row"><button id="zoomOutBtn" class="tool-btn" aria-label="Zoom out">−</button><button id="zoomInBtn" class="tool-btn" aria-label="Zoom in">+</button></div><button id="zoom100Btn" class="tool-btn" style="width:100%;margin-bottom:8px;">100% — actual size</button><button id="zoomFitBtn" class="tool-btn" style="width:100%;margin-bottom:8px;">Fit to View</button><button id="zoomRotResetBtn" class="tool-btn" style="width:100%;margin-bottom:8px;">↺ Reset rotation to 0°</button><button id="zoomResetBtn" class="tool-btn primary" style="width:100%;margin-bottom:8px;">Reset View (0°, centre, fit)</button><button id="updateAppBtn" class="tool-btn" style="width:100%;margin-bottom:8px;" title="Fetch the newest version of the app">⟳ Get latest version  <span id="appVerTxt" style="opacity:.6;font-weight:600"></span></button><div class="hint" style="margin-bottom:8px;">These always work, even if the canvas has scrolled out of sight.</div><button id="zoomCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="tilePopover" class="sym-pop"><div class="section-title">🧱 Tiled export (PNG)</div><div class="hint" style="margin-bottom:8px;">Lays your seamless tile out in the repeat you are using, exactly like the canvas shows it. Your original one-tile export stays separate.</div><div class="hint" style="margin-bottom:4px;">Arrangement</div><div class="row" style="margin-bottom:8px;"><button class="tool-btn tile-n" data-n="1">1×1<br><small>seamless tile</small></button><button class="tool-btn tile-n" data-n="2">2×2<br><small>4 tiles</small></button><button class="tool-btn tile-n" data-n="3">3×3<br><small>9 tiles</small></button></div><div id="tileLayNote" class="hint" style="margin-bottom:8px;"></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>Each tile</label><select id="tileRes" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><option value="1">Tile size (×1)</option><option value="2">Sharper (×2)</option><option value="3">×3</option><option value="4">Sharpest (×4)</option></select><span></span></div><label class="hint" style="display:flex;gap:8px;align-items:center;margin:6px 0;"><input type="checkbox" id="tileTransparent"> Transparent background</label><div id="tileInfo" class="hint" style="margin:6px 0;"></div><div class="row"><button id="tileSaveBtn" class="tool-btn primary">💾 Save PNG</button><button id="tileCloseBtn" class="tool-btn">Close</button></div><div class="tx-bar" id="tileBar"><i></i></div></div>
+    <div id="canvasViewportOuter" class="canvas-viewport-outer"><div id="canvasWrap" class="canvas-wrap"><div id="viewPopover" class="sym-pop"><div class="section-title">🧭 Canvas / View</div><div class="row" style="margin-bottom:10px;align-items:center;gap:8px;"><div id="viewRotVal" class="pill" style="flex:1;text-align:center;">Rotation 0°</div><button id="viewRotResetBtn" class="tool-btn" style="flex:1" title="Turn the canvas back upright">Reset to 0°</button></div><button id="viewLockBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">&#128274; Lock view (no pan / zoom): Off</button><button id="viewRotLockBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">🔒 Lock rotation: On</button><button id="viewSharpBtn" class="tool-btn" style="width:100%;margin-bottom:10px;" title="How crisp the picture on screen is. Sharper uses more of the iPad memory.">🔍 Sharpness: Normal</button><button id="viewGuidesBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">📐 Guides: Off</button><button id="viewCursorBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">⭕ Brush cursor: On</button><button id="viewResetBtn" class="tool-btn" style="width:100%;margin-bottom:10px;" title="0°, centred and fitted">🔍 Reset view (0°, fit)</button><button id="symToggle" class="tool-btn" style="width:100%;margin-bottom:10px;">🦋 Symmetry Off</button><div class="row" style="margin-bottom:10px;"><button id="tilingBtn" class="tool-btn active" style="flex:1">Tiling On</button><div id="layoutPill" class="pill">📍 Grid Mode</div></div><button id="themeToggle" class="tool-btn" style="width:100%;margin-bottom:10px;">☀️ Light Mode</button><button id="clearDrawing" class="btn mini danger" style="width:100%;margin-bottom:10px;">Clear Drawing &amp; Motifs</button><button id="clearAllDrawing" class="btn mini danger" style="width:100%;margin-bottom:10px;">Clear All Layers &amp; Motifs</button><label class="row" style="gap:8px;align-items:center;margin:6px 0;font-size:13px;"><input type="checkbox" id="dblDupChk" checked> Double-tap a selected item to duplicate it (a motif opens for editing instead)</label><button id="viewCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="zoomPopover" class="sym-pop"><div class="section-title">🔍 View <span id="zoomPopPct" class="small"></span></div><div class="zoom-row"><button id="zoomOutBtn" class="tool-btn" aria-label="Zoom out">−</button><button id="zoomInBtn" class="tool-btn" aria-label="Zoom in">+</button></div><button id="zoom100Btn" class="tool-btn" style="width:100%;margin-bottom:8px;">100% — actual size</button><button id="zoomFitBtn" class="tool-btn" style="width:100%;margin-bottom:8px;">Fit to View</button><button id="zoomRotResetBtn" class="tool-btn" style="width:100%;margin-bottom:8px;">↺ Reset rotation to 0°</button><button id="zoomResetBtn" class="tool-btn primary" style="width:100%;margin-bottom:8px;">Reset View (0°, centre, fit)</button><button id="updateAppBtn" class="tool-btn" style="width:100%;margin-bottom:8px;" title="Fetch the newest version of the app">⟳ Get latest version  <span id="appVerTxt" style="opacity:.6;font-weight:600"></span></button><div class="hint" style="margin-bottom:8px;">These always work, even if the canvas has scrolled out of sight.</div><button id="zoomCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="tilePopover" class="sym-pop"><div class="section-title">🧱 Tiled export (PNG)</div><div class="hint" style="margin-bottom:8px;">Lays your seamless tile out in the repeat you are using, exactly like the canvas shows it. Your original one-tile export stays separate.</div><div class="hint" style="margin-bottom:4px;">Arrangement</div><div class="row" style="margin-bottom:8px;"><button class="tool-btn tile-n" data-n="1">1×1<br><small>seamless tile</small></button><button class="tool-btn tile-n" data-n="2">2×2<br><small>4 tiles</small></button><button class="tool-btn tile-n" data-n="3">3×3<br><small>9 tiles</small></button></div><div id="tilePrevBox"><div id="tilePrevWrap"><canvas id="tilePrev"></canvas><canvas id="tilePrevG"></canvas></div></div><div class="hint" id="tilePrevCap" style="margin:4px 0 2px;text-align:center;"></div><label class="hint" style="display:flex;gap:8px;align-items:center;margin:4px 0 8px;"><input type="checkbox" id="tileGuides"> Show tile boundaries (preview only)</label><div id="tileLayNote" class="hint" style="margin-bottom:8px;"></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>Each tile</label><select id="tileRes" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><option value="1">Tile size (×1)</option><option value="2">Sharper (×2)</option><option value="3">×3</option><option value="4">Sharpest (×4)</option></select><span></span></div><label class="hint" style="display:flex;gap:8px;align-items:center;margin:6px 0;"><input type="checkbox" id="tileTransparent"> Transparent background</label><div id="tileInfo" class="hint" style="margin:6px 0;"></div><div class="row"><button id="tileSaveBtn" class="tool-btn primary">💾 Save PNG</button><button id="tileCloseBtn" class="tool-btn">Close</button></div><div class="tx-bar" id="tileBar"><i></i></div></div>
     <div id="hiPopover" class="sym-pop"><div class="section-title">🖼️ High-resolution card (PNG)</div><div class="hint" style="margin-bottom:8px;">Redraws your whole card sharply at the size you pick, with brushes, pictures and the background. Just the card, no repeat edges. </div><div class="hint" style="margin-bottom:4px;">A normal greeting card is <b>5 × 7 in</b> (a smaller one is 4.25 × 5.5 in). Pick the long side of your card in inches:</div><div class="row" style="margin-bottom:8px;"><button class="tool-btn hi-preset" data-in="5.5">5.5 in</button><button class="tool-btn hi-preset" data-in="7">7 in</button><button class="tool-btn hi-preset" data-in="10">10 in</button></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>Long side</label><input id="hiInInput" type="number" min="1" max="30" step="0.1" value="10" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><span>in</span></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>Quality</label><select id="hiDpi" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><option value="300">300 dpi (print)</option><option value="600">600 dpi (extra sharp)</option><option value="200">200 dpi (smaller file)</option><option value="150">150 dpi (screen / email)</option></select><span></span></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>or pixels</label><input id="hiLongInput" type="number" min="200" max="8000" step="1" value="3000" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><span>px</span></div><div id="hiInfo" class="hint" style="margin-bottom:8px;"></div><label class="hint" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;"><input id="hiTransparent" type="checkbox"> Transparent background (instead of white)</label><button id="hiSaveBtn" class="tool-btn primary" style="width:100%;margin-bottom:8px;min-height:44px;">⬇️ Save PNG</button><button id="hiCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="svgPopover" class="sym-pop"><div class="section-title">🖋️ Export SVG</div><div class="hint" style="margin-bottom:8px;">Vector strokes and fills only. Pictures (placed motifs, background image) are not vector, so they are left out.</div><div class="row" style="margin-bottom:8px;"><button class="tool-btn svg-preset" data-size="780">780</button><button class="tool-btn svg-preset" data-size="1800">1800</button><button class="tool-btn svg-preset" data-size="3600">3600</button></div><div class="slider-row" style="grid-template-columns:64px 1fr 30px;"><label>Size</label><input id="svgSizeInput" type="number" min="64" max="20000" step="1" value="3600" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><span>px</span></div><div class="hint" style="margin-bottom:8px;">Width and height of the square file. 3600 × 3600 is the usual pattern size. The artwork scales exactly.</div><button id="svgSaveBtn" class="tool-btn primary" style="width:100%;margin-bottom:8px;min-height:44px;">⬇️ Save SVG</button><button id="svgCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="recolourPopover" class="sym-pop"><div class="section-title">🎨 Recolour Parts</div><div class="hint" style="margin-bottom:8px;">Motif: <b id="recolourName"></b>. Each row is one colour used in the motif. Pick a new colour for any of them.</div><div id="recolourRows"></div><button id="recolourApplyBtn" class="tool-btn primary" style="width:100%;margin:8px 0;min-height:44px;">Apply to this motif</button><button id="recolourNewBtn" class="tool-btn" style="width:100%;margin-bottom:8px;min-height:44px;">Save as new colourway</button><div class="row"><button id="recolourResetBtn" class="btn mini" style="flex:1">Reset</button><button id="recolourCloseBtn" class="btn mini" style="flex:1">✕ Close</button></div></div><div id="symPopover" class="sym-pop"><div class="section-title">🦋 Symmetry</div><div class="grid"><button class="sym-btn btn active" data-sym="off">Off</button><button class="sym-btn btn" data-sym="vertical">Vertical</button><button class="sym-btn btn" data-sym="horizontal">Horizontal</button><button class="sym-btn btn" data-sym="quad">Quad</button><button class="sym-btn btn" data-sym="diamond">Diamond</button></div><div class="slider-row"><label>Axis X</label><input id="symX" type="range" min="0" max="1800" value="900"><span id="symXVal">50%</span></div><div class="slider-row"><label>Axis Y</label><input id="symY" type="range" min="0" max="1800" value="900"><span id="symYVal">50%</span></div><div class="slider-row"><label>Angle</label><input id="symAng" type="range" min="-90" max="90" step="1" value="0"><span id="symAngVal">0°</span></div><div class="row"><button id="symAngReset" class="btn mini">0° Straight</button><button id="symAng45" class="btn mini">45°</button></div><div class="row" style="margin-top:6px;"><button id="symLenWhole" class="btn mini active" style="flex:1">Line: whole canvas</button><button id="symLenShort" class="btn mini" style="flex:1">Line: short</button></div><div class="slider-row" id="symLenRow" style="display:none"><label>Length</label><input id="symLen" type="range" min="100" max="1800" step="10" value="500"><span id="symLenVal">500</span></div><div class="row" style="margin-top:6px;"><button id="symCentre" class="btn mini">Centre Axis</button><button id="symClose" class="btn mini">Done</button></div><div class="hint">Move the mirror point to make flowers, leaves and playful asymmetric symmetry.</div></div><canvas id="fabricCanvas" aria-hidden="true"></canvas><canvas id="canvas" width="1800" height="1800"></canvas><div id="tileOutline" aria-hidden="true"><svg id="tileDiamond" viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;left:0;top:0;width:100%;height:100%;display:none;overflow:visible"><polygon points="50,0 100,50 50,100 0,50" fill="none" stroke="rgba(214,70,150,.9)" stroke-width="2.5" vector-effect="non-scaling-stroke"/></svg></div><div id="traceBox" aria-hidden="true"></div><div id="replayGuide" aria-hidden="true"><div class="rgBox"><span></span></div></div><div id="selectionBox" class="selection-box"><button id="motifEditChip" class="btn mini primary" style="display:none">✏️ Edit Motif</button><div id="resizeHandle" class="handle"></div><div id="rotateHandle" class="rotHandle"></div></div><div id="pivotMarker" title="Drag to move the centre the copies turn around" style="display:none;position:absolute;width:40px;height:40px;margin:-20px 0 0 -20px;border:3px solid var(--pink);border-radius:50%;background:radial-gradient(circle,var(--pink) 0 5px,rgba(255,255,255,.55) 6px);box-shadow:0 0 0 2px rgba(255,255,255,.9);pointer-events:auto;touch-action:none;cursor:grab;z-index:5;"><div style="position:absolute;left:50%;top:-6px;bottom:-6px;width:2px;margin-left:-1px;background:var(--pink)"></div><div style="position:absolute;top:50%;left:-6px;right:-6px;height:2px;margin-top:-1px;background:var(--pink)"></div></div><div id="paintBBoxOverlay" class="selection-box" style="display:none;"><div id="paintResizeHandle" class="handle" title="Drag to resize. Tap to make 25% bigger."></div><div id="paintRotateHandle" class="rotHandle" title="Drag to rotate. Tap to turn 45 degrees."></div><input id="strokeColourHandle" class="sel-colour strokeColourHandle" type="color" value="#000000" title="Tap to change colour"></div><div id="groupBox" class="selection-box" style="display:none;"><div class="gh" data-h="nw" style="left:0%;top:0%;cursor:nwse-resize"></div><div class="gh" data-h="n" style="left:50%;top:0%;cursor:ns-resize"></div><div class="gh" data-h="ne" style="left:100%;top:0%;cursor:nesw-resize"></div><div class="gh" data-h="e" style="left:100%;top:50%;cursor:ew-resize"></div><div class="gh" data-h="se" style="left:100%;top:100%;cursor:nwse-resize"></div><div class="gh" data-h="s" style="left:50%;top:100%;cursor:ns-resize"></div><div class="gh" data-h="sw" style="left:0%;top:100%;cursor:nesw-resize"></div><div class="gh" data-h="w" style="left:0%;top:50%;cursor:ew-resize"></div><div id="grpRotHandle" class="rotHandle" title="Drag to turn. Tap to turn 45 degrees."></div></div><div id="symAxis" class="sym-axis locked"></div><div id="rotateChip" class="rotate-chip">Canvas 0°</div><div id="pathNodeOverlay"></div></div></div>
     <div id="status" class="status">✨ Apple Pencil draws | one finger protected | two fingers pan/pinch/rotate | two-finger tap Undo | three-finger tap Redo | Capture Motif saves drawing ✨</div>
   </main>
@@ -1346,7 +1350,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v322'; // keep in step with CACHE in sw.js
+const APP_V='v323'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -1441,7 +1445,7 @@ let liveActive=false;
 let detailReady=false,detailShown=false,detailTimer=0;
 const detailCanvas=document.createElement('canvas'),detailScratch=document.createElement('canvas');
 function hideDetail(){if(detailShown){detailCanvas.style.display='none';detailShown=false;compositeDirty=true;try{redraw();}catch(e){}}try{canvas.style.opacity='';detailCanvas.style.transform='none';}catch(e){}if(!detailNeeded()&&detailCanvas.width>1){detailCanvas.width=1;detailCanvas.height=1;try{detailScratch.width=1;detailScratch.height=1;}catch(e){}}}
-function detailNeeded(){return zoom*baseScale*(window.devicePixelRatio||1)>2.15;}
+function detailNeeded(){return ctN()<2&&zoom*baseScale*(window.devicePixelRatio||1)>2.15;}
 // While erasing, the crisp detail layer is NOT thrown away on every move (that made the whole screen go blurry). Instead the
 // eraser circle is punched out of it live, and it is re-rendered properly once the finger/pencil lifts.
 function detailPunch(x,y,r){
@@ -1568,10 +1572,11 @@ function liveDraw(draw,clear,bb){
 const liveTmp=document.createElement('canvas');liveTmp.width=1;liveTmp.height=1; // sheet for live tile repeats (see liveDraw0)
 function liveDraw0(draw,clear,bb){
   if(!liveOvOn){if(clear)lctx.clearRect(0,0,W,H);draw(lctx);return;}
-  const o=liveOv.getContext('2d'),M=liveOvVm.M,pw=liveOvVm.pw,ph=liveOvVm.ph;
+  const o=liveOv.getContext('2d'),pw=liveOvVm.pw,ph=liveOvVm.ph;let M=liveOvVm.M;const cvn=ctN();
+  if(cvn>1){const q=1/cvn,V=liveOvVm.M,tx=CX*(1-q),ty=CY*(1-q);M=[V[0]*q,V[1]*q,V[2]*q,V[3]*q,V[0]*tx+V[2]*ty+V[4],V[1]*tx+V[3]*ty+V[5]];} // Canvas Tiling: the live stroke is drawn in the small-copy scale
   if(clear){o.setTransform(1,0,0,1,0,0);o.clearRect(0,0,pw,ph);}
   const saved=ctx;
-  const offs=(showTiling&&liveTilePreview)?offsets():[[0,0]];
+  const offs=cvn>1?cvtLiveOffsets(cvn):((showTiling&&liveTilePreview)?offsets():[[0,0]]);
   // Live repeats: paint the stroke ONCE into a small sheet and copy that sheet to every repeat position. (Drawing the whole
   // stroke again for each of the ~9-13 repeats made heavy brushes several times slower, and brushes that keep live state,
   // like watercolour, only came out right on the first copy.) Copies are placed on whole screen pixels.
@@ -2765,8 +2770,106 @@ function applyTransform(){
   }
   canvas.style.transform=`translate(calc(-50% + ${panX}px), calc(-50% + ${panY}px)) scale(${zoom*baseScale}) rotate(${rot}deg)`;try{const dr=drawTiles._drawn,nv=visibleCanvasRect(true);if((dr&&!nv)||(dr&&nv&&(nv.x0<dr.x0||nv.y0<dr.y0||nv.x1>dr.x1||nv.y1>dr.y1)))redraw();}catch(e){}detailViewChanged();overlayViewChanged();try{viewMenuSync();}catch(e){}try{penOverlayRender();}catch(e){}$("zoomPill").textContent=Math.round(zoom*100)+'% ▾';$('zoomPopPct').textContent='— '+Math.round(zoom*100)+'%';{const to=$('tileOutline');to.style.setProperty('--vs',zoom*baseScale);to.style.transform=`translate(calc(-50% + ${panX}px), calc(-50% + ${panY}px)) scale(${zoom*baseScale}) rotate(${rot}deg)`;}{const tb=$('traceBox');if(tb){tb.style.setProperty('--vs',zoom*baseScale);tb.style.transform=`translate(calc(-50% + ${panX}px), calc(-50% + ${panY}px)) scale(${zoom*baseScale}) rotate(${rot}deg)`;traceBoxSig='';updateTraceBox();}}{const rg=$('replayGuide');if(rg){rg.style.setProperty('--vs',zoom*baseScale);rg.style.transform=`translate(calc(-50% + ${panX}px), calc(-50% + ${panY}px)) scale(${zoom*baseScale}) rotate(${rot}deg)`;}}$('rotateChip').textContent='Canvas '+Math.round(rot)+'°';updateSelectionBox();updatePaintBBoxOverlay();updateSymAxis();if(pathEditNodes)renderPathNodeOverlay();paintFabric();
 }
-function screenToCanvas(x,y){const r=canvas.getBoundingClientRect();const cx=x-(r.left+r.width/2),cy=y-(r.top+r.height/2);const a=-rot*Math.PI/180;const s=zoom*baseScale;const ux=(cx*Math.cos(a)-cy*Math.sin(a))/s+W/2;const uy=(cx*Math.sin(a)+cy*Math.cos(a))/s+H/2;return {x:ux,y:uy};}
-function canvasToScreen(x,y){const rect=canvas.getBoundingClientRect(),wrapRect=wrap.getBoundingClientRect();const cx=rect.left+rect.width/2-wrapRect.left,cy=rect.top+rect.height/2-wrapRect.top;const a=rot*Math.PI/180;const s=zoom*baseScale;const px=(x-W/2)*s,py=(y-H/2)*s;return {x:cx+px*Math.cos(a)-py*Math.sin(a),y:cy+px*Math.sin(a)+py*Math.cos(a)};}
+
+// ---- Canvas Tiling (pattern scale): 1x1 / 2x2 / 3x3 -------------------------------------------------------------------------------
+// A DISPLAY-ONLY scale. The artwork, the layers and the repeat engine stay exactly as they are (strokes keep their own coordinates). On screen the
+// finished picture of one seamless tile is drawn smaller (1/N, about the tile's corner) and repeated across the canvas on the active layout's lattice,
+// so N x N copies fit inside the tile frame. Pointer input is folded back into the artwork's own coordinates (cvtFold), so drawing in any small copy
+// edits the one source pattern and every copy updates. Switching back to 1x1 shows the original again; nothing was ever resized or flattened.
+var canvasTiling=1,cvtAnchor=null,cvtSrc=null;
+function cvtLayoutOK(){return layout==='grid'||layout==='halfDrop'||layout==='halfBrick';}
+function ctN(){return (showTiling&&canvasTiling>1&&cvtLayoutOK())?canvasTiling:1;}
+// origin of the small copy that contains canvas point (x,y)
+function cvtCellAt(x,y,n){
+  const tw=TW/n,th=TH/n;
+  if(layout==='halfBrick'){const iy=Math.floor((y-CY)/th),sx=(iy&1)?tw/2:0,ix=Math.floor((x-CX-sx)/tw);return [CX+ix*tw+sx,CY+iy*th];}
+  if(layout==='halfDrop'){const ix=Math.floor((x-CX)/tw),sy=(ix&1)?th/2:0,iy=Math.floor((y-CY-sy)/th);return [CX+ix*tw,CY+iy*th+sy];}
+  return [CX+Math.floor((x-CX)/tw)*tw,CY+Math.floor((y-CY)/th)*th];
+}
+function cvtFold(p){const n=ctN();if(n<2)return p;const T=cvtAnchor||cvtCellAt(p.x,p.y,n);return {x:CX+(p.x-T[0])*n,y:CY+(p.y-T[1])*n};}
+function cvtUnfold(x,y){const n=ctN();return n<2?{x,y}:{x:CX+(x-CX)/n,y:CY+(y-CY)/n};}
+// all small-copy origins (in the artwork's own units, i.e. tilePos) whose copy touches the canvas: used by the live stroke overlay
+function cvtLiveOffsets(n){
+  const out=[],tw=TW/n,th=TH/n;
+  for(let ix=-14;ix<=14;ix++)for(let iy=-14;iy<=14;iy++){
+    const p=tilePos(ix,iy),x=CX+p[0]/n,y=CY+p[1]/n;
+    if(x>=W||x+tw<=0||y>=H||y+th<=0)continue;
+    out.push(p);
+  }
+  return out;
+}
+function cvtRender(n){
+  const real=ctx;
+  if(!cvtSrc||cvtSrc.width!==W||cvtSrc.height!==H){cvtSrc=document.createElement('canvas');cvtSrc.width=W;cvtSrc.height=H;}
+  const sg=cvtSrc.getContext('2d');
+  try{ctx=sg;sg.setTransform(1,0,0,1,0,0);sg.clearRect(0,0,W,H);sg.fillStyle='#fff';sg.fillRect(0,0,W,H);drawBackground();drawTraces();drawTiles();drawPlaced();}finally{ctx=real;}
+  real.setTransform(1,0,0,1,0,0);real.clearRect(0,0,W,H);real.fillStyle='#fff';real.fillRect(0,0,W,H);
+  const tw=TW/n,th=TH/n;
+  for(let ix=-14;ix<=14;ix++)for(let iy=-14;iy<=14;iy++){
+    const p=tilePos(ix,iy),x=CX+p[0]/n,y=CY+p[1]/n;
+    if(x>=W||x+tw<=0||y>=H||y+th<=0)continue;
+    const dx=Math.floor(x),dy=Math.floor(y);
+    real.drawImage(cvtSrc,CX,CY,TW,TH,dx,dy,Math.ceil(x+tw)-dx,Math.ceil(y+th)-dy);
+  }
+  // selection outlines belong to the artwork, so they are drawn on the first small copy
+  real.save();real.translate(CX,CY);real.scale(1/n,1/n);real.translate(-CX,-CY);
+  drawMultiSelectHighlights();drawShapeToolsHighlights();drawStrokeSelection();
+  real.restore();
+}
+// the tile frame exactly as the canvas shows it, at the normal export size (each small copy is re-rendered from the vectors, not shrunk from a picture)
+async function cvtBuildPng(transparent){
+  const n=ctN(),k=1/n;
+  const tile=await buildTileHi(k,transparent);
+  const out=document.createElement('canvas');out.width=TW;out.height=TH;const g=out.getContext('2d');
+  if(!transparent){g.fillStyle='#fff';g.fillRect(0,0,TW,TH);}
+  const cw=TW/n,ch=TH/n,lay=layout;
+  for(let ix=-1;ix<=n;ix++)for(let iy=-1;iy<=n+1;iy++){
+    let x=ix*cw,y=iy*ch;
+    if(lay==='halfDrop'&&(ix&1))y+=ch/2;
+    if(lay==='halfBrick'&&(iy&1))x+=cw/2;
+    for(const yy of [y,y-ch]){ if(yy>=TH||yy+ch<=0||x>=TW||x+cw<=0)continue;
+      const dx=Math.round(x),dy=Math.round(yy);g.drawImage(tile,0,0,tile.width,tile.height,dx,dy,Math.round(x+cw)-dx,Math.round(yy+ch)-dy);}
+  }
+  tile.width=tile.height=1;
+  return out;
+}
+function cvtSync(){
+  document.querySelectorAll('#cvtRow .cvt-n').forEach(b=>b.classList.toggle('active',+b.dataset.n===canvasTiling));
+  const note=$('cvtNote');if(!note)return;
+  let t='';
+  if(canvasTiling>1&&!showTiling)t='Turn Tiling On to see this.';
+  else if(canvasTiling>1&&!cvtLayoutOK())t='Canvas Tiling works with Grid, Half Drop and Half Brick. It is paused for this layout.';
+  else if(canvasTiling>1&&layout!=='grid'&&canvasTiling%2)t='Showing '+canvasTiling+'×'+canvasTiling+' copies. With an odd count the frame itself is not seamless in this layout.';
+  else if(canvasTiling>1)t='Showing '+canvasTiling+'×'+canvasTiling+' copies inside the tile frame. The frame stays the same size.';
+  note.textContent=t;
+}
+function setCanvasTiling(n,quiet){
+  n=(n===2||n===3)?n:1;canvasTiling=n;cvtSync();
+  compositeDirty=true;try{invalidateDetail();}catch(e){}redraw();
+  if(!quiet)setStatus(n===1?'🔲 Canvas Tiling 1×1: your original pattern scale.':'🔲 Canvas Tiling '+n+'×'+n+': drawing in any copy edits the one pattern. Switch to 1×1 to go back.');
+}
+document.querySelectorAll('#cvtRow .cvt-n').forEach(b=>b.onclick=()=>{setCanvasTiling(+b.dataset.n);});
+// one drawing gesture keeps ONE small copy as its reference, so a stroke that runs across several copies stays continuous
+window.addEventListener('pointerdown',e=>{if(e.isPrimary&&ctN()>1){const p=screenToCanvasRaw(e.clientX,e.clientY);cvtAnchor=cvtCellAt(p.x,p.y,ctN());}},true);
+['pointerup','pointercancel'].forEach(t=>window.addEventListener(t,e=>{if(e.isPrimary)cvtAnchor=null;},true));
+window.addEventListener('blur',()=>{cvtAnchor=null;});
+$('cvtSaveBtn').onclick=async()=>{
+  const b=$('cvtSaveBtn');if(b._busy)return;b._busy=true;
+  try{
+    setStatus('📸 Saving the canvas as shown…');
+    const out=ctN()>1?await cvtBuildPng(false):null;
+    if(!out){$('exportBtn').click();return;}
+    const blob=await new Promise(r=>out.toBlob(r,'image/png'));
+    saveFileBlob(blob,exportBase()+'-canvas-'+canvasTiling+'x'+canvasTiling+'-'+TW+'x'+TH+'.png');
+    setStatus('📸 Saved the canvas as shown ('+canvasTiling+'×'+canvasTiling+', '+TW+' × '+TH+' px). Your project was not changed.');
+  }catch(err){console.error(err);setStatus('⚠️ Could not save: '+(err&&err.message||err));}
+  b._busy=false;
+};
+window.__sketchpadCanvasTiling={set:setCanvasTiling,get:()=>canvasTiling,n:ctN,fold:cvtFold,png:cvtBuildPng};
+
+function screenToCanvas(x,y){const p=screenToCanvasRaw(x,y);return ctN()>1?cvtFold(p):p;}
+function screenToCanvasRaw(x,y){const r=canvas.getBoundingClientRect();const cx=x-(r.left+r.width/2),cy=y-(r.top+r.height/2);const a=-rot*Math.PI/180;const s=zoom*baseScale;const ux=(cx*Math.cos(a)-cy*Math.sin(a))/s+W/2;const uy=(cx*Math.sin(a)+cy*Math.cos(a))/s+H/2;return {x:ux,y:uy};}
+function canvasToScreen(x,y){const u=cvtUnfold(x,y);x=u.x;y=u.y;const rect=canvas.getBoundingClientRect(),wrapRect=wrap.getBoundingClientRect();const cx=rect.left+rect.width/2-wrapRect.left,cy=rect.top+rect.height/2-wrapRect.top;const a=rot*Math.PI/180;const s=zoom*baseScale;const px=(x-W/2)*s,py=(y-H/2)*s;return {x:cx+px*Math.cos(a)-py*Math.sin(a),y:cy+px*Math.sin(a)+py*Math.cos(a)};}
 
 // ---- View maths (zoom / pan / rotate) --------------------------------------------------------
 // The canvas is positioned at the workspace centre, then translated by (panX,panY), scaled by
@@ -2884,7 +2987,7 @@ function maskOutsideTile(c){
   c.beginPath();c.rect(0,0,c.canvas.width,c.canvas.height);
   const k=c.canvas.width/W;c.rect(CX*k,CY*k,TW*k,TH*k);c.fill('evenodd');c.restore();
 }
-function redraw(){if(redraw._q)return;redraw._q=requestAnimationFrame(()=>{redraw._q=0;if(pathEditStrokeId&&pathEditNodes&&!liveActive&&!drawing)renderPathLivePreview(); /* Edit Path hides the real stroke, so its live preview must never be lost to a stray clear */if(compositeDirty&&!(detailShown&&detailNeeded())){updateDisplayComposite();compositeDirty=false;} /* zoomed in, the normal canvas is hidden behind the sharp picture, so rebuilding it is wasted work and memory */ctx.clearRect(0,0,W,H);ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);drawBackground();drawTraces();if(showTiling)drawTiles();else{ctx.drawImage(displayCanvas,0,0,W,H);if(liveActive)ctx.drawImage(liveLayer,0,0);}drawPlaced();if(!showTiling)maskOutsideTile(ctx);drawMultiSelectHighlights();drawShapeToolsHighlights();drawStrokeSelection();drawTileBoundary();if(showGuides)drawGuides();updateSelectionBox();updatePaintBBoxOverlay();updateGroupBox();fabricContentChanged();invalidateDetail();scheduleMotifHi();try{updateTraceBox();}catch(e){}});}
+function redraw(){if(redraw._q)return;redraw._q=requestAnimationFrame(()=>{redraw._q=0;if(pathEditStrokeId&&pathEditNodes&&!liveActive&&!drawing)renderPathLivePreview(); /* Edit Path hides the real stroke, so its live preview must never be lost to a stray clear */if(compositeDirty&&!(detailShown&&detailNeeded())){updateDisplayComposite();compositeDirty=false;} /* zoomed in, the normal canvas is hidden behind the sharp picture, so rebuilding it is wasted work and memory */const _cvn=ctN();{const k=canvasTiling+'|'+layout+'|'+showTiling;if(cvtSync._k!==k){cvtSync._k=k;cvtSync();}}if(_cvn>1)cvtRender(_cvn);else{ctx.clearRect(0,0,W,H);ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);drawBackground();drawTraces();if(showTiling)drawTiles();else{ctx.drawImage(displayCanvas,0,0,W,H);if(liveActive)ctx.drawImage(liveLayer,0,0);}drawPlaced();if(!showTiling)maskOutsideTile(ctx);drawMultiSelectHighlights();drawShapeToolsHighlights();drawStrokeSelection();}drawTileBoundary();if(showGuides)drawGuides();updateSelectionBox();updatePaintBBoxOverlay();updateGroupBox();fabricContentChanged();invalidateDetail();scheduleMotifHi();try{updateTraceBox();}catch(e){}});}
 // A pattern (e.g. exported from Magic Builder) loaded as the base of the design - unlike Trace
 // Reference (a non-exported, freely-scaled/positioned tracing guide), this is sized to exactly
 // fill the guide-square tile, tiles using the same repeat offsets as the hand-drawn layer/motifs
@@ -11467,6 +11570,16 @@ function tlChunk(type,data){
   dv.setUint32(0,data.length);out[4]=type.charCodeAt(0);out[5]=type.charCodeAt(1);out[6]=type.charCodeAt(2);out[7]=type.charCodeAt(3);out.set(data,8);
   dv.setUint32(8+data.length,tlCrc(out.subarray(4,8+data.length)));return out;
 }
+// Paints the tiles of plan P that fall in rows [y0,y0+rows) onto g. The export strips AND the live preview both call this, so what the
+// preview shows is placed by exactly the same code as the saved PNG (including the wrap-round of dropped / shifted tiles).
+function tlDrawPlan(g,tile,P,y0,rows){
+  const w=tile.width,h=tile.height,W=P.W,H=P.H;
+  P.pl.forEach(([px,py])=>{for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++){
+    const x=px+dx*W,y=py+dy*H-y0;
+    if(x>=W||x+w<=0||y>=rows||y+h<=0)continue;
+    g.drawImage(tile,x,y);
+  }});
+}
 // Draws the tile layout strip by strip. emit(rgbaBytes, rows) is called in order. Returns {W,H}.
 async function tlRender(n,k,transparent,emit,progress){
   const tile=await buildTileHi(k,transparent),w=tile.width,h=tile.height,P=tlPlan(n,w,h),W=P.W,H=P.H;
@@ -11477,11 +11590,7 @@ async function tlRender(n,k,transparent,emit,progress){
       if(tlCancel)throw new Error('cancelled');
       const rows=Math.min(sh,H-y0);
       g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,W,sh);
-      P.pl.forEach(([px,py])=>{for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++){
-        const x=px+dx*W,y=py+dy*H-y0;
-        if(x>=W||x+w<=0||y>=rows||y+h<=0)continue;
-        g.drawImage(tile,x,y);
-      }});
+      tlDrawPlan(g,tile,P,y0,rows);
       const img=g.getImageData(0,0,W,rows);
       await emit(img.data,rows,y0);
       if(progress)progress((y0+rows)/H);
@@ -11519,6 +11628,43 @@ async function tlBuildPng(n,k,transparent,progress){
   return {blob:new Blob(parts,{type:'image/png'}),W,H,plan:res.plan};
 }
 function tlLayName(){return {grid:'Grid',halfDrop:'Half Drop',halfBrick:'Half Brick'}[tlLayoutKey()];}
+
+// ---- Live preview inside the panel: a small copy of the SAME arrangement. The seamless tile is drawn small with the same engine (buildTileHi),
+// placed by tlPlan + tlDrawPlan (the export's own code), and the optional boundary lines go on a separate overlay canvas that the export never touches.
+let tlPrevTok=0,tlPrevBusy=false,tlPrevDirty=false,tlPrevCache=null,tlPrevVer='';
+function tlPrevVersion(){try{return strokes.length+'|'+placed.length+'|'+hIndex+'|'+layers.length+'|'+TW+'x'+TH+'|'+(bgShown?1:0);}catch(e){return '';}}
+async function tileExportPreview(){
+  const pop=$('tilePopover');if(!pop||!pop.classList.contains('open'))return;
+  if(tlPrevBusy){tlPrevDirty=true;return;}
+  tlPrevBusy=true;tlPrevDirty=false;
+  try{
+    const n=tlNget(),transp=$('tileTransparent').checked,lay=tlLayoutKey();
+    const Lp=Math.max(40,Math.floor(300/n)),kp=Lp/Math.max(TW,TH);
+    const key=[n,transp?1:0,lay,Lp,tlPrevVersion()].join('|');
+    let tile;
+    if(tlPrevCache&&tlPrevCache.key===key)tile=tlPrevCache.tile;
+    else{tile=await buildTileHi(kp,transp);if(tlPrevCache&&tlPrevCache.tile&&tlPrevCache.tile!==tile)tlPrevCache.tile.width=tlPrevCache.tile.height=1;tlPrevCache={key,tile};}
+    if(!pop.classList.contains('open'))return;
+    const P=tlPlan(n,tile.width,tile.height),c=$('tilePrev'),g2=$('tilePrevG');
+    if(c.width!==P.W||c.height!==P.H){c.width=P.W;c.height=P.H;}
+    const g=c.getContext('2d');g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,P.W,P.H);
+    tlDrawPlan(g,tile,P,0,P.H);
+    g2.width=P.W;g2.height=P.H;const gg=g2.getContext('2d');gg.clearRect(0,0,P.W,P.H);
+    if($('tileGuides').checked){
+      gg.lineWidth=1;gg.setLineDash([4,3]);
+      const draw=(col,off)=>{gg.strokeStyle=col;gg.lineDashOffset=off;
+        P.pl.forEach(([px,py])=>{for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++){
+          const x=px+dx*P.W,y=py+dy*P.H;if(x>=P.W||x+tile.width<=0||y>=P.H||y+tile.height<=0)continue;
+          gg.strokeRect(Math.round(x)+.5,Math.round(y)+.5,tile.width-1,tile.height-1);}});};
+      draw('rgba(255,255,255,.95)',0);draw('rgba(220,30,110,.95)',3.5);
+    }
+    const z=tlSizes(n,+$('tileRes').value||1);
+    $('tilePrevCap').textContent='Preview (scaled down) · saves as '+z.W+' × '+z.H+' px'+(transp?' · transparent':'');
+  }catch(err){console.warn('[sketchpad] tile preview',err);try{$('tilePrevCap').textContent='Preview not available for this project.';}catch(e){}}
+  tlPrevBusy=false;
+  if(tlPrevDirty)tileExportPreview();
+}
+function tlNget(){return tlN;}
 function tileExportSyncUI(){
   const k=+$('tileRes').value||1,lim=tlLimit(tlN,k),z=lim.z,P=tlPlan(tlN,z.w,z.h);
   document.querySelectorAll('#tilePopover .tile-n').forEach(b=>b.classList.toggle('active',+b.dataset.n===tlN));
@@ -11529,11 +11675,13 @@ function tileExportSyncUI(){
   else if(!P.seamless)note+='This arrangement shows the layout, but it is not a seamless repeat by itself. Use 1×1 or 2×2 for a repeating file.';
   else if(tlLayoutKey()!=='grid')note+='This size repeats seamlessly: the dropped tiles wrap round inside the picture.';
   else note+='Repeats seamlessly.';
+  if(ctN()>1)note+=' Uses your original 1× pattern, not the smaller Canvas Tiling copies, so nothing is tiled twice.';
   $('tileLayNote').textContent=note;
   const info=$('tileInfo');
   info.className='hint'+(lim.hard?' tx-warn':'');
   info.textContent=lim.hard?('⚠️ '+lim.hard):(z.W+' × '+z.H+' px · '+(Math.round(z.px/1e5)/10)+' megapixels'+(lim.warn?'. ⚠️ '+lim.warn:'.'));
   $('tileSaveBtn').disabled=!!lim.hard&&!tlBusy;
+  tileExportPreview();
 }
 function tileExportOpen(){
   try{tbClosePopovers();}catch(e){}
@@ -11542,7 +11690,11 @@ function tileExportOpen(){
 }
 document.querySelectorAll('#tilePopover .tile-n').forEach(b=>b.onclick=()=>{tlN=+b.dataset.n;tlArmed=false;tileExportSyncUI();});
 $('tileRes').onchange=()=>{tlArmed=false;tileExportSyncUI();};
-$('tileCloseBtn').onclick=()=>{$('tilePopover').classList.remove('open');};
+$('tileTransparent').onchange=()=>{tileExportPreview();};
+$('tileGuides').onchange=()=>{tileExportPreview();};
+// keeps the preview honest if the repeat layout (or the artwork) changes while the panel is open
+setInterval(()=>{const p=$('tilePopover');if(!p||!p.classList.contains('open'))return;const key=tlLayoutKey()+'|'+tlPrevVersion();if(key!==setInterval._tl){setInterval._tl=key;tileExportSyncUI();}},700);
+$('tileCloseBtn').onclick=()=>{$('tilePopover').classList.remove('open');if(tlPrevCache&&tlPrevCache.tile){tlPrevCache.tile.width=tlPrevCache.tile.height=1;}tlPrevCache=null;};
 $('tileSaveBtn').onclick=async()=>{
   const btn=$('tileSaveBtn'),bar=$('tileBar'),fill=bar.firstElementChild;
   if(tlBusy){tlCancel=true;setStatus('🧱 Cancelling…');return;}
@@ -11968,7 +12120,7 @@ let traceSource=null; // the picture last used in Trace Image to Vector, kept wi
 let coll=null;      // pattern collection: {list:[{id,name,thumb,state,tl}],activeId} — null until the project has more than one pattern
 function buildDocObject(){
   const d={
-    tileW:TW,tileH:TH,tilePhys:tilePhys,repeatPreview:showTiling?'tiled':'single',
+    tileW:TW,tileH:TH,tilePhys:tilePhys,repeatPreview:showTiling?'tiled':'single',canvasTiling:canvasTiling,
     strokesJSON:strokesToJSON(),
     layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip}))),
     activeLayerId,
@@ -12748,7 +12900,7 @@ async function applyDocObject(doc,opts){
     tilePhys=doc.tilePhys||null;
     setTileShape(doc.tileW||TILE,doc.tileH||TILE,true);
     try{setTiling(doc.repeatPreview!=='single',true);}catch(e){}
-    layout=doc.layout||'grid';activeTemplate=doc.activeTemplate||null;
+    layout=doc.layout||'grid';activeTemplate=doc.activeTemplate||null;try{setCanvasTiling(doc.canvasTiling||1,true);}catch(e){}
     document.querySelectorAll('.layout-btn').forEach(x=>x.classList.toggle('active',x.dataset.layout===layout));
     $('layoutPill').textContent='📍 '+layout+' Mode';
     syncTemplateUI();
@@ -12782,7 +12934,7 @@ async function applyDocObject(doc,opts){
 // A project can hold several patterns (like a stack). The OPEN pattern lives in the normal app state (strokes, layers, undo history ...);
 // the others are stored as plain states in `coll` and swapped in through the same loader that opens a project. Each pattern keeps its own
 // layers, tile size/repeat, background, undo history (for the session) and timelapse. Shared across the collection: motifs, brushes, fonts, palettes.
-const PAT_KEYS=['tileW','tileH','tilePhys','repeatPreview','strokesJSON','layersJSON','activeLayerId','placedJSON','groupsJSON','bgSrc','bgOpacity','bgShown','tracesJSON','traceLocked','traceSource','layout','activeTemplate'];
+const PAT_KEYS=['tileW','tileH','tilePhys','repeatPreview','strokesJSON','layersJSON','activeLayerId','placedJSON','groupsJSON','bgSrc','bgOpacity','bgShown','tracesJSON','traceLocked','traceSource','layout','activeTemplate','canvasTiling'];
 const patHist=new Map();let patBusy=false,patThumbSig='',colFresh=null;
 function colFlag(id){colFresh=id;setTimeout(()=>{if(colFresh===id){colFresh=null;document.querySelectorAll('.col-card.fresh').forEach(c=>c.classList.remove('fresh'));}},2400);}
 function colOpen(){let v=null;try{v=localStorage.getItem('sp-colStrip');}catch(e){}if(v==='1')return true;if(v==='0')return false;return !!(coll&&coll.list.length>1);} // the designer's choice sticks; by default the strip is open once there is more than one pattern
