@@ -1328,7 +1328,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v310'; // keep in step with CACHE in sw.js
+const APP_V='v311'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -4521,11 +4521,12 @@ $('grpBlendBtn').onclick=openBlend;$('blendMotifBtn').onclick=openBlend;
 const OBJ_POINT_BUDGET=400000;
 // "Fill Shape" makes a separate filled stroke that copies the outline's points. Find it (the topmost one) so a blend
 // can carry the fill: its colour mixes between the two ends, and a morphed outline gets the fill too.
+let objFillPool=null;
 function objFillFor(s){
   if(!s||s.fillColor||!s.closed||!s.points||s.points.length<3)return null;
-  const bb=strokeBBox(s);let hit=null;
-  for(let i=strokes.length-1;i>=0;i--){
-    const f=strokes[i];
+  const bb=strokeBBox(s);let hit=null;const pool=objFillPool||strokes;
+  for(let i=pool.length-1;i>=0;i--){
+    const f=pool[i];
     if(f===s||!f.fillColor||!f.closed||f.oblendId||f.blendId||!f.points||f.points.length!==s.points.length)continue;
     const fb=strokeBBox(f);
     if(Math.abs(fb.minX-bb.minX)<2&&Math.abs(fb.minY-bb.minY)<2&&Math.abs(fb.maxX-bb.maxX)<2&&Math.abs(fb.maxY-bb.maxY)<2){hit=f;break;}
@@ -4566,8 +4567,8 @@ function objOpacity(ep){
 }
 function objPoints(ep){let n=0;ep.st.forEach(s=>{n+=(s.regions?s.regions.reduce((a,r)=>a+r.length,0):s.points.length);});return n;}
 // Why the shapes cannot be morphed (null = they can, with pairs).
-function objMorphPlan(A,B){
-  if(A.pl.length||B.pl.length)return {reason:'Pictures (placed motifs) are bitmaps, so they can only be blended by position, size, turn and opacity.'};
+function objMorphPlan0(A,B){
+  if(A.pl.length||B.pl.length)return {reason:'A picture (a motif captured before editable motifs existed, so it has no vector strokes) is a bitmap and can only be blended by position, size, turn and opacity.'};
   if(!A.st.length||!B.st.length)return {reason:'There are no vector paths to morph.'};
   if(A.st.length!==B.st.length)return {reason:'The two have a different number of paths ('+A.st.length+' and '+B.st.length+'), so the paths cannot be paired up.'};
   for(const s of A.st.concat(B.st)){const why=blendStrokeReason(s);if(why)return {reason:'A path '+why+'.'};}
@@ -4626,13 +4627,13 @@ function objUnionContours(list){
   const outer=regs.filter((r,i)=>{let d=0;regs.forEach((o,j)=>{if(j!==i&&objPtIn(r[0],o)&&objPolyArea(o)>objPolyArea(r))d++;});return d%2===0;});
   return outer.map(pts=>({pts,src,merged:true}));
 }
-function objMorphPlanExt(A,B){
-  if(A.pl.length||B.pl.length)return {reason:'Pictures (placed motifs) are bitmaps, so they can only be blended by position, size, turn and opacity.'};
+function objMorphPlanExt0(A,B){
+  if(A.pl.length||B.pl.length)return {reason:'A picture (a motif captured before editable motifs existed, so it has no vector strokes) is a bitmap and can only be blended by position, size, turn and opacity.'};
   if(!A.st.length||!B.st.length)return {reason:'There are no vector paths to morph.'};
   const FA=objFrame(A),FB=objFrame(B);if(!FA||!FB)return {reason:'One of them has no size.'};
   const ca=objContoursOf(A),cb=objContoursOf(B);
   if(ca.open||cb.open){ // open lines: only the strict one-to-one pairing can handle them
-    const st=objMorphPlan(A,B);if(st.pairs)return st;
+    const st=objMorphPlan0(A,B);if(st.pairs)return st;
     return {reason:'Shape Morph needs closed shapes (open lines can only be morphed one-to-one with the same number of paths).'};
   }
   let la=ca.list,lb=cb.list;if(!la.length||!lb.length)return {reason:'There are no closed outlines to morph.'};
@@ -4657,6 +4658,48 @@ function objMorphPlanExt(A,B){
   if(ca.holes+cb.holes)notes.push('holes are not morphed');
   for(const [a,b] of pairs){const why=blendPairReason(a,b);if(why)return {reason:why};}
   return {pairs,note:notes.join('; ')};
+}
+// ---- Vector motifs: a placed motif that kept its source strokes is morphed as real paths (never rasterised) ----
+// The source strokes are mapped into canvas coordinates exactly the way Edit Motif does it (centre, scale, flip, turn).
+const objSrcCache=new Map();
+function objMotifVec(p){
+  const e=motifs.find(x=>x.id===p.motifId);
+  if(!e||!e.source||!e.source.bounds||!e.source.strokesJSON)return null;
+  let sl=objSrcCache.get(e.id);
+  if(!sl||sl.k!==e.source.strokesJSON.length){try{sl={k:e.source.strokesJSON.length,v:JSON.parse(e.source.strokesJSON)};}catch(x){return null;}objSrcCache.set(e.id,sl);}
+  const b=e.source.bounds;if(!(b.w>0&&b.h>0))return null;
+  const kx=p.w*p.s/b.w*(p.fx==null?1:p.fx),ky=p.h*p.s/b.h*(p.fy==null?1:p.fy),bcx=b.minX+b.w/2,bcy=b.minY+b.h/2;
+  const rad=(p.r||0)*Math.PI/180,c=Math.cos(rad),sn=Math.sin(rad),ks=Math.sqrt(Math.abs(kx*ky))||1;
+  const map=(x,y)=>{const dx=(x-bcx)*kx,dy=(y-bcy)*ky;return {x:p.x+dx*c-dy*sn,y:p.y+dx*sn+dy*c};};
+  const lm=e.source.layersJSON?JSON.parse(e.source.layersJSON):[],out=[];
+  sl.v.forEach(o=>{
+    if(o.brushId==='eraser'||o.clipStrokeId||o.patFill||o.text||!o.points||o.points.length<2)return;
+    const s=blendClone(o);['blendId','blendSpec','groupId','oblendId','oblendSpec','oblendStep'].forEach(k=>delete s[k]);
+    transformStrokePoints(s,map);
+    s.id=p.id+':'+o.id;
+    const meta=lm.find(l=>l.id===o.layerId)||{};
+    const lay=layers.find(l=>l.id===o.layerId)||layers.find(l=>l.name===meta.name)||getActiveLayer()||layers[layers.length-1];
+    s.layerId=lay.id;
+    if(s.settings&&typeof s.settings.size==='number')s.settings.size=Math.max(0.1,s.settings.size*ks);
+    if(s.shape&&typeof s.shape==='object')delete s.shape;
+    out.push(s);
+  });
+  return out.length?out:null;
+}
+// Returns {A,B,pool} with motifs swapped for their vector strokes, or null when a picture has no vector source.
+function objVecPrep(A,B){
+  if(!A.pl.length&&!B.pl.length)return null;
+  const conv=ep=>{const v=[];for(const p of ep.pl){const m=objMotifVec(p);if(!m)return null;v.push(...m);}return v;};
+  const va=conv(A),vb=conv(B);if(!va||!vb)return null;
+  return {A:{...A,st:A.st.concat(va),pl:[]},B:{...B,st:B.st.concat(vb),pl:[]},pool:strokes.concat(va,vb)};
+}
+function objMorphPlan(A,B){
+  const v=objVecPrep(A,B);if(!v)return objMorphPlan0(A,B);
+  objFillPool=v.pool;try{const r=objMorphPlan0(v.A,v.B);if(r.pairs)r.note=((r.note?r.note+'; ':'')+'drawn as vector paths');return r;}finally{objFillPool=null;}
+}
+function objMorphPlanExt(A,B){
+  const v=objVecPrep(A,B);if(!v)return objMorphPlanExt0(A,B);
+  objFillPool=v.pool;try{const r=objMorphPlanExt0(v.A,v.B);if(r.pairs)r.note=((r.note?r.note+'; ':'')+'drawn as vector paths');return r;}finally{objFillPool=null;}
 }
 function objDominantColour(ep){const s=ep.st.find(x=>x.color);return s?s.color:null;}
 // ---- blend along a path: the guide stroke, evenly spaced poses on it ----
@@ -4898,7 +4941,7 @@ function objPreview(){
   blendRaf=requestAnimationFrame(()=>{
     const d=blendDraft;if(!d||!d.obj||!d.B||(d.rep&&!d.path))return;
     if(!d.existing&&!d.rep&&!d.modeInit){ // new blend: start as a Shape Morph only where the old pairing already worked; otherwise Transform Blend until Shape Morph is chosen
-      d.modeInit=true;try{d.shape=!!objMorphPlan(objResolve(d.A),objResolve(d.B)).pairs;}catch(e){d.shape=false;}
+      d.modeInit=true;try{const ra=objResolve(d.A),rb=objResolve(d.B);d.shape=!!objMorphPlan(ra,rb).pairs||((ra.pl.length||rb.pl.length)&&!!objMorphPlanExt(ra,rb).pairs);}catch(e){d.shape=false;}
       $('blendShape').checked=d.shape;
     }
     objSyncModeUI();
