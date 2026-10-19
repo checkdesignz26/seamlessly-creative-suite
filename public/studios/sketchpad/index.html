@@ -409,10 +409,10 @@ html.in-suite .suite-only{display:block!important}
 .recolour-was{width:22px;height:22px;border-radius:6px;border:1px solid var(--line);flex-shrink:0}
 .recolour-label{flex:1;font-size:13px;font-weight:700}
 .recolour-row input[type=color]{width:56px;height:40px;padding:0;border:1px solid var(--btnBorder);border-radius:8px;background:var(--btnBg)}
-#svgPopover,#hiPopover{left:auto;right:12px;width:300px}
+#svgPopover,#hiPopover,#tilePopover{left:auto;right:12px;width:300px}
 #svgPopover:before{left:auto;right:44px}
-#svgPopover .row .tool-btn,#hiPopover .row .tool-btn{flex:1;min-height:44px}
-#svgPopover .tool-btn.active,#hiPopover .tool-btn.active{outline:2px solid var(--pink)}
+#svgPopover .row .tool-btn,#hiPopover .row .tool-btn,#tilePopover .row .tool-btn{flex:1;min-height:44px}
+#svgPopover .tool-btn.active,#hiPopover .tool-btn.active,#tilePopover .tool-btn.active{outline:2px solid var(--pink)}
 #viewPopover{left:auto;right:12px}
 #viewPopover:before{left:auto;right:44px}
 /* Narrow viewports get tighter spacing only — text, buttons, sliders and controls stay at their
@@ -468,8 +468,10 @@ html.in-suite .suite-only{display:block!important}
 .tb-item .tb-sub{margin-left:auto;font-size:12px;opacity:.7;font-weight:700;padding-left:8px;text-align:right}
 .tb-sep{height:1px;background:var(--line);margin:6px 4px}
 .tb-head{font-size:11.5px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;opacity:.6;padding:8px 12px 2px}
-#zoomPopover,#viewPopover,#svgPopover,#hiPopover{left:auto;right:12px;top:12px}
-#zoomPopover:before,#viewPopover:before,#svgPopover:before,#hiPopover:before{display:none}
+#zoomPopover,#viewPopover,#svgPopover,#hiPopover,#tilePopover{left:auto;right:12px;top:12px}
+#zoomPopover:before,#viewPopover:before,#svgPopover:before,#hiPopover:before,#tilePopover:before{display:none}
+#tilePopover{position:fixed;z-index:130;top:74px;right:12px;max-height:calc(100vh - 90px);overflow:auto}
+#tilePopover .tx-bar{height:8px;border-radius:6px;background:var(--btnBg);border:1px solid var(--btnBorder);overflow:hidden;margin-top:8px;display:none}#tilePopover .tx-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--purple),var(--pink))}#tilePopover .tx-warn{color:#b3261e;font-weight:600}
 @media (max-width:600px){.tb-row{padding:6px 8px;gap:6px}}
 
 
@@ -1321,7 +1323,8 @@ html.in-suite .suite-only{display:block!important}
 </div>
     <div id="backupsPanel" style="display:none;position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:90;background:var(--sideBg);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:0 18px 50px rgba(0,0,0,.35);font-size:13.5px;max-width:min(560px,calc(100vw - 24px));max-height:70vh;overflow:auto;"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;font-weight:800;margin-bottom:6px;">🕘 Earlier saves<button id="backupsClose" class="btn mini">Close</button></div><div id="backupsList"></div><div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line);"><button id="newBlankBtn" class="btn mini" style="width:100%;">➕ New Project</button><div class="hint">Your current project is saved first, then a fresh one opens. Find every project under 📁 Projects.</div></div></div>
     <div id="restoreBanner" style="display:none;"><span id="restoreBannerText">📂 Autosaved session found from </span><span id="restoreBannerTime"></span> <button id="restoreAcceptBtn" class="btn mini primary">Restore</button><button id="restoreDeclineBtn" class="btn mini">Start Fresh</button><button id="restoreOkBtn" class="btn mini primary" style="display:none;">OK</button></div>
-    <div id="canvasViewportOuter" class="canvas-viewport-outer"><div id="canvasWrap" class="canvas-wrap"><div id="viewPopover" class="sym-pop"><div class="section-title">🧭 Canvas / View</div><div class="row" style="margin-bottom:10px;align-items:center;gap:8px;"><div id="viewRotVal" class="pill" style="flex:1;text-align:center;">Rotation 0°</div><button id="viewRotResetBtn" class="tool-btn" style="flex:1" title="Turn the canvas back upright">Reset to 0°</button></div><button id="viewLockBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">&#128274; Lock view (no pan / zoom): Off</button><button id="viewRotLockBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">🔒 Lock rotation: On</button><button id="viewSharpBtn" class="tool-btn" style="width:100%;margin-bottom:10px;" title="How crisp the picture on screen is. Sharper uses more of the iPad memory.">🔍 Sharpness: Normal</button><button id="viewGuidesBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">📐 Guides: Off</button><button id="viewCursorBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">⭕ Brush cursor: On</button><button id="viewResetBtn" class="tool-btn" style="width:100%;margin-bottom:10px;" title="0°, centred and fitted">🔍 Reset view (0°, fit)</button><button id="symToggle" class="tool-btn" style="width:100%;margin-bottom:10px;">🦋 Symmetry Off</button><div class="row" style="margin-bottom:10px;"><button id="tilingBtn" class="tool-btn active" style="flex:1">Tiling On</button><div id="layoutPill" class="pill">📍 Grid Mode</div></div><button id="themeToggle" class="tool-btn" style="width:100%;margin-bottom:10px;">☀️ Light Mode</button><button id="clearDrawing" class="btn mini danger" style="width:100%;margin-bottom:10px;">Clear Drawing &amp; Motifs</button><button id="clearAllDrawing" class="btn mini danger" style="width:100%;margin-bottom:10px;">Clear All Layers &amp; Motifs</button><label class="row" style="gap:8px;align-items:center;margin:6px 0;font-size:13px;"><input type="checkbox" id="dblDupChk" checked> Double-tap a selected item to duplicate it (a motif opens for editing instead)</label><button id="viewCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="zoomPopover" class="sym-pop"><div class="section-title">🔍 View <span id="zoomPopPct" class="small"></span></div><div class="zoom-row"><button id="zoomOutBtn" class="tool-btn" aria-label="Zoom out">−</button><button id="zoomInBtn" class="tool-btn" aria-label="Zoom in">+</button></div><button id="zoom100Btn" class="tool-btn" style="width:100%;margin-bottom:8px;">100% — actual size</button><button id="zoomFitBtn" class="tool-btn" style="width:100%;margin-bottom:8px;">Fit to View</button><button id="zoomRotResetBtn" class="tool-btn" style="width:100%;margin-bottom:8px;">↺ Reset rotation to 0°</button><button id="zoomResetBtn" class="tool-btn primary" style="width:100%;margin-bottom:8px;">Reset View (0°, centre, fit)</button><button id="updateAppBtn" class="tool-btn" style="width:100%;margin-bottom:8px;" title="Fetch the newest version of the app">⟳ Get latest version  <span id="appVerTxt" style="opacity:.6;font-weight:600"></span></button><div class="hint" style="margin-bottom:8px;">These always work, even if the canvas has scrolled out of sight.</div><button id="zoomCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="hiPopover" class="sym-pop"><div class="section-title">🖼️ High-resolution card (PNG)</div><div class="hint" style="margin-bottom:8px;">Redraws your whole card sharply at the size you pick, with brushes, pictures and the background. Just the card, no repeat edges. </div><div class="hint" style="margin-bottom:4px;">A normal greeting card is <b>5 × 7 in</b> (a smaller one is 4.25 × 5.5 in). Pick the long side of your card in inches:</div><div class="row" style="margin-bottom:8px;"><button class="tool-btn hi-preset" data-in="5.5">5.5 in</button><button class="tool-btn hi-preset" data-in="7">7 in</button><button class="tool-btn hi-preset" data-in="10">10 in</button></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>Long side</label><input id="hiInInput" type="number" min="1" max="30" step="0.1" value="10" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><span>in</span></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>Quality</label><select id="hiDpi" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><option value="300">300 dpi (print)</option><option value="600">600 dpi (extra sharp)</option><option value="200">200 dpi (smaller file)</option><option value="150">150 dpi (screen / email)</option></select><span></span></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>or pixels</label><input id="hiLongInput" type="number" min="200" max="8000" step="1" value="3000" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><span>px</span></div><div id="hiInfo" class="hint" style="margin-bottom:8px;"></div><label class="hint" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;"><input id="hiTransparent" type="checkbox"> Transparent background (instead of white)</label><button id="hiSaveBtn" class="tool-btn primary" style="width:100%;margin-bottom:8px;min-height:44px;">⬇️ Save PNG</button><button id="hiCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="svgPopover" class="sym-pop"><div class="section-title">🖋️ Export SVG</div><div class="hint" style="margin-bottom:8px;">Vector strokes and fills only. Pictures (placed motifs, background image) are not vector, so they are left out.</div><div class="row" style="margin-bottom:8px;"><button class="tool-btn svg-preset" data-size="780">780</button><button class="tool-btn svg-preset" data-size="1800">1800</button><button class="tool-btn svg-preset" data-size="3600">3600</button></div><div class="slider-row" style="grid-template-columns:64px 1fr 30px;"><label>Size</label><input id="svgSizeInput" type="number" min="64" max="20000" step="1" value="3600" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><span>px</span></div><div class="hint" style="margin-bottom:8px;">Width and height of the square file. 3600 × 3600 is the usual pattern size. The artwork scales exactly.</div><button id="svgSaveBtn" class="tool-btn primary" style="width:100%;margin-bottom:8px;min-height:44px;">⬇️ Save SVG</button><button id="svgCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="recolourPopover" class="sym-pop"><div class="section-title">🎨 Recolour Parts</div><div class="hint" style="margin-bottom:8px;">Motif: <b id="recolourName"></b>. Each row is one colour used in the motif. Pick a new colour for any of them.</div><div id="recolourRows"></div><button id="recolourApplyBtn" class="tool-btn primary" style="width:100%;margin:8px 0;min-height:44px;">Apply to this motif</button><button id="recolourNewBtn" class="tool-btn" style="width:100%;margin-bottom:8px;min-height:44px;">Save as new colourway</button><div class="row"><button id="recolourResetBtn" class="btn mini" style="flex:1">Reset</button><button id="recolourCloseBtn" class="btn mini" style="flex:1">✕ Close</button></div></div><div id="symPopover" class="sym-pop"><div class="section-title">🦋 Symmetry</div><div class="grid"><button class="sym-btn btn active" data-sym="off">Off</button><button class="sym-btn btn" data-sym="vertical">Vertical</button><button class="sym-btn btn" data-sym="horizontal">Horizontal</button><button class="sym-btn btn" data-sym="quad">Quad</button><button class="sym-btn btn" data-sym="diamond">Diamond</button></div><div class="slider-row"><label>Axis X</label><input id="symX" type="range" min="0" max="1800" value="900"><span id="symXVal">50%</span></div><div class="slider-row"><label>Axis Y</label><input id="symY" type="range" min="0" max="1800" value="900"><span id="symYVal">50%</span></div><div class="slider-row"><label>Angle</label><input id="symAng" type="range" min="-90" max="90" step="1" value="0"><span id="symAngVal">0°</span></div><div class="row"><button id="symAngReset" class="btn mini">0° Straight</button><button id="symAng45" class="btn mini">45°</button></div><div class="row" style="margin-top:6px;"><button id="symLenWhole" class="btn mini active" style="flex:1">Line: whole canvas</button><button id="symLenShort" class="btn mini" style="flex:1">Line: short</button></div><div class="slider-row" id="symLenRow" style="display:none"><label>Length</label><input id="symLen" type="range" min="100" max="1800" step="10" value="500"><span id="symLenVal">500</span></div><div class="row" style="margin-top:6px;"><button id="symCentre" class="btn mini">Centre Axis</button><button id="symClose" class="btn mini">Done</button></div><div class="hint">Move the mirror point to make flowers, leaves and playful asymmetric symmetry.</div></div><canvas id="fabricCanvas" aria-hidden="true"></canvas><canvas id="canvas" width="1800" height="1800"></canvas><div id="tileOutline" aria-hidden="true"><svg id="tileDiamond" viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;left:0;top:0;width:100%;height:100%;display:none;overflow:visible"><polygon points="50,0 100,50 50,100 0,50" fill="none" stroke="rgba(214,70,150,.9)" stroke-width="2.5" vector-effect="non-scaling-stroke"/></svg></div><div id="traceBox" aria-hidden="true"></div><div id="replayGuide" aria-hidden="true"><div class="rgBox"><span></span></div></div><div id="selectionBox" class="selection-box"><button id="motifEditChip" class="btn mini primary" style="display:none">✏️ Edit Motif</button><div id="resizeHandle" class="handle"></div><div id="rotateHandle" class="rotHandle"></div></div><div id="pivotMarker" title="Drag to move the centre the copies turn around" style="display:none;position:absolute;width:40px;height:40px;margin:-20px 0 0 -20px;border:3px solid var(--pink);border-radius:50%;background:radial-gradient(circle,var(--pink) 0 5px,rgba(255,255,255,.55) 6px);box-shadow:0 0 0 2px rgba(255,255,255,.9);pointer-events:auto;touch-action:none;cursor:grab;z-index:5;"><div style="position:absolute;left:50%;top:-6px;bottom:-6px;width:2px;margin-left:-1px;background:var(--pink)"></div><div style="position:absolute;top:50%;left:-6px;right:-6px;height:2px;margin-top:-1px;background:var(--pink)"></div></div><div id="paintBBoxOverlay" class="selection-box" style="display:none;"><div id="paintResizeHandle" class="handle" title="Drag to resize. Tap to make 25% bigger."></div><div id="paintRotateHandle" class="rotHandle" title="Drag to rotate. Tap to turn 45 degrees."></div><input id="strokeColourHandle" class="sel-colour strokeColourHandle" type="color" value="#000000" title="Tap to change colour"></div><div id="groupBox" class="selection-box" style="display:none;"><div class="gh" data-h="nw" style="left:0%;top:0%;cursor:nwse-resize"></div><div class="gh" data-h="n" style="left:50%;top:0%;cursor:ns-resize"></div><div class="gh" data-h="ne" style="left:100%;top:0%;cursor:nesw-resize"></div><div class="gh" data-h="e" style="left:100%;top:50%;cursor:ew-resize"></div><div class="gh" data-h="se" style="left:100%;top:100%;cursor:nwse-resize"></div><div class="gh" data-h="s" style="left:50%;top:100%;cursor:ns-resize"></div><div class="gh" data-h="sw" style="left:0%;top:100%;cursor:nesw-resize"></div><div class="gh" data-h="w" style="left:0%;top:50%;cursor:ew-resize"></div><div id="grpRotHandle" class="rotHandle" title="Drag to turn. Tap to turn 45 degrees."></div></div><div id="symAxis" class="sym-axis locked"></div><div id="rotateChip" class="rotate-chip">Canvas 0°</div><div id="pathNodeOverlay"></div></div></div>
+    <div id="canvasViewportOuter" class="canvas-viewport-outer"><div id="canvasWrap" class="canvas-wrap"><div id="viewPopover" class="sym-pop"><div class="section-title">🧭 Canvas / View</div><div class="row" style="margin-bottom:10px;align-items:center;gap:8px;"><div id="viewRotVal" class="pill" style="flex:1;text-align:center;">Rotation 0°</div><button id="viewRotResetBtn" class="tool-btn" style="flex:1" title="Turn the canvas back upright">Reset to 0°</button></div><button id="viewLockBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">&#128274; Lock view (no pan / zoom): Off</button><button id="viewRotLockBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">🔒 Lock rotation: On</button><button id="viewSharpBtn" class="tool-btn" style="width:100%;margin-bottom:10px;" title="How crisp the picture on screen is. Sharper uses more of the iPad memory.">🔍 Sharpness: Normal</button><button id="viewGuidesBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">📐 Guides: Off</button><button id="viewCursorBtn" class="tool-btn" style="width:100%;margin-bottom:10px;">⭕ Brush cursor: On</button><button id="viewResetBtn" class="tool-btn" style="width:100%;margin-bottom:10px;" title="0°, centred and fitted">🔍 Reset view (0°, fit)</button><button id="symToggle" class="tool-btn" style="width:100%;margin-bottom:10px;">🦋 Symmetry Off</button><div class="row" style="margin-bottom:10px;"><button id="tilingBtn" class="tool-btn active" style="flex:1">Tiling On</button><div id="layoutPill" class="pill">📍 Grid Mode</div></div><button id="themeToggle" class="tool-btn" style="width:100%;margin-bottom:10px;">☀️ Light Mode</button><button id="clearDrawing" class="btn mini danger" style="width:100%;margin-bottom:10px;">Clear Drawing &amp; Motifs</button><button id="clearAllDrawing" class="btn mini danger" style="width:100%;margin-bottom:10px;">Clear All Layers &amp; Motifs</button><label class="row" style="gap:8px;align-items:center;margin:6px 0;font-size:13px;"><input type="checkbox" id="dblDupChk" checked> Double-tap a selected item to duplicate it (a motif opens for editing instead)</label><button id="viewCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="zoomPopover" class="sym-pop"><div class="section-title">🔍 View <span id="zoomPopPct" class="small"></span></div><div class="zoom-row"><button id="zoomOutBtn" class="tool-btn" aria-label="Zoom out">−</button><button id="zoomInBtn" class="tool-btn" aria-label="Zoom in">+</button></div><button id="zoom100Btn" class="tool-btn" style="width:100%;margin-bottom:8px;">100% — actual size</button><button id="zoomFitBtn" class="tool-btn" style="width:100%;margin-bottom:8px;">Fit to View</button><button id="zoomRotResetBtn" class="tool-btn" style="width:100%;margin-bottom:8px;">↺ Reset rotation to 0°</button><button id="zoomResetBtn" class="tool-btn primary" style="width:100%;margin-bottom:8px;">Reset View (0°, centre, fit)</button><button id="updateAppBtn" class="tool-btn" style="width:100%;margin-bottom:8px;" title="Fetch the newest version of the app">⟳ Get latest version  <span id="appVerTxt" style="opacity:.6;font-weight:600"></span></button><div class="hint" style="margin-bottom:8px;">These always work, even if the canvas has scrolled out of sight.</div><button id="zoomCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="tilePopover" class="sym-pop"><div class="section-title">🧱 Tiled export (PNG)</div><div class="hint" style="margin-bottom:8px;">Lays your seamless tile out in the repeat you are using, exactly like the canvas shows it. Your original one-tile export stays separate.</div><div class="hint" style="margin-bottom:4px;">Arrangement</div><div class="row" style="margin-bottom:8px;"><button class="tool-btn tile-n" data-n="1">1×1<br><small>seamless tile</small></button><button class="tool-btn tile-n" data-n="2">2×2<br><small>4 tiles</small></button><button class="tool-btn tile-n" data-n="3">3×3<br><small>9 tiles</small></button></div><div id="tileLayNote" class="hint" style="margin-bottom:8px;"></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>Each tile</label><select id="tileRes" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><option value="1">Tile size (×1)</option><option value="2">Sharper (×2)</option><option value="3">×3</option><option value="4">Sharpest (×4)</option></select><span></span></div><label class="hint" style="display:flex;gap:8px;align-items:center;margin:6px 0;"><input type="checkbox" id="tileTransparent"> Transparent background</label><div id="tileInfo" class="hint" style="margin:6px 0;"></div><div class="row"><button id="tileSaveBtn" class="tool-btn primary">💾 Save PNG</button><button id="tileCloseBtn" class="tool-btn">Close</button></div><div class="tx-bar" id="tileBar"><i></i></div></div>
+    <div id="hiPopover" class="sym-pop"><div class="section-title">🖼️ High-resolution card (PNG)</div><div class="hint" style="margin-bottom:8px;">Redraws your whole card sharply at the size you pick, with brushes, pictures and the background. Just the card, no repeat edges. </div><div class="hint" style="margin-bottom:4px;">A normal greeting card is <b>5 × 7 in</b> (a smaller one is 4.25 × 5.5 in). Pick the long side of your card in inches:</div><div class="row" style="margin-bottom:8px;"><button class="tool-btn hi-preset" data-in="5.5">5.5 in</button><button class="tool-btn hi-preset" data-in="7">7 in</button><button class="tool-btn hi-preset" data-in="10">10 in</button></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>Long side</label><input id="hiInInput" type="number" min="1" max="30" step="0.1" value="10" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><span>in</span></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>Quality</label><select id="hiDpi" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><option value="300">300 dpi (print)</option><option value="600">600 dpi (extra sharp)</option><option value="200">200 dpi (smaller file)</option><option value="150">150 dpi (screen / email)</option></select><span></span></div><div class="slider-row" style="grid-template-columns:78px 1fr 30px;"><label>or pixels</label><input id="hiLongInput" type="number" min="200" max="8000" step="1" value="3000" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><span>px</span></div><div id="hiInfo" class="hint" style="margin-bottom:8px;"></div><label class="hint" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;"><input id="hiTransparent" type="checkbox"> Transparent background (instead of white)</label><button id="hiSaveBtn" class="tool-btn primary" style="width:100%;margin-bottom:8px;min-height:44px;">⬇️ Save PNG</button><button id="hiCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="svgPopover" class="sym-pop"><div class="section-title">🖋️ Export SVG</div><div class="hint" style="margin-bottom:8px;">Vector strokes and fills only. Pictures (placed motifs, background image) are not vector, so they are left out.</div><div class="row" style="margin-bottom:8px;"><button class="tool-btn svg-preset" data-size="780">780</button><button class="tool-btn svg-preset" data-size="1800">1800</button><button class="tool-btn svg-preset" data-size="3600">3600</button></div><div class="slider-row" style="grid-template-columns:64px 1fr 30px;"><label>Size</label><input id="svgSizeInput" type="number" min="64" max="20000" step="1" value="3600" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"><span>px</span></div><div class="hint" style="margin-bottom:8px;">Width and height of the square file. 3600 × 3600 is the usual pattern size. The artwork scales exactly.</div><button id="svgSaveBtn" class="tool-btn primary" style="width:100%;margin-bottom:8px;min-height:44px;">⬇️ Save SVG</button><button id="svgCloseBtn" class="btn mini" style="width:100%;">✕ Close</button></div><div id="recolourPopover" class="sym-pop"><div class="section-title">🎨 Recolour Parts</div><div class="hint" style="margin-bottom:8px;">Motif: <b id="recolourName"></b>. Each row is one colour used in the motif. Pick a new colour for any of them.</div><div id="recolourRows"></div><button id="recolourApplyBtn" class="tool-btn primary" style="width:100%;margin:8px 0;min-height:44px;">Apply to this motif</button><button id="recolourNewBtn" class="tool-btn" style="width:100%;margin-bottom:8px;min-height:44px;">Save as new colourway</button><div class="row"><button id="recolourResetBtn" class="btn mini" style="flex:1">Reset</button><button id="recolourCloseBtn" class="btn mini" style="flex:1">✕ Close</button></div></div><div id="symPopover" class="sym-pop"><div class="section-title">🦋 Symmetry</div><div class="grid"><button class="sym-btn btn active" data-sym="off">Off</button><button class="sym-btn btn" data-sym="vertical">Vertical</button><button class="sym-btn btn" data-sym="horizontal">Horizontal</button><button class="sym-btn btn" data-sym="quad">Quad</button><button class="sym-btn btn" data-sym="diamond">Diamond</button></div><div class="slider-row"><label>Axis X</label><input id="symX" type="range" min="0" max="1800" value="900"><span id="symXVal">50%</span></div><div class="slider-row"><label>Axis Y</label><input id="symY" type="range" min="0" max="1800" value="900"><span id="symYVal">50%</span></div><div class="slider-row"><label>Angle</label><input id="symAng" type="range" min="-90" max="90" step="1" value="0"><span id="symAngVal">0°</span></div><div class="row"><button id="symAngReset" class="btn mini">0° Straight</button><button id="symAng45" class="btn mini">45°</button></div><div class="row" style="margin-top:6px;"><button id="symLenWhole" class="btn mini active" style="flex:1">Line: whole canvas</button><button id="symLenShort" class="btn mini" style="flex:1">Line: short</button></div><div class="slider-row" id="symLenRow" style="display:none"><label>Length</label><input id="symLen" type="range" min="100" max="1800" step="10" value="500"><span id="symLenVal">500</span></div><div class="row" style="margin-top:6px;"><button id="symCentre" class="btn mini">Centre Axis</button><button id="symClose" class="btn mini">Done</button></div><div class="hint">Move the mirror point to make flowers, leaves and playful asymmetric symmetry.</div></div><canvas id="fabricCanvas" aria-hidden="true"></canvas><canvas id="canvas" width="1800" height="1800"></canvas><div id="tileOutline" aria-hidden="true"><svg id="tileDiamond" viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;left:0;top:0;width:100%;height:100%;display:none;overflow:visible"><polygon points="50,0 100,50 50,100 0,50" fill="none" stroke="rgba(214,70,150,.9)" stroke-width="2.5" vector-effect="non-scaling-stroke"/></svg></div><div id="traceBox" aria-hidden="true"></div><div id="replayGuide" aria-hidden="true"><div class="rgBox"><span></span></div></div><div id="selectionBox" class="selection-box"><button id="motifEditChip" class="btn mini primary" style="display:none">✏️ Edit Motif</button><div id="resizeHandle" class="handle"></div><div id="rotateHandle" class="rotHandle"></div></div><div id="pivotMarker" title="Drag to move the centre the copies turn around" style="display:none;position:absolute;width:40px;height:40px;margin:-20px 0 0 -20px;border:3px solid var(--pink);border-radius:50%;background:radial-gradient(circle,var(--pink) 0 5px,rgba(255,255,255,.55) 6px);box-shadow:0 0 0 2px rgba(255,255,255,.9);pointer-events:auto;touch-action:none;cursor:grab;z-index:5;"><div style="position:absolute;left:50%;top:-6px;bottom:-6px;width:2px;margin-left:-1px;background:var(--pink)"></div><div style="position:absolute;top:50%;left:-6px;right:-6px;height:2px;margin-top:-1px;background:var(--pink)"></div></div><div id="paintBBoxOverlay" class="selection-box" style="display:none;"><div id="paintResizeHandle" class="handle" title="Drag to resize. Tap to make 25% bigger."></div><div id="paintRotateHandle" class="rotHandle" title="Drag to rotate. Tap to turn 45 degrees."></div><input id="strokeColourHandle" class="sel-colour strokeColourHandle" type="color" value="#000000" title="Tap to change colour"></div><div id="groupBox" class="selection-box" style="display:none;"><div class="gh" data-h="nw" style="left:0%;top:0%;cursor:nwse-resize"></div><div class="gh" data-h="n" style="left:50%;top:0%;cursor:ns-resize"></div><div class="gh" data-h="ne" style="left:100%;top:0%;cursor:nesw-resize"></div><div class="gh" data-h="e" style="left:100%;top:50%;cursor:ew-resize"></div><div class="gh" data-h="se" style="left:100%;top:100%;cursor:nwse-resize"></div><div class="gh" data-h="s" style="left:50%;top:100%;cursor:ns-resize"></div><div class="gh" data-h="sw" style="left:0%;top:100%;cursor:nesw-resize"></div><div class="gh" data-h="w" style="left:0%;top:50%;cursor:ew-resize"></div><div id="grpRotHandle" class="rotHandle" title="Drag to turn. Tap to turn 45 degrees."></div></div><div id="symAxis" class="sym-axis locked"></div><div id="rotateChip" class="rotate-chip">Canvas 0°</div><div id="pathNodeOverlay"></div></div></div>
     <div id="status" class="status">✨ Apple Pencil draws | one finger protected | two fingers pan/pinch/rotate | two-finger tap Undo | three-finger tap Redo | Capture Motif saves drawing ✨</div>
   </main>
   <div id="dockR" class="dock"></div>
@@ -1343,7 +1346,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v321'; // keep in step with CACHE in sw.js
+const APP_V='v322'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -11353,11 +11356,11 @@ async function buildHiRes(long,transparent){
 // Sharper seamless tile: the same tile the plain PNG export makes, but drawn k times bigger. Vector strokes are
 // redrawn at the bigger size so their edges are crisp; layers with Liquify paint are pictures, so they are
 // enlarged smoothly instead (they can only be as sharp as they were painted).
-async function buildTileHi(k){
+async function buildTileHi(k,transparent){
   try{await txReady();}catch(e){}
   const w=Math.round(TW*k),h=Math.round(TH*k);
   const out=document.createElement('canvas');out.width=w;out.height=h;const o=out.getContext('2d');
-  o.fillStyle='#fff';o.fillRect(0,0,w,h);
+  if(!transparent){o.fillStyle='#fff';o.fillRect(0,0,w,h);}
   if(bgImg&&bgShown){o.save();o.globalAlpha=bgOpacity;o.drawImage(bgImg,0,0,w,h);o.restore();}
   const offs=[[0,0]];for(let ix=-1;ix<=1;ix++)for(let iy=-1;iy<=1;iy++){if(ix||iy)offs.push(tilePos(ix,iy));}
   const tmp=document.createElement('canvas');tmp.width=w;tmp.height=h;const t=tmp.getContext('2d');
@@ -11431,7 +11434,136 @@ $('hiSaveBtn').onclick=async()=>{
   }catch(err){console.error(err);setStatus('⚠️ Could not make the hi-res card: '+(err&&err.message||err)+'. Try a smaller size.');}
   btn.disabled=false;
 };
-window.__sketchpadHi={build:(l,t)=>buildHiRes(l,t),dims:hiDims,tile:k=>buildTileHi(k)};
+window.__sketchpadHi={build:(l,t)=>buildHiRes(l,t),dims:hiDims,tile:(k,t)=>buildTileHi(k,t)};
+// ---- Tiled export (1×1 · 2×2 · 3×3): the seamless tile is drawn ONCE at the chosen scale (buildTileHi, the same engine as the
+// sharper-tile export, whose wrap-around already follows the active layout), then laid out at the SAME lattice positions the canvas
+// uses (tilePos) and written to a PNG in strips, so the whole picture never exists as one giant canvas or one giant pixel buffer.
+const TL_TILE_MAX_PX=14e6,TL_SIDE_MAX=16384,TL_HARD_PX=150e6,TL_WARN_PX=50e6;
+let tlN=2,tlBusy=false,tlCancel=false,tlArmed=false;
+function tlLayoutKey(){return (layout==='halfDrop'||layout==='halfBrick')?layout:'grid';}
+// Where each tile goes inside the picture (pixels), for n×n tiles of w×h. Half Drop drops every second column by half a tile, Half Brick slides
+// every second row by half a tile; whatever leaves the picture wraps round to the other side, so a picture with an even count repeats seamlessly.
+function tlPlan(n,w,h){
+  const lay=tlLayoutKey(),pl=[];
+  for(let ix=0;ix<n;ix++)for(let iy=0;iy<n;iy++){
+    let x=ix*w,y=iy*h;
+    if(n>1){if(lay==='halfDrop'&&ix%2)y+=Math.floor(h/2);if(lay==='halfBrick'&&iy%2)x+=Math.floor(w/2);}
+    pl.push([x,y]);
+  }
+  return {lay,pl,W:n*w,H:n*h,seamless:n===1||n%2===0||lay==='grid'};
+}
+function tlSizes(n,k){const w=Math.round(TW*k),h=Math.round(TH*k);return {w,h,W:n*w,H:n*h,px:n*n*w*h};}
+function tlLimit(n,k){
+  const z=tlSizes(n,k);
+  if(z.w*z.h>TL_TILE_MAX_PX)return {hard:'One tile at this size ('+z.w+' × '+z.h+' px) is too big for an iPad to draw. Pick a smaller size.',z};
+  if(z.W>TL_SIDE_MAX||z.H>TL_SIDE_MAX)return {hard:'The picture would be '+z.W+' × '+z.H+' px. The limit is '+TL_SIDE_MAX+' px on a side.',z};
+  if(z.px>TL_HARD_PX)return {hard:'That is '+Math.round(z.px/1e6)+' million pixels, more than an iPad can safely write. Pick a smaller size or fewer tiles.',z};
+  if(z.px>TL_WARN_PX)return {warn:'Large: '+Math.round(z.px/1e6)+' million pixels. It can take a minute and may fail on an older iPad. Tap Save again to go ahead.',z};
+  return {z};
+}
+function tlCrc(chunk){return crc32b(chunk);}
+function tlChunk(type,data){
+  const out=new Uint8Array(12+data.length),dv=new DataView(out.buffer);
+  dv.setUint32(0,data.length);out[4]=type.charCodeAt(0);out[5]=type.charCodeAt(1);out[6]=type.charCodeAt(2);out[7]=type.charCodeAt(3);out.set(data,8);
+  dv.setUint32(8+data.length,tlCrc(out.subarray(4,8+data.length)));return out;
+}
+// Draws the tile layout strip by strip. emit(rgbaBytes, rows) is called in order. Returns {W,H}.
+async function tlRender(n,k,transparent,emit,progress){
+  const tile=await buildTileHi(k,transparent),w=tile.width,h=tile.height,P=tlPlan(n,w,h),W=P.W,H=P.H;
+  const sh=Math.max(8,Math.min(256,Math.floor(2e6/W))),sc=document.createElement('canvas');sc.width=W;sc.height=sh;
+  const g=sc.getContext('2d',{willReadFrequently:true});g.imageSmoothingEnabled=false;
+  try{
+    for(let y0=0;y0<H;y0+=sh){
+      if(tlCancel)throw new Error('cancelled');
+      const rows=Math.min(sh,H-y0);
+      g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,W,sh);
+      P.pl.forEach(([px,py])=>{for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++){
+        const x=px+dx*W,y=py+dy*H-y0;
+        if(x>=W||x+w<=0||y>=rows||y+h<=0)continue;
+        g.drawImage(tile,x,y);
+      }});
+      const img=g.getImageData(0,0,W,rows);
+      await emit(img.data,rows,y0);
+      if(progress)progress((y0+rows)/H);
+      await new Promise(r=>setTimeout(r,0));
+    }
+  }finally{tile.width=tile.height=1;sc.width=sc.height=1;}
+  return {W,H,plan:P};
+}
+// Streams the strips into a PNG: Sub-filtered rows go through the browser's own zlib compressor straight into IDAT chunks.
+async function tlBuildPng(n,k,transparent,progress){
+  const parts=[new Uint8Array([137,80,78,71,13,10,26,10])];let ihdrAt=parts.length;parts.push(null);
+  let done=null,writer=null,reading=null,W=0,H=0;
+  const rowFilter=(d,rows,W)=>{
+    const stride=4*W,out=new Uint8Array(rows*(stride+1));
+    for(let r=0;r<rows;r++){
+      const o=r*(stride+1),s=r*stride;out[o]=1;
+      for(let i=0;i<4&&i<stride;i++)out[o+1+i]=d[s+i];
+      for(let i=4;i<stride;i++)out[o+1+i]=(d[s+i]-d[s+i-4])&255;
+    }
+    return out;
+  };
+  let res;try{res=await tlRender(n,k,transparent,async(data,rows)=>{
+    if(!writer){
+      if(typeof CompressionStream==='undefined')throw new Error('this Safari cannot write large PNGs. Update iPadOS, or choose a smaller size');
+      const cs=new CompressionStream('deflate');writer=cs.writable.getWriter();const rd=cs.readable.getReader();
+      reading=(async()=>{for(;;){const {value,done:dn}=await rd.read();if(dn)break;parts.push(tlChunk('IDAT',value));}})();
+    }
+    await writer.write(rowFilter(data,rows,data.length/4/rows));
+  },progress);}catch(e){try{writer&&writer.abort(e);}catch(x){}throw e;}
+  W=res.W;H=res.H;
+  await writer.close();await reading;
+  const ih=new Uint8Array(13),dv=new DataView(ih.buffer);dv.setUint32(0,W);dv.setUint32(4,H);ih[8]=8;ih[9]=6;
+  parts[ihdrAt]=tlChunk('IHDR',ih);
+  parts.push(tlChunk('IEND',new Uint8Array(0)));
+  return {blob:new Blob(parts,{type:'image/png'}),W,H,plan:res.plan};
+}
+function tlLayName(){return {grid:'Grid',halfDrop:'Half Drop',halfBrick:'Half Brick'}[tlLayoutKey()];}
+function tileExportSyncUI(){
+  const k=+$('tileRes').value||1,lim=tlLimit(tlN,k),z=lim.z,P=tlPlan(tlN,z.w,z.h);
+  document.querySelectorAll('#tilePopover .tile-n').forEach(b=>b.classList.toggle('active',+b.dataset.n===tlN));
+  [...$('tileRes').options].forEach(o=>{const q=tlSizes(tlN,+o.value);o.textContent=['×1','×2','×3','×4'][+o.value-1]+' · '+q.W+'×'+q.H+' px';});
+  const other=layout!=='grid'&&tlLayoutKey()==='grid';
+  let note='Layout: '+tlLayName()+(other?' (your '+(({diamond:'Diamond',ogee:'Ogee',tossed:'Tossed'})[layout]||layout)+' layout is exported as a plain Grid for now)':'')+'. ';
+  if(tlN===1)note+='One seamless tile, same as the plain tile export.';
+  else if(!P.seamless)note+='This arrangement shows the layout, but it is not a seamless repeat by itself. Use 1×1 or 2×2 for a repeating file.';
+  else if(tlLayoutKey()!=='grid')note+='This size repeats seamlessly: the dropped tiles wrap round inside the picture.';
+  else note+='Repeats seamlessly.';
+  $('tileLayNote').textContent=note;
+  const info=$('tileInfo');
+  info.className='hint'+(lim.hard?' tx-warn':'');
+  info.textContent=lim.hard?('⚠️ '+lim.hard):(z.W+' × '+z.H+' px · '+(Math.round(z.px/1e5)/10)+' megapixels'+(lim.warn?'. ⚠️ '+lim.warn:'.'));
+  $('tileSaveBtn').disabled=!!lim.hard&&!tlBusy;
+}
+function tileExportOpen(){
+  try{tbClosePopovers();}catch(e){}
+  try{const pp=$('tilePopover');if(pp.parentNode!==document.body)document.body.appendChild(pp);}catch(e){} // top level, so no floating panel can sit on top of it
+  tlArmed=false;tileExportSyncUI();$('tilePopover').classList.add('open');
+}
+document.querySelectorAll('#tilePopover .tile-n').forEach(b=>b.onclick=()=>{tlN=+b.dataset.n;tlArmed=false;tileExportSyncUI();});
+$('tileRes').onchange=()=>{tlArmed=false;tileExportSyncUI();};
+$('tileCloseBtn').onclick=()=>{$('tilePopover').classList.remove('open');};
+$('tileSaveBtn').onclick=async()=>{
+  const btn=$('tileSaveBtn'),bar=$('tileBar'),fill=bar.firstElementChild;
+  if(tlBusy){tlCancel=true;setStatus('🧱 Cancelling…');return;}
+  const k=+$('tileRes').value||1,lim=tlLimit(tlN,k);
+  if(lim.hard){tileExportSyncUI();return;}
+  if(lim.warn&&!tlArmed){tlArmed=true;btn.textContent='⚠️ Save anyway';setStatus('⚠️ '+lim.warn);return;}
+  tlBusy=true;tlCancel=false;tlArmed=false;btn.textContent='✋ Cancel';bar.style.display='block';fill.style.width='0%';
+  const name=exportBase(),lay=tlLayoutKey();
+  try{
+    setStatus('🧱 Drawing the tile…');
+    const r=await tlBuildPng(tlN,k,$('tileTransparent').checked,p=>{fill.style.width=Math.round(p*100)+'%';setStatus('🧱 Writing the picture… '+Math.round(p*100)+'%');});
+    saveFileBlob(r.blob,name+'-'+({grid:'grid',halfDrop:'halfdrop',halfBrick:'halfbrick'})[lay]+'-'+tlN+'x'+tlN+'-'+r.W+'x'+r.H+'.png');
+    setStatus('🧱 Saved '+tlN+'×'+tlN+' '+tlLayName()+' ('+r.W+' × '+r.H+' px). Your project was not changed.');
+  }catch(err){
+    if(String(err&&err.message)==='cancelled')setStatus('🧱 Tiled export cancelled.');
+    else{console.error(err);setStatus('⚠️ Could not make the tiled picture: '+(err&&err.message||err)+'. Try a smaller size.');}
+  }
+  tlBusy=false;btn.textContent='💾 Save PNG';setTimeout(()=>{bar.style.display='none';},800);tileExportSyncUI();
+};
+window.__sketchpadTileExport={plan:tlPlan,limit:tlLimit,png:(n,k,t)=>tlBuildPng(n,k,t),open:tileExportOpen};
+
 // ---- Pattern Brush maker --------------------------------------------------------------------------
 // Turns a vector path (the selected stroke, or every stroke on the active layer when none is
 // selected) into a brush tip image: a square, centred, padded render at up to 2048 px.
@@ -13092,7 +13224,7 @@ window.addEventListener('error',e=>{showErrToast((e.message||'error')+(e.lineno?
 window.addEventListener('unhandledrejection',e=>{showErrToast('promise: '+((e.reason&&e.reason.message)||e.reason));});
 let tbOpen=null;
 function tbClose(){if(!tbOpen)return;tbOpen.el.remove();try{tbOpen.anchor.setAttribute('aria-expanded','false');}catch(e){}tbOpen=null;}
-function tbClosePopovers(){['zoomPopover','viewPopover','svgPopover','hiPopover'].forEach(id=>{const e=$(id);if(e)e.classList.remove('open');});}
+function tbClosePopovers(){['zoomPopover','viewPopover','svgPopover','hiPopover','tilePopover'].forEach(id=>{const e=$(id);if(e)e.classList.remove('open');});}
 function tbPlace(el,anchor){
   const r=anchor.getBoundingClientRect(),vw=window.innerWidth,vh=window.innerHeight,m=8;
   el.style.maxHeight='none';el.style.left='0px';el.style.top='0px';
@@ -13155,6 +13287,7 @@ function tbExportMenu(){
     {label:'📸 Export image (PNG tile)',sub:'seamless tile',run:pressLegacy('exportBtn')},
     {label:'📸 Sharper tile (2× size)',sub:'less blurry',run:()=>exportTileSharp(2)},
     {label:'📸 Sharpest tile (4× size)',sub:'for printing',run:()=>exportTileSharp(4)},
+    {label:'🧱 Tiled export (1×1 · 2×2 · 3×3)…',sub:'repeat layout as previewed',run:()=>tileExportOpen()},
     {label:'🖼️ Export card (hi-res PNG)…',sub:'for selling / printing',run:pressLegacy('exportHiBtn')},
     {label:'🖋️ Export SVG (vector)…',sub:'choose size',run:pressLegacy('exportSvgBtn')},
   ]);
