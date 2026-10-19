@@ -1343,7 +1343,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v319'; // keep in step with CACHE in sw.js
+const APP_V='v320'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -5868,7 +5868,11 @@ function grpPaint(){
   if(grpPrev&&grpPrev.op){
     const o=grpPrev.op,cs=Math.cos(o.rot*Math.PI/180),sn=Math.sin(o.rot*Math.PI/180);
     liveActive=true;
-    liveDraw(c=>{c.save();c.transform(o.sx*cs,o.sx*sn,-o.sy*sn,o.sy*cs,o.ax-o.ax*o.sx*cs+o.ay*o.sy*sn+o.dx,o.ay-o.ax*o.sx*sn-o.ay*o.sy*cs+o.dy);c.drawImage(grpPrev.bmp,0,0,W,H);c.restore();},true);
+    // Only the group's own area is painted (and copied to each tile repeat), not the whole canvas once per repeat.
+    let gbb=null;if(grpPrev.bb0){let x0=1e12,y0=1e12,x1=-1e12,y1=-1e12;const b0=grpPrev.bb0;
+      [[b0.x0,b0.y0],[b0.x1,b0.y0],[b0.x0,b0.y1],[b0.x1,b0.y1]].forEach(([x,y])=>{const q=opPoint(o,x,y);if(q.x<x0)x0=q.x;if(q.x>x1)x1=q.x;if(q.y<y0)y0=q.y;if(q.y>y1)y1=q.y;});
+      gbb={x0:x0-30,y0:y0-30,x1:x1+30,y1:y1+30};}
+    liveDraw(c=>{c.save();c.transform(o.sx*cs,o.sx*sn,-o.sy*sn,o.sy*cs,o.ax-o.ax*o.sx*cs+o.ay*o.sy*sn+o.dx,o.ay-o.ax*o.sx*sn-o.ay*o.sy*cs+o.dy);c.drawImage(grpPrev.bmp,0,0,W,H);c.restore();},true,gbb);
     if(!liveOvOn)redraw();return;
   }
   const {st,pl}=selMembers();liveActive=true;
@@ -5876,7 +5880,7 @@ function grpPaint(){
     const sv=ctx;ctx=c;
     try{st.forEach(s=>renderStrokeClipped(c,s,BrushEngine.getBrush(s.brushId),strokeSettings(s)));pl.forEach(p=>{if(p.img)drawOne(p,0,0);});}
     finally{ctx=sv;}
-  },true);
+  },true,(()=>{try{const q=selBBox();return q?{x0:q.x0-30,y0:q.y0-30,x1:q.x1+30,y1:q.y1+30}:null;}catch(e){return null;}})());
   redraw();
 }
 function grpSchedulePaint(){if(grpRaf)return;grpRaf=requestAnimationFrame(()=>{grpRaf=0;if(multiSel)grpPaint();});}
@@ -5894,7 +5898,8 @@ function grpDragBegin(){
       finally{ctx=sv;}
       const half=document.createElement('canvas');half.width=W>>1;half.height=H>>1;
       const hc=half.getContext('2d');hc.imageSmoothingQuality='high';hc.drawImage(bmp,0,0,half.width,half.height);bmp.width=1;bmp.height=1;
-      grpPrev={bmp:half,op:{ax:0,ay:0,sx:1,sy:1,rot:0,dx:0,dy:0}};
+      let bb0=null;try{const q=selBBox();if(q)bb0={x0:q.x0,y0:q.y0,x1:q.x1,y1:q.y1};}catch(e){}
+      grpPrev={bmp:half,bb0,op:{ax:0,ay:0,sx:1,sy:1,rot:0,dx:0,dy:0}};
     }catch(e){grpPrev=null;}
   }
   return base;
