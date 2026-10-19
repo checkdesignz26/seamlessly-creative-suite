@@ -27,7 +27,11 @@ with sync_playwright() as p:
     pg = ctx.new_page()
     errs = []
     pg.on('pageerror', lambda e: errs.append(str(e)))
-    pg.on('dialog', lambda d: d.accept(d.default_value or 'Café Test'))
+    dlg = {'accept': True, 'msgs': []}
+    def on_dialog(d):
+        dlg['msgs'].append(d.message)
+        d.accept(d.default_value or 'Café Test') if dlg['accept'] else d.dismiss()
+    pg.on('dialog', on_dialog)
     ev = pg.evaluate
 
     # --- a suite project with a pattern, a mock-up and a plain graphic, made through the real shared library
@@ -89,6 +93,20 @@ with sync_playwright() as p:
         check('new project asset not shown before refresh', 'patterns 1' in f.evaluate("document.getElementById('ilAssetTray').innerText"))
         f.click('#ilAssetTray .il-tray-refresh'); f.wait_for_timeout(1500)
         check('refresh brings in the newly starred pattern', 'patterns 2' in f.evaluate("document.getElementById('ilAssetTray').innerText"))
+
+        # --- 4b. delete a project asset from the tray (confirm, cancel keeps it)
+        n_before = ev("""async (pid) => (await SCLibrary.listAssets(pid)).length""", pid)
+        check('every project thumbnail has a delete ×', f.evaluate("document.querySelectorAll('#ilAssetTray .il-tray-thumb').length === document.querySelectorAll('#ilAssetTray .il-tray-x').length && document.querySelectorAll('#ilAssetTray .il-tray-x').length > 0"))
+        dlg['accept'] = False; dlg['msgs'].clear()
+        f.click('#ilAssetTray .il-tray-x >> nth=1'); f.wait_for_timeout(600)
+        check('cancelling the confirmation keeps the asset', ev("""async (pid) => (await SCLibrary.listAssets(pid)).length""", pid) == n_before and len(dlg['msgs']) == 1, dlg['msgs'])
+        dlg['accept'] = True; dlg['msgs'].clear()
+        f.click('#ilAssetTray .il-tray-x >> nth=1'); f.wait_for_function("document.getElementById('ilAssetTray').innerText.includes('patterns 1')", timeout=10000)
+        left = ev("""async (pid) => (await SCLibrary.listAssets(pid)).map(a=>a.name)""", pid)
+        check('confirming deletes exactly that asset from the project', len(left) == n_before - 1 and 'Second pattern' not in left and 'Latte swirl' in left, left)
+        check('deleted pattern also leaves the Lookbook strips', f.evaluate("ilHostPatterns().length") == 1)
+        check('warning names the assets and where else it disappears', 'Mock-up Studio' in dlg['msgs'][0] and 'can’t be undone' in dlg['msgs'][0], dlg['msgs'])
+        f.evaluate("window.__lbApp.saveNow()")
 
         # --- 5. editable lookbook is saved and returns after a reload; project assets are not duplicated into it
         f.evaluate("window.__lbApp.saveNow()"); f.wait_for_timeout(800)

@@ -82,6 +82,21 @@
       if (suite.srcs[src]) { toast('that one belongs to your project — remove it from the project, not from the Lookbook.'); return; }
       return own.removeAsset(kind, src);
     };
+    // delete one picture from the suite project (the shared library). Pages already using it keep their copy.
+    h.deleteProjectAsset = async function (it) {
+      var used = false;
+      try { used = JSON.stringify(ilSerializeLookbook()).indexOf(it.src) >= 0; } catch (e) {}
+      var msg = 'Delete “' + (it.name || 'this picture') + '” from the project?\n\n' +
+        'It will also disappear from Mock-up Studio, Pattern Pages and the other studios in this project, and this can’t be undone.' +
+        (used ? '\n\nIt is used on a page of this lookbook. The page keeps its own copy, but the original will be gone from the project.' : '');
+      if (!confirm(msg)) return;
+      try {
+        await window.SCLibrary.deleteAsset(it.assetId);
+        suite.cache = {};
+        await loadAssets();
+        toast('deleted from the project.');
+      } catch (e) { console.error(e); toast("couldn't delete that one — please try again."); }
+    };
     h.refreshAssets = async function () {
       var n = await loadAssets();
       toast(suite.error || (n + (n === 1 ? ' project asset' : ' project assets') + ' available.'));

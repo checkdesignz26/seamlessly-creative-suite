@@ -124,7 +124,14 @@
       t.setAttribute('aria-label', 'place ' + (it.name || 'picture'));
       t.style.backgroundImage = 'url("' + (it.thumbSrc || it.src) + '")';
       t.addEventListener('click', function () { place(it); });
-      shelf.appendChild(t);
+      // a host that can delete an item (the suite: removes it from the project) gets a × on that thumbnail
+      if (it.assetId && host().deleteProjectAsset) {
+        var holder = el('div', 'il-tray-item');
+        var x = el('button', 'il-tray-x', '×');
+        x.type = 'button'; x.title = 'delete from the project'; x.setAttribute('aria-label', 'delete ' + (it.name || 'picture') + ' from the project');
+        x.addEventListener('click', function (e) { e.stopPropagation(); host().deleteProjectAsset(it); });
+        holder.appendChild(t); holder.appendChild(x); shelf.appendChild(holder);
+      } else shelf.appendChild(t);
     });
     root.appendChild(shelf);
     var s = host().assetsNote && host().assetsNote();
