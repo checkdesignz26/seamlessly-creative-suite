@@ -1457,7 +1457,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v342'; // keep in step with CACHE in sw.js
+const APP_V='v343'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -6052,6 +6052,12 @@ function sgDraw(guides){
   if(!guides||!guides.length){sgSvg.innerHTML='';return;}
   const pad=14/Math.max(.05,zoom*baseScale),seen=new Set();let out='';
   for(const g of guides){
+    if(g.seg){ // an angle-lock guide: the line itself, carried on a little past both ends
+      const dx=g.x2-g.x1,dy=g.y2-g.y1,L=Math.hypot(dx,dy)||1,e=40/Math.max(.05,zoom*baseScale),ux=dx/L*e,uy=dy/L*e;
+      const q1=canvasToScreen(g.x1-ux,g.y1-uy),q2=canvasToScreen(g.x2+ux,g.y2+uy);
+      out+='<line x1="'+q1.x.toFixed(1)+'" y1="'+q1.y.toFixed(1)+'" x2="'+q2.x.toFixed(1)+'" y2="'+q2.y.toFixed(1)+'" stroke="#ff2d95" stroke-width="1.5" stroke-dasharray="6 4"/>';
+      continue;
+    }
     if(g.s){ // equal-gap marker: a line across each gap with a small tick at both ends
       const tk=5/Math.max(.05,zoom*baseScale);
       for(const sg of g.segs){
@@ -6069,7 +6075,20 @@ function sgDraw(guides){
   }
   sgSvg.innerHTML=out;
 }
-function sgClear(){sgT=null;if(sgSvg)sgSvg.innerHTML='';}
+// Draw + Hold line: when the held line is within about 7 degrees of 0, 45, 90 ... degrees, its end swings onto that angle (length kept)
+// and a guide line shows it. Keeps working while the Pencil drags the line around; move further off the angle and it is free again.
+let sgLockK=null;
+function sgAngleLock(shape){
+  if(!sgOn||!shape||shape.type!=='line'){sgLockK=null;return null;}
+  const dx=shape.x1-shape.x0,dy=shape.y1-shape.y0,len=Math.hypot(dx,dy);if(len<4){sgLockK=null;return null;}
+  const ang=Math.atan2(dy,dx)*180/Math.PI,k=Math.round(ang/45)*45;
+  if(Math.abs(ang-k)>7){if(sgLockK!=null){sgLockK=null;sgDraw([]);}return null;}
+  const r=k*Math.PI/180;shape.x1=shape.x0+len*Math.cos(r);shape.y1=shape.y0+len*Math.sin(r);
+  sgDraw([{seg:1,x1:shape.x0,y1:shape.y0,x2:shape.x1,y2:shape.y1}]);
+  if(sgLockK!==k){sgLockK=k;try{setStatus('📐 Line locked to '+(((k%180)+180)%180)+'°.');}catch(e){}}
+  return k;
+}
+function sgClear(){sgLockK=null;sgT=null;if(sgSvg)sgSvg.innerHTML='';}
 let dragMotif=null,dragStroke=null,quickMoveOn=false,flowerDragArm=null;
 canvas.addEventListener('pointerdown',e=>{
   if(mode!=='edit'||!isPen(e))return;
@@ -10487,6 +10506,7 @@ function triggerHoldRecognition(){
     if(Math.hypot(lp.x-fp.x,lp.y-fp.y)>Math.hypot(shape.x1-shape.x0,shape.y1-shape.y0)){shape.x0=fp.x;shape.y0=fp.y;shape.x1=lp.x;shape.y1=lp.y;}
   }
   tileSnapLine(shape);
+  try{sgAngleLock(shape);}catch(e){}
   const profile=buildPressureProfile(sourcePoints);
   const correctedPoints=applyPressureProfile(shapeToPoints(shape),profile);
   holdCorrectedShape=shape;holdPressureProfile=profile;holdTriggered=true;
@@ -10538,6 +10558,7 @@ function adjustHeldShape(p){
     // The line's far end simply follows the pen tip (the start stays put), so it stays one straight line and
     // lengthens/shortens/turns exactly where you drag — no offset, no jumps.
     shape.x1=p.x;shape.y1=p.y;
+    try{sgAngleLock(shape);}catch(e){}
   }else{
     const cx=(shape.x0+shape.x1)/2,cy=(shape.y0+shape.y1)/2;
     // Measured as a CHANGE in distance-from-centre relative to where the Pencil was when the
@@ -16533,7 +16554,7 @@ window.__sketchpadDescribe=(a,b)=>describeChange(a,b);
 window.__sketchpadPush=()=>{rebuildAllLayers();pushHist();redraw();};
 window.__sketchpadBlurTest={filterOK:()=>blurFilterOK(),force:v=>{_blurFilterOK=v;},semi:()=>{updateComposite();const d=compositeCtx.getImageData(0,0,W,H).data;let semi=0,solid=0;for(let i=3;i<d.length;i+=4){if(d[i]>8&&d[i]<200)semi++;else if(d[i]>=200)solid++;}return [semi,solid];},hi:async n=>{const c=await buildHiRes(n,true);const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let semi=0;for(let i=3;i<d.length;i+=4)if(d[i]>8&&d[i]<200)semi++;return semi;}};
 window.__sketchpadCollection={get:()=>coll,history:()=>({n:history.length,i:hIndex}),colNew,colDuplicate,colDupRevert,colMoveTo,liquifyPresent:()=>liquifyPresent(strokes),colSwitch,colMove,colDelete,colRename,colRevertPattern,colExportAll,buildDocObject,applyDocObject,liquifyRevertLayers:()=>liquifyRevertLayers(layers,'test')};
-window.__sketchpadInternals=()=>({updateGroupBox,sgSnap,sgSnapScale,sgSnapEdge,sgSpaceCands,sgBegin,sgBoxOfStroke,sgState:()=>({on:sgOn,t:sgT}),cmExtractColoursFromImage,cmExtractInfo:()=>cmExtractInfo,wpApply,renderBrushStrokeCapped,dashPieces,dashSeq,svgStrokeOutline,setMulti,syncStrokeSelectionUI,pushHist,undo,redo,blendInstall,blendSpecOf,radialSync,layers,strokes,rebuildAllLayers,pixTotal,segVerBump:()=>{segVer++;compositeDirty=true;redraw();}});
+window.__sketchpadInternals=()=>({sgAngleLock,updateGroupBox,sgSnap,sgSnapScale,sgSnapEdge,sgSpaceCands,sgBegin,sgBoxOfStroke,sgState:()=>({on:sgOn,t:sgT}),cmExtractColoursFromImage,cmExtractInfo:()=>cmExtractInfo,wpApply,renderBrushStrokeCapped,dashPieces,dashSeq,svgStrokeOutline,setMulti,syncStrokeSelectionUI,pushHist,undo,redo,blendInstall,blendSpecOf,radialSync,layers,strokes,rebuildAllLayers,pixTotal,segVerBump:()=>{segVer++;compositeDirty=true;redraw();}});
 window.__sketchpadLayerInfo=()=>{updateDisplayComposite();updateComposite();
   const cmp=document.createElement('canvas');cmp.width=W/4;cmp.height=H/4;const c=cmp.getContext('2d');
   c.drawImage(displayCanvas,0,0,cmp.width,cmp.height);const a=c.getImageData(0,0,cmp.width,cmp.height).data;
