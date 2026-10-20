@@ -1375,7 +1375,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v330'; // keep in step with CACHE in sw.js
+const APP_V='v331'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -2520,6 +2520,11 @@ function renderGradStroke(ctx,stroke,brush,settings,alphaMul){
   return true;
 }
 function renderStrokeClipped(ctx,stroke,brush,settings,alphaMul){
+  renderStrokeClipped0(ctx,stroke,brush,settings,alphaMul);
+  // a template placeholder draws its own direction arrow, from its CURRENT geometry, so the arrow can never lag behind a move, resize or turn
+  if(stroke.tplArrow&&stroke.tplArrow.on)tplDrawArrow(ctx,stroke,brush,settings,alphaMul);
+}
+function renderStrokeClipped0(ctx,stroke,brush,settings,alphaMul){
   if(stroke.patFill)return renderPatFill(ctx,stroke,alphaMul);
   if(stroke.noStroke&&!stroke.fillColor&&!stroke.text)return; // "None" stroke: the outline is invisible but its geometry (selection, clip boundary, fill) stays
   if(stroke.text)return txRender(ctx,stroke,alphaMul);
@@ -2570,7 +2575,6 @@ function renderStrokeClipped(ctx,stroke,brush,settings,alphaMul){
 }
 function rebuildLayer(layerId){
   const layer=layers.find(l=>l.id===layerId);if(!layer)return;
-  if(layer.tpl===1&&!tplArrowSync._b){try{tplArrowSync();}catch(e){}} // arrows inside placeholders follow their shape
   // Any geometry change (joined ends, closed gaps, moved nodes) reaches the linked fill here, so it can never keep an older shape.
   if(!window.__fillBusy&&strokes.some(o=>o.fill&&o.fill.on&&o.layerId===layerId)){try{fillSync();}catch(e){}}
   if(layer.asleep){
@@ -2670,7 +2674,7 @@ function strokesToJSON(){return JSON.stringify(strokes,_rnd);}
 function snapshot(){
   return {
     strokesJSON:strokesToJSON(),
-    layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip,tpl:l.tpl||0}))),
+    layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip,tpl:l.tpl||0,arHide:l.arHide||0}))),
     activeLayerId,
     placed:JSON.stringify(placed.map(p=>({...p,img:null}))),
     selected,selectedStrokeId,
@@ -2711,7 +2715,7 @@ function applyLayerMeta(layerMeta,wantActiveId){
   const used=new Set();
   const take=m=>{const o=old.find(l=>l.id===m.id&&!used.has(l));if(o){used.add(o);return o;}return makeLayer(m.name);};
   if(layerMeta&&layerMeta.length){
-    layers=layerMeta.map(m=>{const l=take(m);l.name=m.name;l.id=m.id;l.kind=m.kind||'vector';l.visible=m.visible!==false;l.locked=!!m.locked;l.opacity=(m.opacity!=null)?m.opacity:100;l.blend=m.blend||'source-over';l.alphaLock=!!m.alphaLock;l.blur=+m.blur||0;l.clip=!!m.clip;l.tpl=m.tpl||0;return l;});
+    layers=layerMeta.map(m=>{const l=take(m);l.name=m.name;l.id=m.id;l.kind=m.kind||'vector';l.visible=m.visible!==false;l.locked=!!m.locked;l.opacity=(m.opacity!=null)?m.opacity:100;l.blend=m.blend||'source-over';l.alphaLock=!!m.alphaLock;l.blur=+m.blur||0;l.clip=!!m.clip;l.tpl=m.tpl||0;l.arHide=m.arHide||0;return l;});
   }else{
     layers=defaultLayers();
   }
@@ -3897,7 +3901,7 @@ function captureMotif(subset,stayInEdit){
   if(!preview){if(subset){strokes=allStrokes;rebuildAllLayers();}setStatus('Nothing to capture yet — draw with Apple Pencil first.');return}
   const source={
     strokesJSON:strokesToJSON(),
-    layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip,tpl:l.tpl||0}))),
+    layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip,tpl:l.tpl||0,arHide:l.arHide||0}))),
     bounds:preview.bounds,
   };
   // returnToDraw=true: the user was mid-drawing when they captured — see the comment on
@@ -10742,7 +10746,7 @@ function enterEditMotif(){
  armedShapeType=null;syncShapeToolUI();
  editingMotifStash={
   strokesJSON:strokesToJSON(),
-  layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip,tpl:l.tpl||0}))),
+  layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip,tpl:l.tpl||0,arHide:l.arHide||0}))),
   activeLayerId,mode,
  };
  editingMotifId=entry.id;
@@ -10809,7 +10813,7 @@ function finishEditMotif(){
   setStatus('✓ Motif updated — every linked instance now reflects your changes.');
  };
  if(entry&&preview){
-  entry.source={strokesJSON:strokesToJSON(),layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip,tpl:l.tpl||0}))),bounds:preview.bounds};
+  entry.source={strokesJSON:strokesToJSON(),layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip,tpl:l.tpl||0,arHide:l.arHide||0}))),bounds:preview.bounds};
   const img=new Image();
   img.onload=()=>{
    entry.img=img;entry.src=preview.src;
@@ -10852,7 +10856,7 @@ function recolourStrokeList(list,map){
 // trick Edit Motif uses, so Paint Inside clips and layer opacity come out identical), then restoring.
 function renderMotifSourcePreview(source){
   if(editingMotifId)return null;
-  const stash={strokesJSON:strokesToJSON(),layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip,tpl:l.tpl||0}))),activeLayerId};
+  const stash={strokesJSON:strokesToJSON(),layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip,tpl:l.tpl||0,arHide:l.arHide||0}))),activeLayerId};
   let preview=null;
   try{
     strokes=JSON.parse(source.strokesJSON);
@@ -12096,7 +12100,7 @@ function buildDocObject(){
   const d={
     tileW:TW,tileH:TH,tilePhys:tilePhys,repeatPreview:showTiling?'tiled':'single',canvasTiling:canvasTiling,
     strokesJSON:strokesToJSON(),
-    layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip,tpl:l.tpl||0}))),
+    layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip,tpl:l.tpl||0,arHide:l.arHide||0}))),
     activeLayerId,
     placedJSON:JSON.stringify(placed.map(p=>({...p,img:null}))),
     groupsJSON:JSON.stringify(groups),
@@ -12153,7 +12157,7 @@ function queueJob(fn){const job=saveChain.then(fn,fn);saveChain=job.then(()=>{},
 function blankDoc(lay,tile,phys,preview){
   const dl=defaultLayers();
   const tt=tile?tileFromRatio(tile.split(':')[0],tile.split(':')[1]):[TILE,TILE];
-  return {format:'sketchpad-project',version:2,tileW:tt[0],tileH:tt[1],strokesJSON:'[]',layersJSON:JSON.stringify(dl.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip,tpl:l.tpl||0}))),activeLayerId:dl[dl.length-1].id,placedJSON:'[]',groupsJSON:'{}',motifs:[],editingMotifId:null,editingMotifStash:null,bgSrc:null,bgOpacity:1,bgShown:true,tracesJSON:'[]',traceLocked:true,customBrushes:[],layout:lay||'grid',activeTemplate:null,savedPalettes:savedPalettes.map(p=>({id:crypto.randomUUID(),name:p.name,hexes:p.hexes.slice()})),tilePhys:phys||null,repeatPreview:preview||'tiled',savedAt:Date.now()};
+  return {format:'sketchpad-project',version:2,tileW:tt[0],tileH:tt[1],strokesJSON:'[]',layersJSON:JSON.stringify(dl.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip,tpl:l.tpl||0,arHide:l.arHide||0}))),activeLayerId:dl[dl.length-1].id,placedJSON:'[]',groupsJSON:'{}',motifs:[],editingMotifId:null,editingMotifStash:null,bgSrc:null,bgOpacity:1,bgShown:true,tracesJSON:'[]',traceLocked:true,customBrushes:[],layout:lay||'grid',activeTemplate:null,savedPalettes:savedPalettes.map(p=>({id:crypto.randomUUID(),name:p.name,hexes:p.hexes.slice()})),tilePhys:phys||null,repeatPreview:preview||'tiled',savedAt:Date.now()};
 }
 function docCounts(d){const n=j=>{try{return JSON.parse(j||'[]').length;}catch(e){return 0;}};return {strokes:n(d.strokesJSON),motifs:(d.motifs||[]).length};}
 function makeThumb(){
@@ -12859,7 +12863,7 @@ async function applyDocObject(doc,opts){
       if(entry){
         const preview=renderCurrentArtworkPreview();
         if(preview){
-          entry.source={strokesJSON:strokesToJSON(),layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip,tpl:l.tpl||0}))),bounds:preview.bounds};
+          entry.source={strokesJSON:strokesToJSON(),layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip,tpl:l.tpl||0,arHide:l.arHide||0}))),bounds:preview.bounds};
           await new Promise(res=>{const img=new Image();img.onload=()=>{entry.img=img;entry.src=preview.src;placed.forEach(p=>{if(p.motifId===entry.id)p.img=img;});res();};img.onerror=res;img.src=preview.src;});
         }
       }
@@ -13442,7 +13446,7 @@ function tplApplyObjs(objs,meta){
   const gmap=new Map();
   objs.forEach(o=>strokes.push(tplObjToStroke(o,lay,gmap)));
   const g=meta.guide||{};
-  lay.ph.visible=g.phVisible!==false;lay.ar.visible=g.arVisible!==false;lay.ph.locked=!!g.locked;
+  lay.ph.visible=g.phVisible!==false;lay.ar.visible=g.arVisible!==false;lay.ph.arHide=g.arVisible===false?1:0;lay.ph.locked=!!g.locked;
   lay.ph.opacity=lay.ar.opacity=Math.max(10,Math.min(100,g.opacity||100));
   {const b=$('tilingBtn');if(meta.pre&&b&&!showTiling)b.click();} // show the surrounding repeat so the edge-crossing shapes are visible
   const art=layers.find(l=>!l.tpl);if(art&&(layers.find(l=>l.id===activeLayerId)||{}).tpl)activeLayerId=art.id;
@@ -13472,46 +13476,54 @@ function tplParentBox(p){
   if(p.shape&&shapeInSync(p)){const sh=p.shape;return {cx:(sh.x0+sh.x1)/2,cy:(sh.y0+sh.y1)/2,w:Math.abs(sh.x1-sh.x0),h:Math.abs(sh.y1-sh.y0),rot:sh.rotation||0};}
   const b=strokeBounds([p]);return {cx:(b.x0+b.x1)/2,cy:(b.y0+b.y1)/2,w:b.x1-b.x0,h:b.y1-b.y0,rot:0};
 }
+// Version 330 stored each arrow as a separate stroke. They are now drawn by the placeholder itself, so any old separate ones are removed (the arrow
+// setting stays on the placeholder, so nothing visible is lost).
 function tplArrowSync(){
-  if(tplArrowSync._b)return;tplArrowSync._b=1;
-  try{
-    const owners=strokes.filter(s=>s.tpl===1&&s.tplArrow&&s.tplArrow.on),ids=new Set(owners.map(s=>s.id));
-    let lay=tplLayers(false),changed=false;
-    for(let i=strokes.length-1;i>=0;i--){const q=strokes[i];if(q.tplOf&&!ids.has(q.tplOf)){strokes.splice(i,1);changed=true;}}
-    if(owners.length&&!(lay.ar)){lay=tplLayers(true);}
-    if(!lay.ar&&!changed)return;
-    const have=new Map();strokes.forEach(q=>{if(q.tplOf)have.set(q.tplOf,q);});
-    owners.forEach(p=>{
-      const b=tplParentBox(p),g=tplArrowGeom(b.cx,b.cy,b.w,b.h,b.rot,p.tplKind,p.tplArrow.a),size=Math.max(2.5,((p.settings&&p.settings.size)||5)*0.7);
-      let q=have.get(p.id);
-      if(!q){q={id:crypto.randomUUID(),brushId:'smoothPen',layerId:lay.ar.id,color:p.color,settings:Object.assign(tplSettings(size),{opacity:60}),points:g.points,nodes:null,closed:false,clipStrokeId:null,shape:g.shape,tpl:2,tplKind:'arrow',tplOf:p.id};strokes.push(q);changed=true;}
-      else{
-        const same=q.color===p.color&&q.points.length===g.points.length&&q.points.every((pt,i)=>Math.abs(pt.x-g.points[i].x)<0.01&&Math.abs(pt.y-g.points[i].y)<0.01)&&((q.settings&&q.settings.size)||0)===size;
-        if(!same){q.color=p.color;q.points=g.points;q.shape=g.shape;q.settings=Object.assign(tplSettings(size),{opacity:60});q.layerId=lay.ar.id;changed=true;}
-      }
-    });
-    if(changed&&lay.ar){const ar=lay.ar;tplArrowSync._b=0;try{rebuildLayer(ar.id);}finally{tplArrowSync._b=1;}segVer++;compositeDirty=true;}
-  }finally{tplArrowSync._b=0;}
+  if(!strokes.some(q=>q.tplOf))return;
+  for(let i=strokes.length-1;i>=0;i--)if(strokes[i].tplOf)strokes.splice(i,1);
+  const l=tplLayers(false);if(l.ar){try{rebuildLayer(l.ar.id);}catch(e){}}segVer++;compositeDirty=true;
+}
+// the arrow polyline for a placeholder, worked out from its shape (kind, size, turn) and shifted to wherever its outline points are right now
+function tplArrowPts(p){
+  const pb=strokeBounds([{points:p.points,settings:{size:0}}]);if(!pb)return null;
+  let cx=(pb.x0+pb.x1)/2,cy=(pb.y0+pb.y1)/2,w=pb.x1-pb.x0,h=pb.y1-pb.y0,rot=0;
+  if(p.shape&&p.shape.type!=='line'){
+    try{
+      const sh=p.shape,sp=shapeToPoints(sh),sb=strokeBounds([{points:sp,settings:{size:0}}]);
+      const scx=(sb.x0+sb.x1)/2,scy=(sb.y0+sb.y1)/2;
+      const dx=cx-scx,dy=cy-scy;                 // 0 normally; the drag distance while a live move preview is showing
+      cx=(sh.x0+sh.x1)/2+dx;cy=(sh.y0+sh.y1)/2+dy;w=Math.abs(sh.x1-sh.x0);h=Math.abs(sh.y1-sh.y0);rot=sh.rotation||0;
+    }catch(e){}
+  }
+  return tplArrowGeom(cx,cy,w,h,rot,p.tplKind,p.tplArrow.a).points;
+}
+function tplArrowHidden(p){const l=layers.find(x=>x.id===p.layerId);return !!(l&&l.arHide);}
+function tplDrawArrow(ctx,p,brush,settings,alphaMul){
+  if(tplArrowHidden(p))return;
+  const pts=tplArrowPts(p);if(!pts)return;
+  const size=Math.max(2.5,((settings&&settings.size)||5)*0.7);
+  const st=Object.assign({},settings||{},{size});
+  renderStrokeClipped0(ctx,{id:p.id+'-arrow',brushId:p.brushId,layerId:p.layerId,color:p.color,settings:st,points:pts,nodes:null,closed:false,shape:null},brush,st,(alphaMul!=null?alphaMul:1)*0.6);
 }
 function tplToggleArrow(){
   const ids=tplSelIds().filter(id=>{const s=strokes.find(x=>x.id===id);return s&&s.tpl===1;});
   if(!ids.length){setStatus('➜ Select a placeholder first, then tap Arrow in shape.');return;}
   const owners=ids.map(id=>strokes.find(x=>x.id===id)),turnOn=!owners.every(s=>s.tplArrow&&s.tplArrow.on);
   owners.forEach(s=>{s.tplArrow={on:turnOn,a:(s.tplArrow&&s.tplArrow.a)||0};});
-  tplArrowSync();tplArLock();tplAfter(turnOn?'➜ Arrow added inside. Use Arrow turn to point it; it moves, resizes and rotates with the shape.':'Arrow removed.');
+  tplAfter(turnOn?'➜ Arrow added inside. Use Arrow turn to point it; it moves, resizes and rotates with the shape.':'Arrow removed.');
 }
 function tplArrowTurn(v){
   const ids=tplSelIds().filter(id=>{const s=strokes.find(x=>x.id===id);return s&&s.tpl===1&&s.tplArrow&&s.tplArrow.on;});
   if(!ids.length)return false;
   ids.forEach(id=>{strokes.find(x=>x.id===id).tplArrow.a=v;});
-  tplArrowSync();redraw();return true;
+  const l=tplLayers(false);if(l.ph)rebuildLayer(l.ph.id);segVer++;compositeDirty=true;redraw();return true;
 }
 function tplColourAll(){
   const ids=tplSelIds().map(id=>strokes.find(x=>x.id===id)).filter(s=>s&&s.tpl===1);
   if(!ids.length){setStatus('🎨 Select a placeholder first. Every shape of the same type will take the colour.');return;}
   const kinds=new Set(ids.map(s=>s.tplKind));let n=0;
   strokes.forEach(s=>{if(s.tpl===1&&kinds.has(s.tplKind)){s.color=tplCurCol();n++;}});
-  tplArrowSync();tplAfter('🎨 '+n+' '+[...kinds].join('/')+' placeholder'+(n===1?'':'s')+' recoloured.');
+  tplAfter('🎨 '+n+' '+[...kinds].join('/')+' placeholder'+(n===1?'':'s')+' recoloured.');
 }
 // ---------- selection helpers ----------
 function tplSelIds(){
@@ -13554,14 +13566,14 @@ function tplReplace(kind){
   pushHist();tplSync();setStatus('📐 Replaced. Centre, size, turn and colour are kept; nothing else moved.');
 }
 // ---------- appearance ----------
-$('tplColour').oninput=()=>{tplApplyToSel(s=>{s.color=tplCurCol();});tplArrowSync();};
+$('tplColour').oninput=()=>{tplApplyToSel(s=>{s.color=tplCurCol();});};
 $('tplColour').onchange=()=>{if(tplSelIds().length)pushHist();};
 $('tplWidth').oninput=()=>{$('tplWidthV').textContent=tplCurW();tplApplyToSel(s=>{s.settings=Object.assign({},s.settings||tplSettings(5),{size:tplCurW()});});};
 $('tplWidth').onchange=()=>{if(tplSelIds().length)pushHist();};
 $('tplOpacity').oninput=()=>{const v=+$('tplOpacity').value;$('tplOpacityV').textContent=v;const l=tplLayers(false);[l.ph,l.ar].forEach(x=>{if(x)x.opacity=v;});compositeDirty=true;segVer++;redraw();try{renderLayersList();}catch(e){}};
 $('tplOpacity').onchange=()=>{pushHist();};
 $('tplShowBtn').onclick=()=>{const l=tplLayers(false);if(!l.ph)return;l.ph.visible=!l.ph.visible;tplAfter();setStatus(l.ph.visible?'👁 Guides shown.':'🚫 Placeholders hidden.');};
-$('tplArrowsBtn').onclick=()=>{const l=tplLayers(false);if(!l.ar)return;l.ar.visible=!l.ar.visible;tplAfter();setStatus(l.ar.visible?'➜ Arrows shown.':'🚫 Arrows hidden.');};
+$('tplArrowsBtn').onclick=()=>{const l=tplLayers(false);if(!l.ph)return;const show=!!l.ph.arHide;l.ph.arHide=show?0:1;if(l.ar)l.ar.visible=show;tplAfter();setStatus(show?'➜ Arrows shown.':'🚫 Arrows hidden.');};
 $('tplLockBtn').onclick=()=>{const l=tplLayers(false);if(!l.ph)return;const v=!l.ph.locked;l.ph.locked=v;tplArLock();if(v)tplClearSelection();tplAfter();setStatus(v?'🔒 Guides locked. They stay put while you draw.':'🔓 Guides unlocked.');};
 $('tplArrowToggle').onclick=tplToggleArrow;
 $('tplColourAllBtn').onclick=tplColourAll;
@@ -13594,7 +13606,7 @@ function tplMyLoad(){try{const o=JSON.parse(localStorage.getItem(TPL_MY_KEY)||'n
 function tplMySave(list){try{localStorage.setItem(TPL_MY_KEY,JSON.stringify({v:1,list}));return true;}catch(e){setStatus('⚠️ Could not store the template here (browser storage is full or blocked). Use Export to keep a file.');return false;}}
 function tplDoc(name){
   const l=tplLayers(false);
-  return {format:'pattern-sketch-template',version:1,name,layout,tile:{w:TW,h:TH},guide:{opacity:l.ph?l.ph.opacity:100,phVisible:l.ph?l.ph.visible:true,arVisible:l.ar?l.ar.visible:true,locked:l.ph?!!l.ph.locked:false},objs:tplCollect()};
+  return {format:'pattern-sketch-template',version:1,name,layout,tile:{w:TW,h:TH},guide:{opacity:l.ph?l.ph.opacity:100,phVisible:l.ph?l.ph.visible:true,arVisible:l.ph?!l.ph.arHide:true,locked:l.ph?!!l.ph.locked:false},objs:tplCollect()};
 }
 function tplValidate(d){
   if(!d||typeof d!=='object'||d.format!=='pattern-sketch-template'||!(d.version>=1))throw new Error('This is not a Pattern Sketch template file.');
@@ -13686,6 +13698,7 @@ async function tplRenderPng(w,h,o){
       g.strokeStyle=s.color;g.lineWidth=((s.settings&&s.settings.size)||5);g.globalAlpha=Math.max(.1,Math.min(1,o.opacity/100))*(((s.settings&&s.settings.opacity)||100)/100);
       g.beginPath();s.points.forEach((p,i)=>{if(i)g.lineTo(p.x,p.y);else g.moveTo(p.x,p.y);});if(s.closed)g.closePath();
       g.stroke();
+      if(o.arrows&&s.tplArrow&&s.tplArrow.on){const ap=tplArrowPts(s);if(ap){g.save();g.globalAlpha*=0.6;g.lineWidth=Math.max(2.5,((s.settings&&s.settings.size)||5)*0.7);g.beginPath();ap.forEach((p,i)=>{if(i)g.lineTo(p.x,p.y);else g.moveTo(p.x,p.y);});g.stroke();g.restore();}}
     });
   });
   g.setTransform(1,0,0,1,0,0);
@@ -13776,7 +13789,7 @@ function tplSync(){
   const t=$('tplTools');if(!t)return;t.style.display=has?'':'none';if(!has)return;
   $('tplCurName').textContent=tplCur?('📐 '+tplCur.name+(tplCur.pre?' (editable copy)':'')):'';
   if(l.ph){
-    $('tplShowBtn').classList.toggle('active',!!l.ph.visible);$('tplArrowsBtn').classList.toggle('active',!!(l.ar&&l.ar.visible));
+    $('tplShowBtn').classList.toggle('active',!!l.ph.visible);$('tplArrowsBtn').classList.toggle('active',!l.ph.arHide);
     $('tplLockBtn').textContent=l.ph.locked?'🔒 Locked':'🔓 Lock';$('tplLockBtn').classList.toggle('active',!!l.ph.locked);
     const v=Math.round(l.ph.opacity);if(+$('tplOpacity').value!==v&&document.activeElement!==$('tplOpacity')){$('tplOpacity').value=v;$('tplOpacityV').textContent=v;}
   }
@@ -13795,11 +13808,11 @@ function tplTruth(w,h){
   g.lineJoin='round';g.lineCap='round';
   for(let ix=-5;ix<=5;ix++)for(let iy=-5;iy<=5;iy++){
     const [ox,oy]=tilePos(ix,iy);g.setTransform(kx,0,0,ky,(ox-CX)*kx,(oy-CY)*ky);
-    tplStrokes().forEach(s=>{if(!s.points||s.points.length<2)return;g.strokeStyle=s.color;g.lineWidth=(s.settings&&s.settings.size)||5;g.globalAlpha=(((s.settings&&s.settings.opacity)||100)/100);g.beginPath();s.points.forEach((p,i)=>{if(i)g.lineTo(p.x,p.y);else g.moveTo(p.x,p.y);});if(s.closed)g.closePath();g.stroke();});
+    tplStrokes().forEach(s=>{if(!s.points||s.points.length<2)return;g.strokeStyle=s.color;g.lineWidth=(s.settings&&s.settings.size)||5;g.globalAlpha=(((s.settings&&s.settings.opacity)||100)/100);g.beginPath();s.points.forEach((p,i)=>{if(i)g.lineTo(p.x,p.y);else g.moveTo(p.x,p.y);});if(s.closed)g.closePath();g.stroke();if(s.tplArrow&&s.tplArrow.on){const ap=tplArrowPts(s);if(ap){const ga=g.globalAlpha;g.globalAlpha=ga*0.6;g.lineWidth=Math.max(2.5,((s.settings&&s.settings.size)||5)*0.7);g.beginPath();ap.forEach((p,i)=>{if(i)g.lineTo(p.x,p.y);else g.moveTo(p.x,p.y);});g.stroke();g.globalAlpha=ga;}}});
   }
   return c;
 }
-window.__sketchpadTemplates={truth:tplTruth,select:id=>{const s=strokes.find(x=>x.id===id);if(s)tplSelectOnly(s);},presets:TPL_PRE,load:tplLoadPreset,loadById:id=>tplLoadPreset(TPL_PRE.find(p=>p.id===id)),add:tplAddShape,replace:tplReplace,collect:tplCollect,apply:tplApplyObjs,validate:tplValidate,doc:tplDoc,saveAs:tplSaveAs,render:tplRenderPng,cur:()=>tplCur,strokes:tplStrokes};
+window.__sketchpadTemplates={arrowPts:tplArrowPts,truth:tplTruth,select:id=>{const s=strokes.find(x=>x.id===id);if(s)tplSelectOnly(s);},presets:TPL_PRE,load:tplLoadPreset,loadById:id=>tplLoadPreset(TPL_PRE.find(p=>p.id===id)),add:tplAddShape,replace:tplReplace,collect:tplCollect,apply:tplApplyObjs,validate:tplValidate,doc:tplDoc,saveAs:tplSaveAs,render:tplRenderPng,cur:()=>tplCur,strokes:tplStrokes};
 // Edit button (top bar) stays in step with the Draw/Edit switch.
 (function(){
   const eb=document.getElementById('editModeBtn'),tb=document.getElementById('tbEditBtn');if(!eb||!tb)return;
@@ -15658,7 +15671,7 @@ boot();
 // Seamlessly Creative suite integration (see the bottom of this file once frozen into the
 // suite), just exposed unconditionally here since it's harmless and useful standalone too.
 $('tbTimelapseBtn').onclick=()=>{if(window.SPTimelapse)SPTimelapse.open();else setStatus('Timelapse is still loading — try again in a moment.');};
-window.__sketchpadGetState=()=>({strokeCount:strokes.length,strokes,placed,motifs,activeBrushId,eraserActive,selectedStrokeId,groups,multiSel,groupInsideId,selAddArmed,histLen:history.length,hIndex,layout,layers:layers.map(l=>({id:l.id,name:l.name,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip,tpl:l.tpl||0})),activeLayerId,pathEditStrokeId,pathEditNodes,pathEditClosed,selectedNodeIndex,pathEditTool,copiedBrushStyle,continueStrokeId,joinPendingStrokeId,paintMode,paintInsideTargetId,armedShapeType,constrainShape,holdTriggered,holdCorrectedShape,currentPointsLength:currentPoints.length,zoom,panX,panY,baseScale,renderScale,rot,canvasBackingWidth:canvas.width,displayBackingWidth:displayCanvas.width,sidebarCollapsed});
+window.__sketchpadGetState=()=>({strokeCount:strokes.length,strokes,placed,motifs,activeBrushId,eraserActive,selectedStrokeId,groups,multiSel,groupInsideId,selAddArmed,histLen:history.length,hIndex,layout,layers:layers.map(l=>({id:l.id,name:l.name,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip,tpl:l.tpl||0,arHide:l.arHide||0})),activeLayerId,pathEditStrokeId,pathEditNodes,pathEditClosed,selectedNodeIndex,pathEditTool,copiedBrushStyle,continueStrokeId,joinPendingStrokeId,paintMode,paintInsideTargetId,armedShapeType,constrainShape,holdTriggered,holdCorrectedShape,currentPointsLength:currentPoints.length,zoom,panX,panY,baseScale,renderScale,rot,canvasBackingWidth:canvas.width,displayBackingWidth:displayCanvas.width,sidebarCollapsed});
 // Test-only: exposes the app's own screen<->canvas coordinate mapping directly, so a test can
 // place a real pointer event at the exact screen position corresponding to a given canvas-space
 // point (or vice versa) at whatever zoom/pan/rotation is currently active, without having to
