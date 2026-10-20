@@ -488,6 +488,8 @@ html.in-suite .suite-only{display:block!important}
 .tb-head{font-size:11.5px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;opacity:.6;padding:8px 12px 2px}
 #zoomPopover,#viewPopover,#svgPopover,#hiPopover,#expPopover{left:auto;right:12px;top:12px}
 #zoomPopover:before,#viewPopover:before,#svgPopover:before,#hiPopover:before,#expPopover:before{display:none}
+/* These menus can be taller than a landscape iPad screen: they scroll inside themselves instead of running off the bottom */
+#zoomPopover,#viewPopover,#svgPopover,#hiPopover,#expPopover{max-height:min(calc(100% - 24px),calc(100vh - 110px));overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;box-sizing:border-box}
 #expPopover{position:fixed;z-index:130;top:74px;right:12px;max-height:calc(100vh - 90px);overflow:auto}
 @media (max-width:600px){.tb-row{padding:6px 8px;gap:6px}}
 
@@ -1455,7 +1457,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v341'; // keep in step with CACHE in sw.js
+const APP_V='v342'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -5965,26 +5967,80 @@ function sgBegin(exStrokeIds,exPlacedIds){
     sgT={boxes};
   }catch(e){sgT=null;}
 }
-// mv = the moving box in canvas units. Returns the nudge that lines it up, and the guide lines to draw.
-function sgSnap(mv){
-  const none={dx:0,dy:0,guides:[]};if(!sgT)return none;
-  const thr=7/Math.max(.05,zoom*baseScale);
-  const own=(a,b)=>[a,(a+b)/2,b];
-  let ex=null,ey=null;
-  const mxs=own(mv.x0,mv.x1),mys=own(mv.y0,mv.y1);
+// Equal spacing: gap candidates along one axis (ax 0 = across, 1 = down). m is the moving box. Two kinds:
+// (1) m sits between two elements and the two gaps come out equal; (2) m sits beside two elements with the gap they already have.
+function sgSpaceCands(m,boxes,ax){
+  const a0=ax?'y0':'x0',a1=ax?'y1':'x1',c0=ax?'x0':'y0',c1=ax?'x1':'y1',lo=m[a0],hi=m[a1],w=hi-lo,mid=(lo+hi)/2,cross=(m[c0]+m[c1])/2;
+  const T=boxes.filter(b=>!b.canvas&&b[c0]<m[c1]&&b[c1]>m[c0]);
+  T.sort((p,q)=>Math.abs((p[a0]+p[a1])/2-mid)-Math.abs((q[a0]+q[a1])/2-mid));if(T.length>20)T.length=20;
+  const out=[];
+  for(const L of T)for(const R of T){
+    if(L===R||L[a1]>=R[a0])continue;
+    const free=R[a0]-L[a1]-w;
+    if(free>=0){const t=L[a1]+free/2;out.push({e:t-lo,segs:[[L[a1],t],[t+w,R[a0]]],cross,ax});}
+    const g=R[a0]-L[a1];
+    if(g>1e-6){
+      let t=R[a1]+g;out.push({e:t-lo,segs:[[L[a1],R[a0]],[R[a1],t]],cross,ax});
+      t=L[a0]-g-w;out.push({e:t-lo,segs:[[t+w,L[a0]],[L[a1],R[a0]]],cross,ax});
+    }
+  }
+  return out;
+}
+// Guide lines for the moving box m: every target line it now sits exactly on. xi / yi say which of its left-mid-right / top-mid-bottom lines count.
+function sgAlignGuides(m,eps,doX,doY,xi,yi){
+  const own=(a,b,idx)=>idx.map(i=>i==0?a:i==1?(a+b)/2:b),guides=[];
+  const mx=own(m.x0,m.x1,xi),my=own(m.y0,m.y1,yi);
   for(const b of sgT.boxes){
-    const txs=own(b.x0,b.x1),tys=own(b.y0,b.y1);
+    const txs=[b.x0,(b.x0+b.x1)/2,b.x1],tys=[b.y0,(b.y0+b.y1)/2,b.y1];
+    if(doX)for(const a of mx)for(const t of txs)if(Math.abs(a-t)<=eps)guides.push({v:1,pos:t,a:Math.min(m.y0,b.y0),b:Math.max(m.y1,b.y1),canvas:!!b.canvas});
+    if(doY)for(const a of my)for(const t of tys)if(Math.abs(a-t)<=eps)guides.push({v:0,pos:t,a:Math.min(m.x0,b.x0),b:Math.max(m.x1,b.x1),canvas:!!b.canvas});
+  }
+  return guides;
+}
+// mv = the moving box in canvas units. Returns the nudge that lines it up, and the guide lines to draw.
+// opt.xi / opt.yi limit which of its lines may snap (default all three); opt.noSpace turns equal spacing off.
+function sgSnap(mv,opt){
+  const none={dx:0,dy:0,guides:[]};if(!sgT)return none;
+  opt=opt||{};const xi=opt.xi||[0,1,2],yi=opt.yi||[0,1,2];
+  const thr=7/Math.max(.05,zoom*baseScale);
+  const own=(a,b,idx)=>idx.map(i=>i==0?a:i==1?(a+b)/2:b);
+  let ex=null,ey=null;
+  const mxs=own(mv.x0,mv.x1,xi),mys=own(mv.y0,mv.y1,yi);
+  for(const b of sgT.boxes){
+    const txs=[b.x0,(b.x0+b.x1)/2,b.x1],tys=[b.y0,(b.y0+b.y1)/2,b.y1];
     for(const a of mxs)for(const t of txs){const e=t-a;if(Math.abs(e)<=thr&&(ex==null||Math.abs(e)<Math.abs(ex)))ex=e;}
     for(const a of mys)for(const t of tys){const e=t-a;if(Math.abs(e)<=thr&&(ey==null||Math.abs(e)<Math.abs(ey)))ey=e;}
   }
-  const dx=ex||0,dy=ey||0,m={x0:mv.x0+dx,x1:mv.x1+dx,y0:mv.y0+dy,y1:mv.y1+dy},eps=thr*0.02+0.01,guides=[];
-  const mx2=own(m.x0,m.x1),my2=own(m.y0,m.y1);
-  for(const b of sgT.boxes){
-    const txs=own(b.x0,b.x1),tys=own(b.y0,b.y1);
-    if(ex!=null)for(const a of mx2)for(const t of txs)if(Math.abs(a-t)<=eps)guides.push({v:1,pos:t,a:Math.min(m.y0,b.y0),b:Math.max(m.y1,b.y1),canvas:!!b.canvas});
-    if(ey!=null)for(const a of my2)for(const t of tys)if(Math.abs(a-t)<=eps)guides.push({v:0,pos:t,a:Math.min(m.x0,b.x0),b:Math.max(m.x1,b.x1),canvas:!!b.canvas});
+  let sx=null,sy=null;
+  if(!opt.noSpace){
+    const pick=(ax,cur)=>{let best=null;for(const c of sgSpaceCands(mv,sgT.boxes,ax))if(Math.abs(c.e)<=thr&&Math.abs(c.e)<(cur==null?1e9:Math.abs(cur))-1e-9&&(!best||Math.abs(c.e)<Math.abs(best.e)))best=c;return best;};
+    sx=pick(0,ex);sy=pick(1,ey);
+    if(sx){ex=sx.e;}if(sy){ey=sy.e;}
   }
+  const dx=ex||0,dy=ey||0,m={x0:mv.x0+dx,x1:mv.x1+dx,y0:mv.y0+dy,y1:mv.y1+dy},eps=thr*0.02+0.01;
+  const guides=sgAlignGuides(m,eps,ex!=null&&!sx,ey!=null&&!sy,xi,yi);
+  if(sx)sgSpaceCands(m,sgT.boxes,0).forEach(c=>{if(Math.abs(c.e)<=eps)guides.push({s:1,ax:0,segs:c.segs,cross:c.cross});});
+  if(sy)sgSpaceCands(m,sgT.boxes,1).forEach(c=>{if(Math.abs(c.e)<=eps)guides.push({s:1,ax:1,segs:c.segs,cross:c.cross});});
   return {dx,dy,guides};
+}
+// Resizing from the middle outwards by a factor f (a stroke's resize handle): snap an edge of the grown box to another element's lines.
+function sgSnapScale(cx,cy,hw,hh,f){
+  const res={f,guides:[]};if(!sgT||hw<=0||hh<=0)return res;
+  const thr=7/Math.max(.05,zoom*baseScale);let best=null;
+  for(const b of sgT.boxes){
+    for(const t of [b.x0,(b.x0+b.x1)/2,b.x1])for(const sg of [-1,1]){const f2=sg*(t-cx)/hw;if(f2>0.05){const d=Math.abs(sg*hw*f2-sg*hw*f);if(d<=thr&&(!best||d<best.d))best={f2,d};}}
+    for(const t of [b.y0,(b.y0+b.y1)/2,b.y1])for(const sg of [-1,1]){const f2=sg*(t-cy)/hh;if(f2>0.05){const d=Math.abs(sg*hh*f2-sg*hh*f);if(d<=thr&&(!best||d<best.d))best={f2,d};}}
+  }
+  if(!best)return res;
+  res.f=best.f2;const m={x0:cx-hw*best.f2,x1:cx+hw*best.f2,y0:cy-hh*best.f2,y1:cy+hh*best.f2};
+  res.guides=sgAlignGuides(m,thr*0.02+0.01,true,true,[0,2],[0,2]);
+  return res;
+}
+// Resizing a selection by a corner / side handle: the edge being dragged (x and/or y) snaps to another element's lines.
+function sgSnapEdge(v,t0,t1,axis){ // v = the dragged edge's position; returns the nearest target line within reach
+  if(!sgT)return null;const thr=7/Math.max(.05,zoom*baseScale);let best=null;
+  for(const b of sgT.boxes){for(const t of (axis?[b.y0,(b.y0+b.y1)/2,b.y1]:[b.x0,(b.x0+b.x1)/2,b.x1])){const d=Math.abs(t-v);if(d<=thr&&(!best||d<best.d))best={t,d};}}
+  return best;
 }
 function sgDraw(guides){
   if(!sgSvg){
@@ -5996,6 +6052,17 @@ function sgDraw(guides){
   if(!guides||!guides.length){sgSvg.innerHTML='';return;}
   const pad=14/Math.max(.05,zoom*baseScale),seen=new Set();let out='';
   for(const g of guides){
+    if(g.s){ // equal-gap marker: a line across each gap with a small tick at both ends
+      const tk=5/Math.max(.05,zoom*baseScale);
+      for(const sg of g.segs){
+        const q1=g.ax?canvasToScreen(g.cross,sg[0]):canvasToScreen(sg[0],g.cross),q2=g.ax?canvasToScreen(g.cross,sg[1]):canvasToScreen(sg[1],g.cross);
+        const t1a=g.ax?canvasToScreen(g.cross-tk,sg[0]):canvasToScreen(sg[0],g.cross-tk),t1b=g.ax?canvasToScreen(g.cross+tk,sg[0]):canvasToScreen(sg[0],g.cross+tk);
+        const t2a=g.ax?canvasToScreen(g.cross-tk,sg[1]):canvasToScreen(sg[1],g.cross-tk),t2b=g.ax?canvasToScreen(g.cross+tk,sg[1]):canvasToScreen(sg[1],g.cross+tk);
+        const L=(p,q)=>'<line x1="'+p.x.toFixed(1)+'" y1="'+p.y.toFixed(1)+'" x2="'+q.x.toFixed(1)+'" y2="'+q.y.toFixed(1)+'" stroke="#ff9f1a" stroke-width="1.5"/>';
+        out+=L(q1,q2)+L(t1a,t1b)+L(t2a,t2b);
+      }
+      continue;
+    }
     const k=g.v+'|'+Math.round(g.pos*100)+'|'+Math.round(g.a)+'|'+Math.round(g.b);if(seen.has(k))continue;seen.add(k);
     const p1=g.v?canvasToScreen(g.pos,g.a-pad):canvasToScreen(g.a-pad,g.pos),p2=g.v?canvasToScreen(g.pos,g.b+pad):canvasToScreen(g.b+pad,g.pos);
     out+='<line x1="'+p1.x.toFixed(1)+'" y1="'+p1.y.toFixed(1)+'" x2="'+p2.x.toFixed(1)+'" y2="'+p2.y.toFixed(1)+'" stroke="'+(g.canvas?'#19c37d':'#ff2d95')+'" stroke-width="1.5" stroke-dasharray="'+(g.canvas?'6 4':'none')+'"/>';
@@ -6296,7 +6363,8 @@ function paintBBoxHandleDrag(handleEl,mode){
       if(!hidden){hidden=true;rebuildLayerDimmed(stroke.layerId,stroke.id,0);} // live copy is the only visible one
       const p=screenToCanvas(ev.clientX,ev.clientY);
       if(mode==='resize'){
-        const f=Math.max(0.05,(Math.hypot(p.x-bb.cx,p.y-bb.cy)||1)/baseDist);
+        let f=Math.max(0.05,(Math.hypot(p.x-bb.cx,p.y-bb.cy)||1)/baseDist);
+        if(sgOn){try{if(!sgT)sgBegin(new Set([stroke.id]),new Set());const r=sgSnapScale(bb.cx,bb.cy,bb.w/2,bb.h/2,f);f=r.f;sgDraw(r.guides);}catch(err){}}
         apply('scale',f);ov={cx:bb.cx,cy:bb.cy,w:bb.w*f,h:bb.h*f,deg:0};
       }else{
         let deg=(Math.atan2(p.y-bb.cy,p.x-bb.cx)-baseAngle)*180/Math.PI;
@@ -6313,7 +6381,7 @@ function paintBBoxHandleDrag(handleEl,mode){
       redraw();
     };
     const finish=ev=>{
-      handleDragOv=null;
+      sgClear();handleDragOv=null;
       {const chip=$('rotateChip');if(chip)chip.textContent='Canvas '+Math.round(rot)+'\u00b0';}
       handleEl.removeEventListener('pointermove',onMove);
       handleEl.removeEventListener('pointerup',finish);handleEl.removeEventListener('pointercancel',finish);
@@ -6498,7 +6566,7 @@ function grpBindHandle(el,kind){
     const corner=kind.length===2,lock=!!opts.lock;
     const hp=(kind!=='move'&&kind!=='rot')?grpHandlePos(kind,bb):null,an=hp?grpHandlePos(grpOpposite(kind),bb):null;
     const pv=grpPivot(bb),baseAngle=Math.atan2(start.y-pv.y,start.x-pv.x);
-    let base=null,moved=false,lastOp=null,failed=false;
+    let base=null,moved=false,lastOp=null,failed=false,sgSn=null;
     const onMove=ev=>{
       if(failed)return;
       if(!moved){if(Math.hypot(ev.clientX-sx0,ev.clientY-sy0)<8)return;moved=true;
@@ -6524,9 +6592,20 @@ function grpBindHandle(el,kind){
         }else if(kind==='n'||kind==='s')sy=hy?(p.y-an.y)/hy:1;
         else sx=hx?(p.x-an.x)/hx:1;
         sx=Math.max(0.03,sx);sy=Math.max(0.03,sy);
+        if(sgOn&&multiSel){ // smart guides: the edge being dragged snaps to other elements
+          try{
+            if(!sgT)sgBegin(new Set(multiSel.strokeIds),new Set(multiSel.placedIds));
+            const bx=(kind.includes('e')||kind.includes('w'))&&hx?sgSnapEdge(an.x+hx*sx,0,0,0):null,by=(kind.includes('n')||kind.includes('s'))&&hy?sgSnapEdge(an.y+hy*sy,0,0,1):null;
+            if(corner&&lock){const c=bx&&by?(bx.d<=by.d?{x:bx}:{y:by}):(bx?{x:bx}:by?{y:by}:null);if(c){const k=c.x?(c.x.t-an.x)/hx:(c.y.t-an.y)/hy;if(k>0.03){sx=sy=k;sgSn={x:c.x||null,y:c.y||null};}}else sgSn=null;}
+            else{if(bx&&(bx.t-an.x)/hx>0.03)sx=(bx.t-an.x)/hx;if(by&&(by.t-an.y)/hy>0.03)sy=(by.t-an.y)/hy;sgSn={x:bx,y:by};}
+          }catch(err){console.warn('[sketchpad] smart guides (group resize)',err);}
+        }
         op={ax:an.x,ay:an.y,sx,sy,rot:0,dx:0,dy:0};
         const nx=[an.x+(bb.x0-an.x)*sx,an.x+(bb.x1-an.x)*sx],ny=[an.y+(bb.y0-an.y)*sy,an.y+(bb.y1-an.y)*sy];
         grpOv={x0:Math.min(nx[0],nx[1]),x1:Math.max(nx[0],nx[1]),y0:Math.min(ny[0],ny[1]),y1:Math.max(ny[0],ny[1]),deg:0};
+        if(sgOn&&sgSn&&sgT){ // guide lines where the dragged edge landed
+          const gl=[];if(sgSn.x)gl.push({v:1,pos:sgSn.x.t,a:Math.min(grpOv.y0,bb.y0),b:Math.max(grpOv.y1,bb.y1)});if(sgSn.y)gl.push({v:0,pos:sgSn.y.t,a:Math.min(grpOv.x0,bb.x0),b:Math.max(grpOv.x1,bb.x1)});sgDraw(gl);
+        }else if(sgOn)sgDraw([]);
       }
       lastOp=op;grpApply(base,op,opts.scale);if(grpPrev)grpPrev.op=op;grpSchedulePaint();updateGroupBox();
     };
@@ -16454,7 +16533,7 @@ window.__sketchpadDescribe=(a,b)=>describeChange(a,b);
 window.__sketchpadPush=()=>{rebuildAllLayers();pushHist();redraw();};
 window.__sketchpadBlurTest={filterOK:()=>blurFilterOK(),force:v=>{_blurFilterOK=v;},semi:()=>{updateComposite();const d=compositeCtx.getImageData(0,0,W,H).data;let semi=0,solid=0;for(let i=3;i<d.length;i+=4){if(d[i]>8&&d[i]<200)semi++;else if(d[i]>=200)solid++;}return [semi,solid];},hi:async n=>{const c=await buildHiRes(n,true);const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let semi=0;for(let i=3;i<d.length;i+=4)if(d[i]>8&&d[i]<200)semi++;return semi;}};
 window.__sketchpadCollection={get:()=>coll,history:()=>({n:history.length,i:hIndex}),colNew,colDuplicate,colDupRevert,colMoveTo,liquifyPresent:()=>liquifyPresent(strokes),colSwitch,colMove,colDelete,colRename,colRevertPattern,colExportAll,buildDocObject,applyDocObject,liquifyRevertLayers:()=>liquifyRevertLayers(layers,'test')};
-window.__sketchpadInternals=()=>({updateGroupBox,sgSnap,sgBegin,sgBoxOfStroke,sgState:()=>({on:sgOn,t:sgT}),cmExtractColoursFromImage,cmExtractInfo:()=>cmExtractInfo,wpApply,renderBrushStrokeCapped,dashPieces,dashSeq,svgStrokeOutline,setMulti,syncStrokeSelectionUI,pushHist,undo,redo,blendInstall,blendSpecOf,radialSync,layers,strokes,rebuildAllLayers,pixTotal,segVerBump:()=>{segVer++;compositeDirty=true;redraw();}});
+window.__sketchpadInternals=()=>({updateGroupBox,sgSnap,sgSnapScale,sgSnapEdge,sgSpaceCands,sgBegin,sgBoxOfStroke,sgState:()=>({on:sgOn,t:sgT}),cmExtractColoursFromImage,cmExtractInfo:()=>cmExtractInfo,wpApply,renderBrushStrokeCapped,dashPieces,dashSeq,svgStrokeOutline,setMulti,syncStrokeSelectionUI,pushHist,undo,redo,blendInstall,blendSpecOf,radialSync,layers,strokes,rebuildAllLayers,pixTotal,segVerBump:()=>{segVer++;compositeDirty=true;redraw();}});
 window.__sketchpadLayerInfo=()=>{updateDisplayComposite();updateComposite();
   const cmp=document.createElement('canvas');cmp.width=W/4;cmp.height=H/4;const c=cmp.getContext('2d');
   c.drawImage(displayCanvas,0,0,cmp.width,cmp.height);const a=c.getImageData(0,0,cmp.width,cmp.height).data;
