@@ -363,10 +363,15 @@ html.in-suite .suite-only{display:block!important}
 .layer-clip.on{background:var(--pink);color:#fff;border-color:var(--pink)}
 .layer-row.clipped{margin-left:12px;border-left:4px solid var(--pink)}
 .recipe-text{font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:0;white-space:pre-line;background:var(--btnBg);border-radius:10px;padding:8px 10px}
-.wp-h{position:absolute;width:26px;height:26px;margin-left:-13px;margin-top:-13px;border-radius:50%;background:#fff;border:3px solid #d65a9a;box-shadow:0 1px 4px rgba(0,0,0,.35);pointer-events:auto;touch-action:none;cursor:grab;box-sizing:border-box}
-.wp-h.sel{background:#d65a9a}
-.wp-h.end{border-radius:6px}
-.wp-c{position:absolute;width:8px;height:8px;margin-left:-4px;margin-top:-4px;border-radius:50%;background:#d65a9a;pointer-events:none;opacity:.8}
+.wp-h{position:absolute;width:44px;height:44px;margin-left:-22px;margin-top:-22px;pointer-events:auto;touch-action:none;cursor:grab;display:flex;align-items:center;justify-content:center}
+.wp-h i{display:block;width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid #d65a9a;box-shadow:0 1px 4px rgba(0,0,0,.35);box-sizing:border-box}
+.wp-h.end i{border-radius:5px}
+.wp-h.sel i{background:#d65a9a;width:24px;height:24px;box-shadow:0 0 0 3px rgba(214,90,154,.3),0 1px 4px rgba(0,0,0,.4)}
+.wp-c{position:absolute;width:6px;height:6px;margin-left:-3px;margin-top:-3px;border-radius:50%;background:#d65a9a;pointer-events:none;opacity:.75}
+.wp-sub{font-size:12.5px;font-weight:700;margin:12px 0 6px;opacity:.85}
+.wp-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.wp-prow{display:flex;align-items:center;gap:8px;width:100%;padding:5px 8px;margin:0 0 4px;border-radius:10px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:13px;min-height:36px}
+.wp-prow.on{outline:2px solid #d65a9a}
 #widthOverlay{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:16}
 #pathNodeOverlay{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:15}
 /* Real nodes: the VISIBLE dot is deliberately tiny (so the artwork underneath stays readable),
@@ -605,6 +610,33 @@ html.in-suite .suite-only{display:block!important}
       <button class="btn mini template-btn" data-tpl="scattered">Scattered</button>
       <button class="btn mini template-btn" data-tpl="dotGrid">Dot Grid</button>
     </div><label class="upload accentPurple" style="margin-top:8px">📥 Import Template from Magic Builder<input id="templateImportInput" type="file" accept="application/json,.json" style="display:none"></label><button id="templateClear" class="btn mini danger" style="width:100%;margin-top:8px">✕ Clear Template</button><div class="hint">Pick a layout above, or import a template's layout exported from Magic Builder ("export for playground"), then tap a motif below to drop it into the next empty slot - bigger (hero) slots take your focal motifs, smaller (accent/filler) slots take details.</div></section>
+    <section class="section" id="widthSection"><div class="section-title">↔ Width tool</div>
+      <div id="wpHint" class="hint" style="margin:0 0 6px;"></div>
+      <details open><summary class="wp-sub" style="cursor:pointer;margin-top:6px;">Quick profiles</summary>
+        <div class="wp-grid">
+          <button type="button" class="btn mini wp-pre" data-k="even">Uniform</button><button type="button" class="btn mini wp-pre" data-k="swell">Swell middle</button>
+          <button type="button" class="btn mini wp-pre" data-k="start">Taper start</button><button type="button" class="btn mini wp-pre" data-k="end">Taper end</button>
+          <button type="button" class="btn mini wp-pre" data-k="both">Taper both</button><button type="button" class="btn mini wp-pre" data-k="pinch">Pinch middle</button>
+        </div></details>
+      <details open><summary class="wp-sub" style="cursor:pointer;">Width points</summary>
+        <div class="wp-grid">
+          <button type="button" id="wpAddBtn" class="btn mini">Add point</button><button type="button" id="wpRemoveBtn" class="btn mini" disabled>Remove selected</button>
+          <button type="button" id="wpResetBtn" class="btn mini">Reset width</button><button type="button" id="wpHandlesBtn" class="btn mini">Handles: Shown</button>
+        </div></details>
+      <details open><summary class="wp-sub" style="cursor:pointer;">My width profiles</summary>
+        <div id="wpProfList"></div>
+        <input id="wpNameInput" type="text" maxlength="40" placeholder="Name, e.g. Fine Taper" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;margin:4px 0 6px;">
+        <div class="wp-grid">
+          <button type="button" id="wpSaveBtn" class="btn mini primary">Save as new</button><button type="button" id="wpUpdateBtn" class="btn mini" disabled>Update selected</button>
+          <button type="button" id="wpApplyBtn" class="btn mini" disabled>Apply to line</button><button type="button" id="wpRenameBtn" class="btn mini" disabled>Rename</button>
+          <button type="button" id="wpDupBtn" class="btn mini" disabled>Duplicate</button><button type="button" id="wpDelBtn" class="btn mini danger" disabled>Delete</button>
+        </div>
+        <div class="hint">Profiles keep only the shape of the thickness, so they fit any line at any size. Changing a line never changes a saved profile unless you tap Update.</div></details>
+      <details open><summary class="wp-sub" style="cursor:pointer;">New lines</summary>
+        <button type="button" id="wpUseBtn" class="btn mini" style="width:100%;" disabled>Use selected profile for new lines</button>
+        <label class="hint" style="display:flex;gap:8px;align-items:center;margin:6px 0 0;"><input type="checkbox" id="wpNewChk"> Draw new lines with the chosen profile <span id="wpNewName" style="opacity:.8"></span></label>
+        <button type="button" id="wpUniformBtn" class="btn mini" style="width:100%;margin-top:6px;">Return to uniform width</button></details>
+    </section>
     <section class="section" id="tplSection"><div class="section-title">📐 Pattern Templates</div>
       <div class="hint" style="margin:-2px 0 8px;">Coloured outline guides that help you plan a layout. They never fill in or limit your drawing.</div>
       <div class="row" id="tplTabs" style="gap:6px;margin-bottom:8px;"><button class="tool-btn active" data-tab="pre" style="flex:1">Premade</button><button class="tool-btn" data-tab="my" style="flex:1">My Templates</button><button class="tool-btn" data-tab="new" style="flex:1">Create New</button></div>
@@ -849,14 +881,6 @@ html.in-suite .suite-only{display:block!important}
         <div class="hint capHint" style="display:none;">Closed shapes have no ends.</div>
         <div class="slider-row" style="margin:8px 0 0;"><label>Dash</label><select class="dash-sel" style="flex:1;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);"><option value="">Solid</option><option value="dashed">Dashed</option><option value="long">Long dashes</option><option value="dotted">Dotted</option></select></div>
         <div class="slider-row" class="dash-gap-row" style="display:none;margin:4px 0 0;"><label>Gap</label><input class="dash-gap" type="range" min="0.3" max="8" step="0.1" value="2"><span class="dash-gap-val">2</span></div>
-        <div class="wpBox" style="margin:10px 0 0;padding-top:8px;border-top:1px solid var(--btnBorder);">
-          <button type="button" class="btn mini wp-toggle" style="width:100%;">↔ Width tool: Off</button>
-          <div class="wp-more" style="display:none;margin-top:6px;">
-            <div class="slider-row" style="margin:0 0 6px;"><label>Shape</label><select class="wp-preset" style="flex:1;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);"><option value="">Choose a preset…</option><option value="even">Even (no change)</option><option value="both">Taper both ends</option><option value="start">Taper start</option><option value="end">Taper end</option><option value="swell">Swell in the middle</option><option value="pinch">Pinch in the middle</option></select></div>
-            <div class="row" style="gap:6px;"><button type="button" class="btn mini wp-remove" style="flex:1;" disabled>Remove point</button><button type="button" class="btn mini wp-reset" style="flex:1;">Reset width</button></div>
-            <div class="hint">Tap the line to add a point. Drag a dot across the line to make it thicker or thinner, or along the line to move it. Tap a dot to select it.</div>
-          </div>
-        </div>
       </div>
       <div class="row" style="margin-top:6px;flex-wrap:wrap;">
         <button id="useThisBrushBtn" class="btn mini" style="flex:1 1 45%;">Use This Brush</button>
@@ -1162,14 +1186,6 @@ html.in-suite .suite-only{display:block!important}
       <div class="hint capHint" style="display:none;">Closed shapes have no ends.</div>
       <div class="slider-row" style="margin:8px 0 0;"><label>Dash</label><select class="dash-sel" style="flex:1;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);"><option value="">Solid</option><option value="dashed">Dashed</option><option value="long">Long dashes</option><option value="dotted">Dotted</option></select></div>
       <div class="slider-row" class="dash-gap-row" style="display:none;margin:4px 0 0;"><label>Gap</label><input class="dash-gap" type="range" min="0.3" max="8" step="0.1" value="2"><span class="dash-gap-val">2</span></div>
-        <div class="wpBox" style="margin:10px 0 0;padding-top:8px;border-top:1px solid var(--btnBorder);">
-          <button type="button" class="btn mini wp-toggle" style="width:100%;">↔ Width tool: Off</button>
-          <div class="wp-more" style="display:none;margin-top:6px;">
-            <div class="slider-row" style="margin:0 0 6px;"><label>Shape</label><select class="wp-preset" style="flex:1;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);"><option value="">Choose a preset…</option><option value="even">Even (no change)</option><option value="both">Taper both ends</option><option value="start">Taper start</option><option value="end">Taper end</option><option value="swell">Swell in the middle</option><option value="pinch">Pinch in the middle</option></select></div>
-            <div class="row" style="gap:6px;"><button type="button" class="btn mini wp-remove" style="flex:1;" disabled>Remove point</button><button type="button" class="btn mini wp-reset" style="flex:1;">Reset width</button></div>
-            <div class="hint">Tap the line to add a point. Drag a dot across the line to make it thicker or thinner, or along the line to move it. Tap a dot to select it.</div>
-          </div>
-        </div>
     </div>
     <div class="hint">Drag the stroke to move it. Fill and layers are under 🖊️ Stroke tools.</div>
     <div class="row" style="margin-top:6px;">
@@ -1410,7 +1426,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v334'; // keep in step with CACHE in sw.js
+const APP_V='v335'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -3979,6 +3995,7 @@ canvas.addEventListener('pointerup',e=>{
       const pts=currentPoints.map(pt=>{const t=tf(pt);return{x:t.x,y:t.y,pressure:pt.pressure};});
       const stroke={id:crypto.randomUUID(),brushId:activeBrushId,layerId:activeLayerId,atop:!!((layers.find(l=>l.id===activeLayerId)||{}).alphaLock),color:currentColor,settings:Object.assign({},settingsSnapshot),points:pts,nodes:null,closed:committedClosed,clipStrokeId,shape:(idx===0&&committedShape)?committedShape:null};
       if(symGid){stroke.symId=symGid;stroke.symM=symMatrixOf(tf);}
+      {const np=(typeof wpNewPts==='function')?wpNewPts():null;if(np&&!committedClosed&&!committedShape&&activeBrushId!=='eraser'&&pts.length>=2)stroke.wp=wpFrom(np);}
       strokes.push(stroke);appendStrokeToLayer(stroke);
     });
     BrushEngine.touchRecent(activeBrushId);syncRecents();
@@ -7688,11 +7705,18 @@ document.querySelectorAll('.dash-gap').forEach(g=>{
   g.onchange=()=>{if(!pathEditStrokeId){pushHist();scheduleAutosave();}};
 });
 
-// ---- Width tool (on-canvas handles) ----
-window.__wpOn=false;let wpSel=null;
+// ---- Width tool: on-canvas handles + Width panel + saved profiles ----
+// stroke.wp = [{id,t,w}]: t = 0..1 along the line (in drawing direction), w = thickness multiplier of the stroke's base size.
+// The ends always use the ids 'ws' / 'we'. Handles are kept (never rebuilt) while dragging, so a drag cannot be cut short by a refresh.
+window.__wpOn=false;let wpSelId=null,wpHandlesOn=true,wpDrag=null,wpProfActive=null;
 const WP_PRE={even:null,both:[{t:0,w:.08},{t:.5,w:1},{t:1,w:.08}],start:[{t:0,w:.08},{t:.6,w:1},{t:1,w:1}],end:[{t:0,w:1},{t:.4,w:1},{t:1,w:.08}],swell:[{t:0,w:.4},{t:.5,w:1.8},{t:1,w:.4}],pinch:[{t:0,w:1.4},{t:.5,w:.35},{t:1,w:1.4}]};
-function wpStroke(){const st=strokes.find(x=>x.id===selectedStrokeId);return(st&&!st.text&&st.points&&st.points.length>=2)?st:null;}
+function wpNewId(t){return t<=0?'ws':t>=1?'we':'w'+Math.random().toString(36).slice(2,8);}
+function wpFrom(pts){return pts.map(q=>({id:wpNewId(q.t),t:q.t,w:Math.max(WP_MIN,Math.min(WP_MAX,q.w))}));}
+function wpDefault(){return wpFrom([{t:0,w:1},{t:1,w:1}]);}
+function wpEnsureIds(st){if(st.wp)st.wp.forEach(q=>{if(!q.id)q.id=wpNewId(q.t);});}
+function wpStroke(){const st=strokes.find(x=>x.id===selectedStrokeId);return(st&&!st.text&&!st.closed&&st.points&&st.points.length>=2)?st:null;}
 function wpSize(st){const q=st.settings||BrushEngine.getSettings(st.brushId);return Math.max(.5,+(q&&q.size)||6);}
+function wpScale(){return Math.max(.02,(typeof zoom!=='undefined'?zoom:1)*(typeof baseScale!=='undefined'?baseScale:1));}
 function wpPos(info,t){
   const target=t*info.total,c=info.cum;let i=1;
   while(i<c.length-1&&c[i]<target)i++;
@@ -7710,100 +7734,174 @@ function wpNearest(info,x,y){
   }
   return best;
 }
-function wpDefault(){return [{t:0,w:1},{t:1,w:1}];}
 function wpCommit(st){rebuildLayer(st.layerId);refreshSelStrokeView(st);redraw();}
-function wpSyncUI(){
-  const on=!!window.__wpOn,st=wpStroke();
-  document.querySelectorAll('.wp-toggle').forEach(b=>{b.textContent='↔ Width tool: '+(on?'On':'Off');b.classList.toggle('primary',on);});
-  document.querySelectorAll('.wp-more').forEach(d=>{d.style.display=on?'':'none';});
-  const canRm=!!(on&&st&&st.wp&&wpSel&&st.wp.includes(wpSel)&&wpSel.t>0&&wpSel.t<1);
-  document.querySelectorAll('.wp-remove').forEach(b=>{b.disabled=!canRm;});
+let wpRaf=0;function wpCommitSoon(st){if(wpRaf)return;wpRaf=requestAnimationFrame(()=>{wpRaf=0;wpCommit(st);});}
+// --- saved profiles (stored on this device; independent of any drawing) ---
+let wpProfiles=[];try{const j=JSON.parse(localStorage.getItem('sp-width-profiles-v1')||'[]');if(Array.isArray(j))wpProfiles=j.filter(p=>p&&p.id&&p.name&&Array.isArray(p.pts)&&p.pts.length>=2);}catch(e){}
+let wpNewId0=null;try{wpNewId0=localStorage.getItem('sp-width-new-v1')||null;}catch(e){}
+function wpSaveProfiles(){try{localStorage.setItem('sp-width-profiles-v1',JSON.stringify(wpProfiles));}catch(e){}}
+function wpSaveNew(){try{if(wpNewId0)localStorage.setItem('sp-width-new-v1',wpNewId0);else localStorage.removeItem('sp-width-new-v1');}catch(e){}}
+function wpProfPts(st){const a=wpSort(st.wp||[]).map(q=>({t:Math.round(q.t*1e4)/1e4,w:Math.round(q.w*1e3)/1e3}));return a;}
+function wpNewPts(){const p=wpNewId0&&wpProfiles.find(x=>x.id===wpNewId0);return p?p.pts:null;}
+window.__wpNewPts=wpNewPts; // used when a new line is drawn
+function wpThumb(cv,pts){
+  const w=cv.width,h=cv.height,g=cv.getContext('2d'),a=wpSort(pts);g.clearRect(0,0,w,h);
+  let M=.1;a.forEach(q=>{if(q.w>M)M=q.w;});
+  const maxH=h*.46,m=3,top=[],bot=[];
+  for(let i=0;i<=40;i++){const t=i/40,x=m+(w-2*m)*t,r=Math.max(.4,wpAt(a,t)/M*maxH);top.push([x,h/2-r]);bot.push([x,h/2+r]);}
+  g.fillStyle=getComputedStyle(document.body).color||'#444';g.beginPath();top.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]));bot.reverse().forEach(p=>g.lineTo(p[0],p[1]));g.closePath();g.fill();
 }
+function wpRenderProfiles(){
+  const host=$('wpProfList');if(!host)return;
+  host.innerHTML='';
+  if(!wpProfiles.length){const d=document.createElement('div');d.className='hint';d.textContent='No saved profiles yet. Shape a line, then tap Save as new.';host.appendChild(d);}
+  wpProfiles.forEach(p=>{
+    const row=document.createElement('button');row.type='button';row.className='wp-prow'+(p.id===wpProfActive?' on':'');
+    const cv=document.createElement('canvas');cv.width=96;cv.height=24;cv.style.cssText='position:static!important;width:96px;height:24px;flex:none';
+    const nm=document.createElement('span');nm.textContent=p.name+(p.id===wpNewId0?'  ✓ new strokes':'');nm.style.cssText='flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+    row.appendChild(cv);row.appendChild(nm);host.appendChild(row);wpThumb(cv,p.pts);
+    row.onclick=()=>{wpProfActive=p.id;const ni=$('wpNameInput');if(ni&&wpProfActive)ni.value=p.name;wpRenderProfiles();wpSyncUI();};
+  });
+}
+function wpSyncUI(){
+  const on=!!window.__wpOn,st=wpStroke(),raw=strokes.find(x=>x.id===selectedStrokeId);
+  const hint=$('wpHint');
+  if(hint)hint.textContent=!raw?'Select a line in Edit mode first.':(raw.closed?'Closed shapes keep an even width. Select an open line.':(raw.text?'Text keeps an even width.':'Tap the line to add a point. Drag a dot across the line to make it thicker or thinner, or along the line to move it.'));
+  const selOk=!!(st&&st.wp&&wpSelId&&st.wp.some(q=>q.id===wpSelId));
+  const rm=$('wpRemoveBtn');if(rm)rm.disabled=!(selOk&&st.wp.find(q=>q.id===wpSelId).t>0&&st.wp.find(q=>q.id===wpSelId).t<1);
+  ['wpAddBtn','wpResetBtn','wpSaveBtn'].forEach(id=>{const b=$(id);if(b)b.disabled=!st;});
+  document.querySelectorAll('.wp-pre').forEach(b=>b.disabled=!st);
+  const hb=$('wpHandlesBtn');if(hb)hb.textContent='Handles: '+(wpHandlesOn?'Shown':'Hidden');
+  const act=wpProfiles.find(x=>x.id===wpProfActive);
+  ['wpApplyBtn','wpRenameBtn','wpDupBtn','wpDelBtn','wpUseBtn'].forEach(id=>{const b=$(id);if(b)b.disabled=!act;});
+  const ub=$('wpUpdateBtn');if(ub)ub.disabled=!(act&&st&&st.wp);
+  const ap=$('wpApplyBtn');if(ap&&act)ap.disabled=!st;
+  const chk=$('wpNewChk');if(chk)chk.checked=!!wpNewPts();
+  const nn=$('wpNewName');if(nn){const p=wpProfiles.find(x=>x.id===wpNewId0);nn.textContent=p?'Using: '+p.name:'';}
+}
+// --- on-canvas handles ---
+let wpEls=new Map();
+function wpClearOverlay(){const h=$('widthOverlay');if(h)h.innerHTML='';wpEls=new Map();}
 function renderWidthOverlay(){
   const host=$('widthOverlay');if(!host)return;
-  host.innerHTML='';wpSyncUI();
-  const st=window.__wpOn?wpStroke():null;if(!st||!st.wp||!st.wp.length)return;
-  if(st.nodes&&pathEditStrokeId===st.id)return;
-  const info=wpPathInfo(st.points),size=wpSize(st);if(info.total<1e-6)return;
-  st.wp.forEach(q=>{
-    const mk=(side)=>{
-      const el=document.createElement('div');el.className='wp-h'+(q===wpSel?' sel':'')+((q.t<=0||q.t>=1)?' end':'');
-      el._q=q;el._side=side;host.appendChild(el);wpPlace(el,info,size);
-      el.addEventListener('pointerdown',e=>wpDown(e,el,st));
-    };
-    const c=document.createElement('div');c.className='wp-c';c._q=q;c._c=1;host.appendChild(c);
-    mk(1);mk(-1);
+  try{wpSyncUI();}catch(e){}
+  const st=(window.__wpOn&&wpHandlesOn)?wpStroke():null;
+  if(!st||(pathEditStrokeId&&pathEditStrokeId===st.id)){wpClearOverlay();return;}
+  const info=wpPathInfo(st.points);if(info.total<1e-6){wpClearOverlay();return;}
+  const pts=st.wp&&st.wp.length?(wpEnsureIds(st),st.wp):wpDefault(),size=wpSize(st),minOff=15/wpScale();
+  if(wpSelId&&!pts.some(q=>q.id===wpSelId))wpSelId=null;
+  const seen=new Set();
+  pts.forEach(q=>{
+    seen.add(q.id);
+    let el=wpEls.get(q.id);
+    if(!el||!el.isConnected){
+      el=document.createElement('div');el.className='wp-h';el._id=q.id;el.innerHTML='<i></i>';host.appendChild(el);wpEls.set(q.id,el);
+      el.addEventListener('pointerdown',e=>wpDown(e,st.id));
+      const c=document.createElement('div');c.className='wp-c';host.insertBefore(c,host.firstChild);el._c=c;
+    }
+    el._q=q;
+    el.classList.toggle('sel',q.id===wpSelId);el.classList.toggle('end',q.t<=0||q.t>=1);
+    el.style.zIndex=q.id===wpSelId?3:1;
+    const pp=wpPos(info,q.t),off=Math.max(q.w*size/2,minOff);
+    const sh=canvasToScreen(pp.x+pp.nx*off,pp.y+pp.ny*off),sc=canvasToScreen(pp.x,pp.y);
+    el.style.left=sh.x+'px';el.style.top=sh.y+'px';el._c.style.left=sc.x+'px';el._c.style.top=sc.y+'px';
   });
-  host.querySelectorAll('.wp-c').forEach(c=>wpPlace(c,info,size));
+  wpEls.forEach((el,id)=>{if(!seen.has(id)){if(el._c)el._c.remove();el.remove();wpEls.delete(id);}});
 }
-function wpPlace(el,info,size){
-  const q=el._q,pp=wpPos(info,q.t),off=el._c?0:el._side*q.w*size/2;
-  const s=canvasToScreen(pp.x+pp.nx*off,pp.y+pp.ny*off);el.style.left=s.x+'px';el.style.top=s.y+'px';
-}
-function wpDown(e,el,st){
+function wpPoints(st){if(!st.wp||!st.wp.length)st.wp=wpDefault();wpEnsureIds(st);return st.wp;}
+function wpDown(e,strokeId){
   if(!isPen(e))return;
+  const st=strokes.find(x=>x.id===strokeId);if(!st)return;
   e.stopPropagation();e.preventDefault();
-  const q=el._q,host=$('widthOverlay'),info=wpPathInfo(st.points),size=wpSize(st),endpoint=q.t<=0||q.t>=1;
-  try{el.setPointerCapture(e.pointerId);}catch(err){}
-  const sx=e.clientX,sy=e.clientY;let moved=false,raf=0;
+  // Several handles can overlap: always take the one whose dot is nearest to the finger/Pencil.
+  let best=null,bd=1e9;
+  wpEls.forEach(h=>{const r=h.getBoundingClientRect(),d=Math.hypot(e.clientX-(r.left+r.width/2),e.clientY-(r.top+r.height/2));if(d<bd){bd=d;best=h;}});
+  if(!best)return;
+  const pts0=wpPoints(st),q=pts0.find(x=>x.id===best._id);if(!q)return;
+  wpSelId=q.id;wpEls.forEach(h=>h.classList.toggle('sel',h._id===q.id));wpSyncUI();
+  const info=wpPathInfo(st.points),size=wpSize(st),endpoint=q.t<=0||q.t>=1;
+  let prev=screenToCanvas(e.clientX,e.clientY);
+  wpDrag={pid:e.pointerId,sx:e.clientX,sy:e.clientY,moved:false,id:q.id,st};
+  const hostEl=best;
+  try{hostEl.setPointerCapture(e.pointerId);}catch(err){}
+  // The finger's movement is split, step by step, into "along the line" (moves the point) and "across the line"
+  // (changes the thickness) using the line's direction right at that point, so sliding along a curve never changes the width.
   const move=ev=>{
-    if(!moved&&Math.hypot(ev.clientX-sx,ev.clientY-sy)<5)return;
-    moved=true;
+    if(ev.pointerId!==wpDrag.pid)return;
+    if(!wpDrag.moved&&Math.hypot(ev.clientX-wpDrag.sx,ev.clientY-wpDrag.sy)<4)return;
+    wpDrag.moved=true;
     const pt=screenToCanvas(ev.clientX,ev.clientY);if(!Number.isFinite(pt.x))return;
-    const nr=wpNearest(info,pt.x,pt.y);if(!nr)return;
-    if(!endpoint)q.t=Math.max(.01,Math.min(.99,nr.t));
-    q.w=Math.max(WP_MIN,Math.min(WP_MAX,2*nr.d/size));
-    host.querySelectorAll('.wp-h,.wp-c').forEach(h=>{if(h._q===q)wpPlace(h,info,size);});
-    if(!raf)raf=requestAnimationFrame(()=>{raf=0;wpCommit(st);});
+    const dx=pt.x-prev.x,dy=pt.y-prev.y;prev=pt;
+    const f=wpPos(info,q.t),tx=f.ny,ty=-f.nx;
+    if(!endpoint)q.t=Math.max(.01,Math.min(.99,q.t+(dx*tx+dy*ty)/info.total));
+    q.w=Math.max(WP_MIN,Math.min(WP_MAX,q.w+2*(dx*f.nx+dy*f.ny)/size));
+    renderWidthOverlay();wpCommitSoon(st);
   };
-  const up=()=>{
-    el.removeEventListener('pointermove',move);
-    if(raf){cancelAnimationFrame(raf);raf=0;}
-    if(moved){wpCommit(st);pushHist();scheduleAutosave();}
-    else{wpSel=(wpSel===q)?null:q;}
+  const up=ev=>{
+    if(ev.pointerId!==wpDrag.pid)return;
+    window.removeEventListener('pointermove',move,true);window.removeEventListener('pointerup',up,true);window.removeEventListener('pointercancel',up,true);
+    const d=wpDrag;wpDrag=null;
+    if(wpRaf){cancelAnimationFrame(wpRaf);wpRaf=0;}
+    if(d.moved){st.wp=wpSort(st.wp);wpCommit(st);pushHist();scheduleAutosave();}
     renderWidthOverlay();
   };
-  el.addEventListener('pointermove',move);
-  el.addEventListener('pointerup',up,{once:true});el.addEventListener('pointercancel',up,{once:true});
+  window.addEventListener('pointermove',move,true);window.addEventListener('pointerup',up,true);window.addEventListener('pointercancel',up,true);
 }
-// Tapping the line (with the tool on) adds a point there, keeping the line's current thickness at that spot.
+function wpAddAt(st,t){
+  const pts=wpPoints(st),w=wpAt(wpSort(pts),t),q={id:wpNewId(.5),t:Math.max(.01,Math.min(.99,t)),w};
+  pts.push(q);st.wp=wpSort(pts);wpSelId=q.id;wpCommit(st);pushHist();scheduleAutosave();renderWidthOverlay();
+}
+// Tapping the line (with the tool on) adds a point there, selects it, and keeps the line's thickness at that spot.
 $('canvasWrap').addEventListener('pointerdown',e=>{
   if(!window.__wpOn||!e.isPrimary||!isPen(e))return;
-  const st=wpStroke();if(!st||e.target.closest&&e.target.closest('.wp-h'))return;
+  if(e.target.closest&&e.target.closest('.wp-h'))return;
+  const st=wpStroke();if(!st)return;
   const info=wpPathInfo(st.points);if(info.total<1e-6)return;
   const pt=screenToCanvas(e.clientX,e.clientY),nr=wpNearest(info,pt.x,pt.y);
-  const sc=Math.max(.05,(typeof zoom!=='undefined'?zoom:1)*(typeof baseScale!=='undefined'?baseScale:1));
-  if(!nr||nr.d>Math.max(wpSize(st)*(st.wp?Math.max(1,...st.wp.map(q=>q.w)):1)/2,22/sc))return;
+  const M=st.wp?Math.max(1,...st.wp.map(q=>q.w)):1;
+  if(!nr||nr.d>Math.max(wpSize(st)*M/2,20/wpScale()))return;
   e.stopPropagation();e.preventDefault();
-  if(!st.wp)st.wp=wpDefault();
-  const w=wpAt(wpSort(st.wp),nr.t);
-  const q={t:Math.max(.01,Math.min(.99,nr.t)),w};st.wp.push(q);wpSel=q;
-  wpCommit(st);pushHist();scheduleAutosave();renderWidthOverlay();
+  wpAddAt(st,nr.t);
 },true);
-document.querySelectorAll('.wp-toggle').forEach(b=>b.onclick=()=>{
-  window.__wpOn=!window.__wpOn;
-  const st=wpStroke();
-  if(window.__wpOn){
-    if(!st){setStatus('↔ Select a stroke first, then turn the Width tool on.');}
-    else{if(!st.wp){st.wp=wpDefault();}wpSel=null;setStatus('↔ Width tool: tap the line to add a point, drag a dot to change the thickness.');}
-  }
-  renderWidthOverlay();
+// --- the Width panel ---
+window.__wpPanel=function(open){
+  window.__wpOn=!!open;
+  if(open){try{if(mode!=='edit'){const b=$('editModeBtn');if(b)b.click();}}catch(e){}}
+  wpRenderProfiles();renderWidthOverlay();
+  if(open){const st=wpStroke();setStatus(st?'↔ Width tool: tap the line to add a point, drag a dot to change the thickness.':'↔ Width tool: select an open line (Edit mode) to start.');}
+};
+function wpApplyPts(st,pts,label){
+  if(!st)return;
+  st.wp=pts?wpFrom(pts):null;wpSelId=null;wpCommit(st);pushHist();scheduleAutosave();renderWidthOverlay();
+  if(label)setStatus('↔ '+label);
+}
+document.querySelectorAll('.wp-pre').forEach(b=>b.onclick=()=>{
+  const st=wpStroke();if(!st)return;const k=b.dataset.k;
+  wpApplyPts(st,WP_PRE[k],k==='even'?'Back to an even width.':'Width profile applied. Drag the dots to fine-tune it.');
 });
-document.querySelectorAll('.wp-preset').forEach(sel=>sel.onchange=e=>{
-  const st=wpStroke(),k=e.target.value;if(!st||!k)return;
-  const pre=WP_PRE[k];st.wp=pre?pre.map(q=>({t:q.t,w:q.w})):wpDefault();wpSel=null;
-  document.querySelectorAll('.wp-preset').forEach(x=>x.value='');
-  wpCommit(st);pushHist();scheduleAutosave();renderWidthOverlay();
-});
-document.querySelectorAll('.wp-remove').forEach(b=>b.onclick=()=>{
-  const st=wpStroke();if(!st||!st.wp||!wpSel)return;
-  const i=st.wp.indexOf(wpSel);if(i<0||wpSel.t<=0||wpSel.t>=1)return;
-  st.wp.splice(i,1);wpSel=null;wpCommit(st);pushHist();scheduleAutosave();renderWidthOverlay();
-});
-document.querySelectorAll('.wp-reset').forEach(b=>b.onclick=()=>{
+$('wpAddBtn').onclick=()=>{const st=wpStroke();if(!st)return;const pts=wpSort(wpPoints(st));let bi=0,bg=-1;for(let i=0;i<pts.length-1;i++){const g=pts[i+1].t-pts[i].t;if(g>bg){bg=g;bi=i;}}wpAddAt(st,(pts[bi].t+pts[bi+1].t)/2);};
+$('wpRemoveBtn').onclick=()=>{
+  const st=wpStroke();if(!st||!st.wp||!wpSelId)return;
+  const i=st.wp.findIndex(q=>q.id===wpSelId);if(i<0||st.wp[i].t<=0||st.wp[i].t>=1)return;
+  st.wp.splice(i,1);wpSelId=null;wpCommit(st);pushHist();scheduleAutosave();renderWidthOverlay();
+};
+$('wpResetBtn').onclick=()=>{const st=wpStroke();if(!st)return;wpApplyPts(st,null,'Width reset to even.');};
+$('wpHandlesBtn').onclick=()=>{wpHandlesOn=!wpHandlesOn;if(!wpHandlesOn)wpClearOverlay();renderWidthOverlay();};
+function wpName(){const v=($('wpNameInput').value||'').trim();if(v)return v.slice(0,40);let n=1;while(wpProfiles.some(p=>p.name==='Custom '+String(n).padStart(2,'0')))n++;return 'Custom '+String(n).padStart(2,'0');}
+$('wpSaveBtn').onclick=()=>{
   const st=wpStroke();if(!st)return;
-  st.wp=wpDefault();wpSel=null;wpCommit(st);pushHist();scheduleAutosave();renderWidthOverlay();
-});
+  const pts=st.wp&&st.wp.length?wpProfPts(st):[{t:0,w:1},{t:1,w:1}];
+  const p={id:'wp'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name:wpName(),v:1,interp:'smooth',pts};
+  wpProfiles.push(p);wpProfActive=p.id;wpSaveProfiles();$('wpNameInput').value='';wpRenderProfiles();wpSyncUI();setStatus('↔ Saved width profile “'+p.name+'”.');
+};
+$('wpUpdateBtn').onclick=()=>{const st=wpStroke(),p=wpProfiles.find(x=>x.id===wpProfActive);if(!st||!st.wp||!p)return;p.pts=wpProfPts(st);wpSaveProfiles();wpRenderProfiles();wpSyncUI();setStatus('↔ Updated “'+p.name+'” from this line.');};
+$('wpApplyBtn').onclick=()=>{const st=wpStroke(),p=wpProfiles.find(x=>x.id===wpProfActive);if(!st||!p)return;wpApplyPts(st,p.pts,'Applied “'+p.name+'”.');};
+$('wpRenameBtn').onclick=()=>{const p=wpProfiles.find(x=>x.id===wpProfActive),v=($('wpNameInput').value||'').trim();if(!p||!v){setStatus('↔ Type a new name in the box first.');return;}p.name=v.slice(0,40);wpSaveProfiles();wpRenderProfiles();wpSyncUI();};
+$('wpDupBtn').onclick=()=>{const p=wpProfiles.find(x=>x.id===wpProfActive);if(!p)return;const c={id:'wp'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name:p.name+' copy',v:1,interp:'smooth',pts:p.pts.map(q=>({t:q.t,w:q.w}))};wpProfiles.push(c);wpProfActive=c.id;wpSaveProfiles();wpRenderProfiles();wpSyncUI();};
+$('wpDelBtn').onclick=()=>{const i=wpProfiles.findIndex(x=>x.id===wpProfActive);if(i<0)return;if(wpNewId0===wpProfiles[i].id){wpNewId0=null;wpSaveNew();}wpProfiles.splice(i,1);wpProfActive=null;wpSaveProfiles();wpRenderProfiles();wpSyncUI();};
+$('wpUseBtn').onclick=()=>{const p=wpProfiles.find(x=>x.id===wpProfActive);if(!p)return;wpNewId0=p.id;wpSaveNew();wpRenderProfiles();wpSyncUI();setStatus('↔ New lines will use “'+p.name+'”. Existing lines are not changed.');};
+$('wpNewChk').onchange=e=>{if(!e.target.checked){wpNewId0=null;wpSaveNew();wpRenderProfiles();wpSyncUI();}else if(wpProfActive){$('wpUseBtn').click();}else{e.target.checked=false;setStatus('↔ Pick a saved profile first.');}};
+$('wpUniformBtn').onclick=()=>{wpNewId0=null;wpSaveNew();wpRenderProfiles();wpSyncUI();setStatus('↔ New lines are drawn with an even width again.');};
 // ---- Size: fractional sizes + number box + preset dropdown ----
 const SIZE_PRESETS=[0.1,0.25,0.5,0.75,1,1.5,2,3,4,5,6,8,10,12,16,20,24,32,48,64,100,150,200,300,400];
 function fmtSize(v){v=+v;if(!isFinite(v))return'';return v>=10?String(Math.round(v)):String(Math.round(v*100)/100);}
@@ -17755,6 +17853,7 @@ SPFonts.init().then(()=>{txRefreshMissing();});
     clone:'<rect x="3" y="3" width="11" height="11" rx="2.5"/><rect x="10" y="10" width="11" height="11" rx="2.5" stroke-dasharray="2 2.5"/>',
     gradient:'<rect x="3.5" y="3.5" width="17" height="17" rx="3"/><path d="M3.5 17l17-10M3.5 12.5l17-10M7.5 20.5l13-7.5" stroke-dasharray="1.5 2.5"/>',
     adjust:'<path d="M5 5v14M12 5v14M19 5v14"/><circle cx="5" cy="14" r="2.2"/><circle cx="12" cy="8" r="2.2"/><circle cx="19" cy="15" r="2.2"/>',
+    width:'<path d="M3 12 Q12 2 21 12 Q12 22 3 12 Z"/>',
     contour:'<rect x="3.5" y="3.5" width="17" height="17" rx="5"/><rect x="8" y="8" width="8" height="8" rx="2.5"/>',
     bool:'<circle cx="9" cy="10" r="5.5"/><circle cx="15" cy="14" r="5.5"/>',
     tpl:'<rect x="3.5" y="3.5" width="17" height="17" rx="2.5"/><circle cx="9" cy="9" r="2.6"/><rect x="13.5" y="12.5" width="4.5" height="4.5" rx="0.6"/><path d="M7 17.5l2.5-3 2.5 3z"/>',
@@ -17782,7 +17881,8 @@ SPFonts.init().then(()=>{txRefreshMissing();});
     adjust:{title:'Colour tools',icon:'adjust',pin:true,get:()=>[$('adjustSection'),$('recolourSection')]},
     brushmaker:{title:'Pattern brush',icon:'pbrush',get:()=>[$('brushMakerSection'),$('brushSetSection')]},
     repeat:{title:'Repeat & tiling',icon:'repeat',get:()=>[secByTitle(/repeat layouts/i)]},
-    templates:{title:'Pattern Templates',icon:'tpl',get:()=>[$('tplSection')]}
+    templates:{title:'Pattern Templates',icon:'tpl',get:()=>[$('tplSection')]},
+    width:{title:'Width tool',icon:'width',get:()=>[$('widthSection')]}
   };
   // ---- rail buttons: proxy = the existing top-bar button that actually selects the tool ----
   const TOOLS=[
@@ -17798,6 +17898,7 @@ SPFonts.init().then(()=>{txRefreshMissing();});
     {id:'shapes',label:'Shapes',icon:'shapes',panel:'shapes'},
     {id:'boolean',label:'Shape builder (Add, Subtract, Intersect, Xor, Divide)',icon:'bool',panel:'boolean'},
     {id:'contour',label:'Contour copies & round corners',icon:'contour',panel:'contour'},
+    {id:'width',label:'Width tool (thick and thin parts of a line)',icon:'width',panel:'width'},
     {id:'gradient',label:'Gradient fill',icon:'gradient',panel:'gradient'},
     {id:'adjust',label:'Adjust colours (invert, hue, saturation, brightness)',icon:'adjust',panel:'adjust'},
     {id:'rotate',label:'Rotate (select a stroke first)',icon:'rotate',action:'openRotatePanelBtn'},
@@ -17898,10 +17999,12 @@ SPFonts.init().then(()=>{txRefreshMissing();});
     }
     syncPanel(p);refreshDocks();
     try{const b=p.body;b.scrollTop=0;}catch(e){}
+    if(id==='width'){try{window.__wpPanel(true);}catch(e){console.warn(e);}}
   }
   function closePanel(id,quiet){
     const p=P[id];if(!p||!p.open)return;
     p.open=false;p.el.classList.remove('show');
+    if(id==='width'){try{window.__wpPanel(false);}catch(e){}}
     syncPanel(p);if(!quiet)refreshDocks();else{['dockL','dockR'].forEach(i=>{const h=$(i);if(h)h.classList.toggle('has',!!h.querySelector('.fpanel.show'));});}
   }
   function togglePanel(id){const p=P[id];if(p&&p.open)closePanel(id);else openPanel(id);}
@@ -18002,7 +18105,7 @@ SPFonts.init().then(()=>{txRefreshMissing();});
   // selecting a stroke opens the Selection panel (the old sidebar showed it automatically)
   try{
     const ss=$('strokeSelectSection');
-    if(ss)new MutationObserver(()=>{const em=window.__spEditingMotif&&window.__spEditingMotif();if(em){if(P.selection&&P.selection.open)closePanel('selection');return;} if(P.boolean&&P.boolean.open)return; if(P.contour&&P.contour.open)return; if(P.gradient&&P.gradient.open)return; if(P.adjust&&P.adjust.open)return; /* Shape builder open: leave the Selection panel shut so it can't push the Shape builder away */ /* inside Edit Motif the Stroke panel is the one to use; the Selection panel only piled up on top of it */if(ss.style.display!=='none'&&!(P.selection&&P.selection.open))openPanel('selection'); /* the section only shows while a stroke is selected in Edit mode / motif editing */}).observe(ss,{attributes:true,attributeFilter:['style']});
+    if(ss)new MutationObserver(()=>{const em=window.__spEditingMotif&&window.__spEditingMotif();if(em){if(P.selection&&P.selection.open)closePanel('selection');return;} if(P.boolean&&P.boolean.open)return; if(P.width&&P.width.open)return; if(P.contour&&P.contour.open)return; if(P.gradient&&P.gradient.open)return; if(P.adjust&&P.adjust.open)return; /* Shape builder open: leave the Selection panel shut so it can't push the Shape builder away */ /* inside Edit Motif the Stroke panel is the one to use; the Selection panel only piled up on top of it */if(ss.style.display!=='none'&&!(P.selection&&P.selection.open))openPanel('selection'); /* the section only shows while a stroke is selected in Edit mode / motif editing */}).observe(ss,{attributes:true,attributeFilter:['style']});
   }catch(e){}
   // ---- reset + resize ----
   function resetPanels(){
