@@ -838,6 +838,13 @@ html.in-suite .suite-only{display:block!important}
       <div class="efHost"></div>
       <div class="slider-row"><label>Layer</label><select id="strokeLayerSelect" style="flex:1;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);"></select></div>
       <div class="slider-row"><label>Width</label><input id="strokeWidthCtl" class="sel-width" type="range" min="0.05" step="0.05" max="120" value="6"><span id="strokeWidthVal" class="sel-width-val">6</span></div>
+      <div id="capRow" style="margin:8px 0 2px;">
+        <div class="slider-row" style="margin:0 0 4px;"><label>Start</label><div style="display:flex;gap:6px;flex:1;"><button type="button" class="btn mini cap-btn" data-cap="capS" data-v="round" style="flex:1;">● Round</button><button type="button" class="btn mini cap-btn" data-cap="capS" data-v="flat" style="flex:1;">■ Square</button></div></div>
+        <div class="slider-row" style="margin:0;"><label>End</label><div style="display:flex;gap:6px;flex:1;"><button type="button" class="btn mini cap-btn" data-cap="capE" data-v="round" style="flex:1;">● Round</button><button type="button" class="btn mini cap-btn" data-cap="capE" data-v="flat" style="flex:1;">■ Square</button></div></div>
+        <div class="hint" id="capHint" style="display:none;">Closed shapes have no ends.</div>
+        <div class="slider-row" style="margin:8px 0 0;"><label>Dash</label><select id="dashSel" style="flex:1;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);"><option value="">Solid</option><option value="dashed">Dashed</option><option value="long">Long dashes</option><option value="dotted">Dotted</option></select></div>
+        <div class="slider-row" id="dashGapRow" style="display:none;margin:4px 0 0;"><label>Gap</label><input id="dashGap" type="range" min="0.3" max="8" step="0.1" value="2"><span id="dashGapVal">2</span></div>
+      </div>
       <div class="row" style="margin-top:6px;flex-wrap:wrap;">
         <button id="useThisBrushBtn" class="btn mini" style="flex:1 1 45%;">Use This Brush</button>
         <button id="editPathBtn" class="btn mini" style="flex:1 1 45%;">✎ Edit Path</button>
@@ -1375,7 +1382,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v331'; // keep in step with CACHE in sw.js
+const APP_V='v332'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -2561,15 +2568,68 @@ function renderStrokeClipped0(ctx,stroke,brush,settings,alphaMul){
   }
   if(stroke.cuts&&stroke.cuts.length&&stroke.points&&stroke.points.length>1)return renderStrokeCuts(ctx,stroke,brush,settings,alphaMul);
   const target=stroke.clipStrokeId?findClipTargetStroke(stroke.clipStrokeId):null;
-  if(!target){renderBrushStroke(ctx,stroke,brush,settings,alphaMul);return;}
+  if(!target){renderBrushStrokeCapped(ctx,stroke,brush,settings,alphaMul);return;}
   const pts=target.nodes?nodesToPoints(target.nodes,true):target.points;
-  if(!pts||pts.length<3){renderBrushStroke(ctx,stroke,brush,settings,alphaMul);return;}
+  if(!pts||pts.length<3){renderBrushStrokeCapped(ctx,stroke,brush,settings,alphaMul);return;}
   ctx.save();
   ctx.beginPath();
   ctx.moveTo(pts[0].x,pts[0].y);
   for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);
   ctx.closePath();
   ctx.clip();
+  renderBrushStrokeCapped(ctx,stroke,brush,settings,alphaMul);
+  ctx.restore();
+}
+// Stroke ends: round is the brush's natural end. "Square" (stroke.capS / stroke.capE === 'flat') cuts the end
+// off flat, square to the path direction, exactly at the end point. Start and end are independent.
+function capTangent(pts,fromEnd,minD){
+  const n=pts.length,a=fromEnd?pts[n-1]:pts[0];
+  for(let k=1;k<n;k++){
+    const b=fromEnd?pts[n-1-k]:pts[k],dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);
+    if(d>=minD||k===n-1){if(d<1e-6)return null;return{x:a.x,y:a.y,dx:dx/d,dy:dy/d};}
+  }
+  return null;
+}
+// Dashes: the path is cut into pieces by arc length (length/gap are multiples of the stroke size) and each
+// piece is drawn with the same brush. Square start+end caps give square-ended dashes, otherwise round.
+function renderDashed(ctx,stroke,brush,settings,alphaMul){
+  let pts=stroke.points.slice();
+  if(stroke.closed&&pts.length>2){const a=pts[0],z=pts[pts.length-1];if(Math.hypot(a.x-z.x,a.y-z.y)>.01)pts.push({x:a.x,y:a.y});}
+  const sz=Math.max(.5,+(settings&&settings.size)||6),d=stroke.dash,dl=Math.max(.02,d.len)*sz,gp=Math.max(.2,d.gap)*sz;
+  const sub=(extra)=>Object.assign({},stroke,{dash:null},extra);
+  let on=true,left=dl,cur=[{x:pts[0].x,y:pts[0].y}],n=0;
+  const flush=()=>{if(cur.length>=1&&n<4000){const q=cur.length===1?[cur[0],{x:cur[0].x+.01,y:cur[0].y}]:cur;renderBrushStrokeCapped(ctx,sub({points:q,closed:false}),brush,settings,alphaMul);n++;}};
+  for(let i=1;i<pts.length;i++){
+    let a=pts[i-1],b=pts[i],seg=Math.hypot(b.x-a.x,b.y-a.y),pos=0;
+    while(seg-pos>left){
+      pos+=left;const t=pos/seg,pt={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};
+      if(on){cur.push(pt);flush();cur=[];left=gp;}else{cur=[pt];left=dl;}
+      on=!on;
+    }
+    left-=seg-pos;if(on)cur.push({x:b.x,y:b.y});
+  }
+  if(on)flush();
+}
+function renderBrushStrokeCapped(ctx,stroke,brush,settings,alphaMul){
+  if(stroke.dash&&stroke.dash.len>0&&stroke.points&&stroke.points.length>=2){
+    const flat=stroke.capS==='flat'&&stroke.capE==='flat'&&stroke.dash.len>.5;
+    const st2=flat?stroke:Object.assign({},stroke,{capS:null,capE:null});
+    renderDashed(ctx,st2,brush,settings,alphaMul);return;
+  }
+  const pts=stroke.points;
+  if(!((stroke.capS==='flat'||stroke.capE==='flat')&&pts&&pts.length>=2&&!stroke.closed)){renderBrushStroke(ctx,stroke,brush,settings,alphaMul);return;}
+  const sz=Math.max(1,+(settings&&settings.size)||6),L=1e5,minD=Math.max(1.5,sz*.5);
+  ctx.save();
+  [['capS',false],['capE',true]].forEach(([k,fe])=>{
+    if(stroke[k]!=='flat')return;
+    const t=capTangent(pts,fe,minD);if(!t)return;
+    // keep the side of the end point that lies along the stroke (direction t points into the stroke)
+    const nx=-t.dy,ny=t.dx;
+    ctx.beginPath();
+    ctx.moveTo(t.x+nx*L,t.y+ny*L);ctx.lineTo(t.x-nx*L,t.y-ny*L);
+    ctx.lineTo(t.x-nx*L+t.dx*L,t.y-ny*L+t.dy*L);ctx.lineTo(t.x+nx*L+t.dx*L,t.y+ny*L+t.dy*L);
+    ctx.closePath();ctx.clip();
+  });
   renderBrushStroke(ctx,stroke,brush,settings,alphaMul);
   ctx.restore();
 }
@@ -4102,7 +4162,14 @@ function setStrokePanelOpen(on){
   const b=$('strokePanelBtn');if(b)b.classList.toggle('active',strokePanelOpen);
   syncStrokeSelectionUI();
 }
+// The panel's scroll position must survive every refresh (rebuilding the swatches / layer list briefly
+// shrinks the panel, and iPad Safari then snaps it back to the top — the "panel jumps" report).
 function syncStrokeSelectionUI(){
+  const sec=$('strokeSelectSection'),body=sec&&sec.closest&&sec.closest('.fp-body'),top=body?body.scrollTop:0;
+  try{return syncStrokeSelectionUI0();}
+  finally{if(body&&top>0){if(body.scrollTop!==top)body.scrollTop=top;requestAnimationFrame(()=>{if(body.scrollTop<top&&sec.style.display!=='none')body.scrollTop=top;});}}
+}
+function syncStrokeSelectionUI0(){
   // Selecting something jumps the active layer to the layer it lives on (only when the selection actually changed)
   try{
     let ids=[];if(multiSel&&multiSel.strokeIds&&multiSel.strokeIds.length)ids=multiSel.strokeIds;else if(selectedStrokeId)ids=[selectedStrokeId];
@@ -4201,7 +4268,9 @@ function syncStrokeSelectionUI(){
 }
 function syncStrokeLayerSelect(stroke){
   const sel=$('strokeLayerSelect');if(!sel||!stroke)return;
-  sel.innerHTML='';
+  const lsig=layers.map(l=>l.id+l.name+(l.locked?1:0)).join('|');
+  if(sel.dataset.sig===lsig){sel.value=stroke.layerId;return;}
+  sel.dataset.sig=lsig;sel.innerHTML='';
   layers.slice().reverse().forEach(l=>{
     const opt=document.createElement('option');
     opt.value=l.id;opt.textContent=l.name+(l.locked?' 🔒':'');
@@ -5458,8 +5527,11 @@ function convertShapeToPath(){
   setStatus('✎ Converted to an editable path — use Edit Path to move, add or delete individual nodes.');
 }
 function renderStrokeReassignSwatches(){
-  const host=$('strokeReassignSwatches');host.innerHTML='';
+  const host=$('strokeReassignSwatches');
   const stroke=strokes.find(s=>s.id===selectedStrokeId);
+  const sig=stroke?stroke.id+'|'+stroke.brushId:'';
+  if(host.dataset.sig===sig&&host._st===stroke&&host.childElementCount)return; // unchanged: leave the DOM alone so the panel never reflows
+  host.dataset.sig=sig;host._st=stroke;host.innerHTML='';
   if(!stroke)return;
   BrushEngine.BRUSHES.forEach(b=>{
     const btn=document.createElement('button');
@@ -7453,6 +7525,7 @@ function syncSelStrokeControls(){
   document.querySelectorAll('.sel-colour').forEach(e=>{e.value=/^#[0-9a-f]{6}$/i.test(stroke.color||'')?stroke.color:'#000000';});
   document.querySelectorAll('.sel-width').forEach(e=>{e.max=mx;e.value=st.size;});
   document.querySelectorAll('.sel-width-val').forEach(e=>{e.textContent=fmtSize(st.size);});
+  try{syncCapUI();syncDashUI();}catch(e){}
   syncSizeNums(newSel);try{tbSizeSync();}catch(e){}
 }
 // Brush of the selected stroke (changing it keeps colour and, where it makes sense, size).
@@ -7494,6 +7567,40 @@ document.querySelectorAll('.sel-width').forEach(el=>{
   el.addEventListener('change',()=>{if(!pathEditStrokeId){pushHist();scheduleAutosave();}});
 });
 
+function syncCapUI(){
+  const st=strokes.find(x=>x.id===(pathEditStrokeId||selectedStrokeId));
+  document.querySelectorAll('.cap-btn').forEach(b=>{
+    const cur=(st&&st[b.dataset.cap]==='flat')?'flat':'round';
+    b.classList.toggle('primary',!!st&&cur===b.dataset.v);b.disabled=!st||!!st.closed||!!st.text;
+  });
+  const h=$('capHint');if(h)h.style.display=(st&&st.closed)?'':'none';
+}
+document.querySelectorAll('.cap-btn').forEach(b=>b.addEventListener('click',()=>{
+  const st=strokes.find(x=>x.id===(pathEditStrokeId||selectedStrokeId));if(!st||st.closed)return;
+  if(b.dataset.v==='flat')st[b.dataset.cap]='flat';else delete st[b.dataset.cap];
+  syncCapUI();refreshSelStrokeView(st);
+  if(!pathEditStrokeId){pushHist();scheduleAutosave();}
+}));
+const DASH_PRE={dashed:{len:3,gap:2},long:{len:6,gap:3},dotted:{len:.02,gap:1.6}};
+function syncDashUI(){
+  const st=strokes.find(x=>x.id===(pathEditStrokeId||selectedStrokeId)),d=st&&st.dash;
+  const sel=$('dashSel');if(!sel)return;
+  sel.value=d?d.k:'';sel.disabled=!st||!!st.text;
+  $('dashGapRow').style.display=d?'':'none';
+  if(d){$('dashGap').value=d.gap;$('dashGapVal').textContent=(+d.gap).toFixed(1);}
+}
+$('dashSel').onchange=e=>{
+  const st=strokes.find(x=>x.id===(pathEditStrokeId||selectedStrokeId));if(!st)return;
+  const k=e.target.value;if(k)st.dash=Object.assign({k},DASH_PRE[k]);else delete st.dash;
+  syncDashUI();rebuildLayer(st.layerId);refreshSelStrokeView(st);redraw();
+  if(!pathEditStrokeId){pushHist();scheduleAutosave();}
+};
+$('dashGap').oninput=e=>{
+  const st=strokes.find(x=>x.id===(pathEditStrokeId||selectedStrokeId));if(!st||!st.dash)return;
+  st.dash.gap=+e.target.value;$('dashGapVal').textContent=(+e.target.value).toFixed(1);
+  rebuildLayer(st.layerId);refreshSelStrokeView(st);redraw();
+};
+$('dashGap').onchange=()=>{if(!pathEditStrokeId){pushHist();scheduleAutosave();}};
 // ---- Size: fractional sizes + number box + preset dropdown ----
 const SIZE_PRESETS=[0.1,0.25,0.5,0.75,1,1.5,2,3,4,5,6,8,10,12,16,20,24,32,48,64,100,150,200,300,400];
 function fmtSize(v){v=+v;if(!isFinite(v))return'';return v>=10?String(Math.round(v)):String(Math.round(v*100)/100);}
