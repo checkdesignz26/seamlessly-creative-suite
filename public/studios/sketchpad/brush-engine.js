@@ -344,6 +344,27 @@
     out.push(points[points.length - 1]);
     return out;
   }
+  // Like resample(), but the gap to the next dab is stepAt(pressure) so a thin part of a width-profiled stroke
+  // gets closely spaced dabs (a fixed gap sized for the full-width brush breaks thin tips into separate dots).
+  function resampleVar(points, stepAt) {
+    if (points.length < 2) return points.slice();
+    const out = [points[0]];
+    let need = stepAt(points[0].pressure);
+    for (let i = 1; i < points.length; i++) {
+      const a = points[i - 1], b = points[i];
+      const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+      if (segLen <= 0) continue;
+      let dist = need;
+      while (dist < segLen) {
+        const t = dist / segLen, pr = a.pressure + (b.pressure - a.pressure) * t;
+        out.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, pressure: pr });
+        dist += stepAt(pr);
+      }
+      need = dist - segLen;
+    }
+    out.push(points[points.length - 1]);
+    return out;
+  }
   // Shape outlines and node-edited paths have deliberate corners. The "curve through the midpoints"
   // smoothing below used to round every one of them (a rectangle came out as a blob with one sharp
   // corner at the seam, i.e. a teardrop). Corners are now kept sharp: a point flagged corner:true
@@ -491,7 +512,9 @@
     if (settings.tint) img = tintedTip(brush, src, stroke.color || '#000000');
     const pts0 = stroke.points; if (!pts0 || !pts0.length) return;
     const spacingPx = Math.max(2, (settings.spacing / 100) * settings.size);
-    let pts = pts0.length < 2 ? pts0.slice() : resample(pts0, spacingPx);
+    let pts = pts0.length < 2 ? pts0.slice() : (settings._wpFine
+      ? resampleVar(pts0, pr => Math.max(0.3, Math.min(spacingPx, settings.size * pressureFactor(pr, settings.pressureWidth) * Math.max(0.05, (settings.spacing || 8) / 100))))
+      : resample(pts0, spacingPx));
     if (pts.length > 2) {
       const a = pts[pts.length - 1], b = pts[pts.length - 2];
       if (Math.hypot(a.x - b.x, a.y - b.y) < spacingPx * 0.5) pts.pop();
@@ -1443,7 +1466,10 @@
     // Cap the gap to a fraction of the dab's narrowest width; sizes of ~3.5+ are unchanged.
     const narrow = Math.max(0.35, 1 - settings.pressureWidth / 100);
     spacingPx = Math.max(0.2, Math.min(spacingPx, settings.size * narrow * 0.6));
-    const pts = resample(stroke.points, spacingPx);
+    // A width-profiled stroke (settings._wpFine): spacing follows the dab's own width, so tapered tips stay solid lines.
+    const pts = settings._wpFine
+      ? resampleVar(stroke.points, pr => Math.max(0.12, Math.min(spacingPx, settings.size * pressureFactor(pr, settings.pressureWidth) * 0.22)))
+      : resample(stroke.points, spacingPx);
     const rand = seededRandom(stroke.id || 'live');
     const baseHsl = hasCdyn(brush) ? hexToHsl(stroke.color || '#000000') : null;
     const cdyn = !!baseHsl, rand2 = cdyn ? seededRandom((stroke.id || 'live') + 'c') : null;
