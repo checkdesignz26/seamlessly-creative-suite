@@ -879,8 +879,20 @@ html.in-suite .suite-only{display:block!important}
         <div class="slider-row" style="margin:0 0 4px;"><label>Start</label><div style="display:flex;gap:6px;flex:1;"><button type="button" class="btn mini cap-btn" data-cap="capS" data-v="round" style="flex:1;">● Round</button><button type="button" class="btn mini cap-btn" data-cap="capS" data-v="flat" style="flex:1;">■ Square</button></div></div>
         <div class="slider-row" style="margin:0;"><label>End</label><div style="display:flex;gap:6px;flex:1;"><button type="button" class="btn mini cap-btn" data-cap="capE" data-v="round" style="flex:1;">● Round</button><button type="button" class="btn mini cap-btn" data-cap="capE" data-v="flat" style="flex:1;">■ Square</button></div></div>
         <div class="hint capHint" style="display:none;">Closed shapes have no ends.</div>
-        <div class="slider-row" style="margin:8px 0 0;"><label>Dash</label><select class="dash-sel" style="flex:1;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);"><option value="">Solid</option><option value="dashed">Dashed</option><option value="long">Long dashes</option><option value="dotted">Dotted</option></select></div>
-        <div class="slider-row" class="dash-gap-row" style="display:none;margin:4px 0 0;"><label>Gap</label><input class="dash-gap" type="range" min="0.3" max="8" step="0.1" value="2"><span class="dash-gap-val">2</span></div>
+        <details class="dashBox" style="margin:8px 0 0;">
+          <summary style="cursor:pointer;font-weight:600;font-size:13px;padding:4px 0;">Dash &amp; dots</summary>
+          <div class="slider-row" style="margin:6px 0 4px;"><label>Pattern</label><select class="dash-sel" style="flex:1;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);"></select></div>
+          <div class="dash-body" style="display:none;">
+            <div class="dash-rows"></div>
+            <button type="button" class="btn mini dash-add" style="width:100%;margin:2px 0 6px;">+ Add dash / gap pair</button>
+            <div class="slider-row" style="margin:0 0 6px;"><label>Offset</label><input class="dash-off" type="range" min="-10" max="10" step="0.1" value="0"><input class="dash-off-n" type="number" inputmode="decimal" step="0.1" value="0" style="width:62px;padding:5px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"></div>
+            <div class="slider-row" style="margin:0 0 6px;"><label>Ends</label><div style="display:flex;gap:6px;flex:1;"><button type="button" class="btn mini dash-cap" data-v="round" style="flex:1;">Round</button><button type="button" class="btn mini dash-cap" data-v="square" style="flex:1;">Square</button><button type="button" class="btn mini dash-cap" data-v="butt" style="flex:1;">Butt</button></div></div>
+            <canvas class="dash-prev" width="280" height="38" style="position:static!important;width:100%;height:38px;display:block;border-radius:8px;border:1px solid var(--btnBorder);"></canvas>
+            <input class="dash-name" type="text" maxlength="40" placeholder="Preset name" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;margin:8px 0 6px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;"><button type="button" class="btn mini primary dash-psave">Save as preset</button><button type="button" class="btn mini dash-pupd" disabled>Update preset</button><button type="button" class="btn mini dash-pren" disabled>Rename</button><button type="button" class="btn mini danger dash-pdel" disabled>Delete</button></div>
+            <div class="hint">Lengths are in multiples of the line width, so the pattern keeps its proportions when the width changes. Round and square ends add half a line width to each end of every dash.</div>
+          </div>
+        </details>
       </div>
       <div class="row" style="margin-top:6px;flex-wrap:wrap;">
         <button id="useThisBrushBtn" class="btn mini" style="flex:1 1 45%;">Use This Brush</button>
@@ -1184,8 +1196,20 @@ html.in-suite .suite-only{display:block!important}
       <div class="slider-row" style="margin:0 0 4px;"><label>Start</label><div style="display:flex;gap:6px;flex:1;"><button type="button" class="btn mini cap-btn" data-cap="capS" data-v="round" style="flex:1;">● Round</button><button type="button" class="btn mini cap-btn" data-cap="capS" data-v="flat" style="flex:1;">■ Square</button></div></div>
       <div class="slider-row" style="margin:0;"><label>End</label><div style="display:flex;gap:6px;flex:1;"><button type="button" class="btn mini cap-btn" data-cap="capE" data-v="round" style="flex:1;">● Round</button><button type="button" class="btn mini cap-btn" data-cap="capE" data-v="flat" style="flex:1;">■ Square</button></div></div>
       <div class="hint capHint" style="display:none;">Closed shapes have no ends.</div>
-      <div class="slider-row" style="margin:8px 0 0;"><label>Dash</label><select class="dash-sel" style="flex:1;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);"><option value="">Solid</option><option value="dashed">Dashed</option><option value="long">Long dashes</option><option value="dotted">Dotted</option></select></div>
-      <div class="slider-row" class="dash-gap-row" style="display:none;margin:4px 0 0;"><label>Gap</label><input class="dash-gap" type="range" min="0.3" max="8" step="0.1" value="2"><span class="dash-gap-val">2</span></div>
+      <details class="dashBox" style="margin:8px 0 0;">
+          <summary style="cursor:pointer;font-weight:600;font-size:13px;padding:4px 0;">Dash &amp; dots</summary>
+          <div class="slider-row" style="margin:6px 0 4px;"><label>Pattern</label><select class="dash-sel" style="flex:1;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);"></select></div>
+          <div class="dash-body" style="display:none;">
+            <div class="dash-rows"></div>
+            <button type="button" class="btn mini dash-add" style="width:100%;margin:2px 0 6px;">+ Add dash / gap pair</button>
+            <div class="slider-row" style="margin:0 0 6px;"><label>Offset</label><input class="dash-off" type="range" min="-10" max="10" step="0.1" value="0"><input class="dash-off-n" type="number" inputmode="decimal" step="0.1" value="0" style="width:62px;padding:5px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;"></div>
+            <div class="slider-row" style="margin:0 0 6px;"><label>Ends</label><div style="display:flex;gap:6px;flex:1;"><button type="button" class="btn mini dash-cap" data-v="round" style="flex:1;">Round</button><button type="button" class="btn mini dash-cap" data-v="square" style="flex:1;">Square</button><button type="button" class="btn mini dash-cap" data-v="butt" style="flex:1;">Butt</button></div></div>
+            <canvas class="dash-prev" width="280" height="38" style="position:static!important;width:100%;height:38px;display:block;border-radius:8px;border:1px solid var(--btnBorder);"></canvas>
+            <input class="dash-name" type="text" maxlength="40" placeholder="Preset name" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;margin:8px 0 6px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;"><button type="button" class="btn mini primary dash-psave">Save as preset</button><button type="button" class="btn mini dash-pupd" disabled>Update preset</button><button type="button" class="btn mini dash-pren" disabled>Rename</button><button type="button" class="btn mini danger dash-pdel" disabled>Delete</button></div>
+            <div class="hint">Lengths are in multiples of the line width, so the pattern keeps its proportions when the width changes. Round and square ends add half a line width to each end of every dash.</div>
+          </div>
+        </details>
     </div>
     <div class="hint">Drag the stroke to move it. Fill and layers are under 🖊️ Stroke tools.</div>
     <div class="row" style="margin-top:6px;">
@@ -1426,7 +1450,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v335'; // keep in step with CACHE in sw.js
+const APP_V='v336'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -2634,25 +2658,62 @@ function capTangent(pts,fromEnd,minD){
   }
   return null;
 }
-// Dashes: the path is cut into pieces by arc length (length/gap are multiples of the stroke size) and each
-// piece is drawn with the same brush. Square start+end caps give square-ended dashes, otherwise round.
-function renderDashed(ctx,stroke,brush,settings,alphaMul){
-  let pts=stroke.points.slice();
-  if(stroke.closed&&pts.length>2){const a=pts[0],z=pts[pts.length-1];if(Math.hypot(a.x-z.x,a.y-z.y)>.01)pts.push({x:a.x,y:a.y});}
-  const sz=Math.max(.5,+(settings&&settings.size)||6),d=stroke.dash,dl=Math.max(.02,d.len)*(stroke._bs||sz),gp=Math.max(.2,d.gap)*(stroke._bs||sz);
-  const sub=(extra)=>Object.assign({},stroke,{dash:null},extra);
-  let on=true,left=dl,cur=[{x:pts[0].x,y:pts[0].y}],n=0;
-  const flush=()=>{if(cur.length>=1&&n<4000){const q=cur.length===1?[cur[0],{x:cur[0].x+.01,y:cur[0].y}]:cur;renderBrushStrokeCapped(ctx,sub({points:q,closed:false}),brush,settings,alphaMul);n++;}};
-  for(let i=1;i<pts.length;i++){
-    let a=pts[i-1],b=pts[i],seg=Math.hypot(b.x-a.x,b.y-a.y),pos=0;
-    while(seg-pos>left){
-      pos+=left;const t=pos/seg,pt={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};
-      if(on){cur.push(pt);flush();cur=[];left=gp;}else{cur=[pt];left=dl;}
-      on=!on;
-    }
-    left-=seg-pos;if(on)cur.push({x:b.x,y:b.y});
+// ---- Dashes ----
+// stroke.dash = {k, seq:[dash,gap,dash,gap,...], off, cap}. All lengths are multiples of the line's base width, so changing the
+// width keeps the pattern in proportion (and a width profile never stretches it). Like SVG: dash length is the straight part;
+// "round" and "square" ends add half a line width at each end of every dash, "butt" ends are cut exactly at the dash length.
+// off shifts the whole pattern forward along the path. An odd-length sequence repeats itself (10,5,2 = 10,5,2,10,5,2).
+// Old strokes saved as {len,gap} still work. Each dash is drawn with the same brush; the path itself is never changed.
+function dashSeq(d){
+  let q=(d.seq&&d.seq.length>=2)?d.seq.slice(0,16):[d.len>0?d.len:3,d.gap>0?d.gap:2];
+  q=q.map(v=>Math.max(0,Math.min(60,+v||0)));if(q.length%2)q=q.concat(q);return q;
+}
+function dashSlice(pts,cum,a,b,unit){
+  const total=cum[cum.length-1];a=Math.max(0,a);b=Math.min(total,b);
+  const at=(pos)=>{
+    let lo=1,hi=pts.length-1;while(lo<hi){const m=(lo+hi)>>1;if(cum[m]<pos)lo=m+1;else hi=m;}
+    const i=lo,p0=pts[i-1],p1=pts[i],len=Math.max(1e-9,cum[i]-cum[i-1]),u=Math.max(0,Math.min(1,(pos-cum[i-1])/len));
+    const q={x:p0.x+(p1.x-p0.x)*u,y:p0.y+(p1.y-p0.y)*u};
+    if(p0.pressure!=null||p1.pressure!=null){const a0=p0.pressure==null?1:p0.pressure,a1=p1.pressure==null?1:p1.pressure;q.pressure=a0+(a1-a0)*u;}
+    q.i=i;return q;
+  };
+  const s0=at(a),out=[s0];
+  if(b-a<1e-6){const nx=at(Math.min(total,a+unit*.02)),dx=nx.x-s0.x,dy=nx.y-s0.y;if(Math.hypot(dx,dy)<1e-6){out.push({x:s0.x+.01,y:s0.y,pressure:s0.pressure});}else out.push({x:nx.x,y:nx.y,pressure:nx.pressure});return out;}
+  const e0=at(b);
+  for(let i=s0.i;i<e0.i&&i<pts.length;i++){if(cum[i]>a&&cum[i]<b)out.push({x:pts[i].x,y:pts[i].y,pressure:pts[i].pressure});}
+  out.push(e0);return out;
+}
+// The pieces (arrays of points) that make up the visible dashes of a stroke's points.
+function dashPieces(points,d,unit,closed){
+  let pts=points.slice();
+  if(closed&&pts.length>2){const a0=pts[0],z=pts[pts.length-1];if(Math.hypot(a0.x-z.x,a0.y-z.y)>.01)pts.push({x:a0.x,y:a0.y,pressure:a0.pressure});}
+  if(pts.length<2)return [];
+  const dots=unit*.02,seq=dashSeq(d).map((v,i)=>i%2===0?Math.max(dots,v*unit):v*unit);
+  let P=0;seq.forEach(v=>{P+=v;});if(P<unit*.05)return [];
+  const cum=[0];for(let i=1;i<pts.length;i++)cum.push(cum[i-1]+Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y));
+  const total=cum[cum.length-1];if(total<1e-6)return [];
+  let phase=((-(+d.off||0)*unit)%P+P)%P,idx=0,rem=seq[0];
+  for(let g=0;g<64&&phase>=rem&&phase>0;g++){phase-=rem;idx=(idx+1)%seq.length;rem=seq[idx];}
+  rem-=phase;
+  const ext=d.cap==='square'?unit/2:0,out=[];let pos=0;
+  for(let g=0;pos<total&&out.length<4000&&g<20000;g++){
+    const end=Math.min(total,pos+Math.max(rem,0));
+    if(idx%2===0)out.push(dashSlice(pts,cum,pos-ext,end+ext,unit));
+    pos=end;idx=(idx+1)%seq.length;rem=seq[idx];
+    if(rem<=0&&idx%2===1){idx=(idx+1)%seq.length;rem=seq[idx];} // a zero gap simply runs the next dash on
   }
-  if(on)flush();
+  return out;
+}
+function dashSubStroke(stroke,d,piece){
+  const o={dash:null,points:piece,closed:false};
+  if(d.cap==='butt'||d.cap==='square'){o.capS='flat';o.capE='flat';}
+  else if(d.cap==='round'){o.capS=null;o.capE=null;}
+  else{const flat=stroke.capS==='flat'&&stroke.capE==='flat';o.capS=flat?'flat':null;o.capE=flat?'flat':null;} // saved before dash ends existed
+  return Object.assign({},stroke,o);
+}
+function renderDashed(ctx,stroke,brush,settings,alphaMul){
+  const d=stroke.dash,unit=Math.max(.5,stroke._bs||+(settings&&settings.size)||6);
+  dashPieces(stroke.points,d,unit,stroke.closed).forEach(pc=>renderBrushStrokeCapped(ctx,dashSubStroke(stroke,d,pc),brush,settings,alphaMul));
 }
 // ---- Width profile (stroke.wp = [{t:0..1 along the line, w: thickness multiplier}]) ----
 // Applied at draw time by turning the profile into per-point pressure at 100% pressure->width, so every brush
@@ -2714,11 +2775,7 @@ function renderBrushStrokeW(ctx,stroke,brush,settings,alphaMul){
 }
 function renderBrushStrokeCapped(ctx,stroke,brush,settings,alphaMul){
   if(stroke.wp&&stroke.wp.length){const r=wpApply(stroke,settings);if(r){r.stroke._ribbon=!!(brush&&brush.path);renderBrushStrokeCapped(ctx,r.stroke,brush,r.settings,alphaMul);return;}}
-  if(stroke.dash&&stroke.dash.len>0&&stroke.points&&stroke.points.length>=2){
-    const flat=stroke.capS==='flat'&&stroke.capE==='flat'&&stroke.dash.len>.5;
-    const st2=flat?stroke:Object.assign({},stroke,{capS:null,capE:null});
-    renderDashed(ctx,st2,brush,settings,alphaMul);return;
-  }
+  if(stroke.dash&&(stroke.dash.seq||stroke.dash.len>0)&&stroke.points&&stroke.points.length>=2){renderDashed(ctx,stroke,brush,settings,alphaMul);return;}
   const pts=stroke.points;
   if(!((stroke.capS==='flat'||stroke.capE==='flat')&&pts&&pts.length>=2&&!stroke.closed)){renderBrushStrokeW(ctx,stroke,brush,settings,alphaMul);return;}
   const sz=Math.max(1,+(settings&&settings.size)||6),L=1e5,minD=Math.max(1.5,sz*.5);
@@ -7686,23 +7743,112 @@ document.querySelectorAll('.cap-btn').forEach(b=>b.addEventListener('click',()=>
   syncCapUI();rebuildLayer(st.layerId);refreshSelStrokeView(st);redraw();
   if(!pathEditStrokeId){pushHist();scheduleAutosave();}
 }));
-const DASH_PRE={dashed:{len:3,gap:2},long:{len:6,gap:3},dotted:{len:.02,gap:1.6}};
+// ---- Dash & dots controls (live preview, custom sequences, saved presets) ----
+const DASH_BUILT=[['dashed','Standard dash',[3,2],'round'],['stitch','Fine stitch',[1.6,1.2],'butt'],['long','Long dash',[6,3],'round'],['dotted','Dotted',[.02,1.6],'round'],['dashdot','Dash-dot',[4,1.5,.02,1.5],'round']];
+let dashPresets=[];try{const j=JSON.parse(localStorage.getItem('sp-dash-presets-v1')||'[]');if(Array.isArray(j))dashPresets=j.filter(p=>p&&p.id&&p.name&&Array.isArray(p.seq)&&p.seq.length>=2);}catch(e){}
+let dashUserActive=null,dashSig='',dashRaf=0;
+function dashSavePresets(){try{localStorage.setItem('sp-dash-presets-v1',JSON.stringify(dashPresets));}catch(e){}}
+const dashFmt=v=>String(Math.round(v*100)/100);
+function dashPreview(box,d){
+  const cv=box.querySelector('.dash-prev');if(!cv)return;
+  const g=cv.getContext('2d'),w=cv.width,h=cv.height;g.clearRect(0,0,w,h);
+  const u=7;g.strokeStyle=getComputedStyle(document.body).color||'#444';g.lineWidth=u;g.lineCap=(d&&d.cap==='square')?'square':(d&&d.cap==='butt')?'butt':'round';g.lineJoin='round';
+  if(d){const q=dashSeq(d).map((v,i)=>i%2===0?Math.max(.02,v)*u:v*u);g.setLineDash(q);g.lineDashOffset=-(+d.off||0)*u;}
+  g.beginPath();g.moveTo(12,h*.62);g.bezierCurveTo(w*.3,h*.05,w*.6,h*1.1,w-12,h*.38);g.stroke();
+}
+function dashRows(box,d){
+  const rows=box.querySelector('.dash-rows'),seq=dashSeq(d),pairs=seq.length/2;
+  const sig=pairs+':'+(curCapStroke()||{}).id;
+  if(rows.dataset.sig===sig&&rows.childElementCount===pairs){
+    rows.querySelectorAll('[data-i]').forEach(el=>{if(document.activeElement!==el){const v=seq[+el.dataset.i];el.value=el.type==='range'?Math.min(12,v):dashFmt(v);}});
+    return;
+  }
+  rows.dataset.sig=sig;rows.innerHTML='';
+  for(let k=0;k<pairs;k++){
+    const card=document.createElement('div');card.style.cssText='border:1px solid var(--btnBorder);border-radius:10px;padding:6px 8px;margin:0 0 6px;position:relative';
+    [['Dash',2*k],['Gap',2*k+1]].forEach(([lab,i])=>{
+      const r=document.createElement('div');r.className='slider-row';r.style.margin='2px 0';
+      r.innerHTML='<label>'+lab+'</label><input type="range" min="0" max="12" step="0.1" data-i="'+i+'"><input type="number" inputmode="decimal" min="0" max="60" step="0.1" data-i="'+i+'" style="width:62px;padding:5px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);font-size:16px;">';
+      card.appendChild(r);
+    });
+    if(pairs>1){const x=document.createElement('button');x.type='button';x.className='btn mini dash-pdelrow';x.textContent='✕';x.dataset.k=k;x.style.cssText='position:absolute;right:6px;top:-10px;padding:2px 8px;min-height:26px';card.appendChild(x);}
+    rows.appendChild(card);
+  }
+  rows.querySelectorAll('[data-i]').forEach(el=>{const v=seq[+el.dataset.i];el.value=el.type==='range'?Math.min(12,v):dashFmt(v);});
+}
 function syncDashUI(){
   const st=curCapStroke(),d=st&&st.dash;
-  document.querySelectorAll('.dash-sel').forEach(sel=>{sel.value=d?d.k:'';sel.disabled=!st||!!st.text;});
-  document.querySelectorAll('.dash-gap-row').forEach(r=>{r.style.display=d?'':'none';});
-  if(d)document.querySelectorAll('.dash-gap').forEach(g=>{g.value=d.gap;});
-  if(d)document.querySelectorAll('.dash-gap-val').forEach(g=>{g.textContent=(+d.gap).toFixed(1);});
+  const psig=dashPresets.map(p=>p.id+p.name).join('|');
+  document.querySelectorAll('.dashBox').forEach(box=>{
+    const sel=box.querySelector('.dash-sel');
+    if(sel.dataset.sig!==psig||!sel.options.length){
+      sel.dataset.sig=psig;sel.innerHTML='<option value="">Solid</option>'+DASH_BUILT.map(b=>'<option value="'+b[0]+'">'+b[1]+'</option>').join('')+'<option value="custom">Custom</option>'+(dashPresets.length?'<optgroup label="My presets">'+dashPresets.map(p=>'<option value="u:'+p.id+'">'+p.name.replace(/[<>&"]/g,'')+'</option>').join('')+'</optgroup>':'');
+    }
+    sel.disabled=!st||!!st.text;
+    sel.value=d?(d.k&&[...sel.options].some(o=>o.value===d.k)?d.k:'custom'):'';
+    box.querySelector('.dash-body').style.display=d?'':'none';
+    if(d){
+      dashRows(box,d);
+      const off=box.querySelector('.dash-off'),on=box.querySelector('.dash-off-n');
+      if(document.activeElement!==off)off.value=+d.off||0;if(document.activeElement!==on)on.value=dashFmt(+d.off||0);
+      box.querySelectorAll('.dash-cap').forEach(b=>b.classList.toggle('primary',(d.cap||'round')===b.dataset.v));
+    }
+    dashPreview(box,d);
+    const act=dashPresets.find(p=>p.id===dashUserActive);
+    box.querySelector('.dash-pupd').disabled=!(act&&d);box.querySelector('.dash-pren').disabled=!act;box.querySelector('.dash-pdel').disabled=!act;box.querySelector('.dash-psave').disabled=!d;
+  });
 }
-document.querySelectorAll('.dash-sel').forEach(sel=>sel.onchange=e=>{
-  const st=curCapStroke();if(!st)return;
-  const k=e.target.value;if(k)st.dash=Object.assign({k},DASH_PRE[k]);else delete st.dash;
+function dashCommitSoon(st){if(dashRaf)return;dashRaf=requestAnimationFrame(()=>{dashRaf=0;rebuildLayer(st.layerId);refreshSelStrokeView(st);redraw();});}
+function dashEdit(mut,commit){
+  const st=curCapStroke();if(!st||st.text)return;
+  if(!st.dash){const b=DASH_BUILT[0];st.dash={k:'custom',seq:b[2].slice(),off:0,cap:b[3]};}
+  if(!st.dash.seq)st.dash.seq=dashSeq(st.dash);
+  mut(st.dash);
+  if(st.dash.k!=='custom'&&!(st.dash.k||'').startsWith('u:'))st.dash.k='custom';else if((st.dash.k||'').startsWith('u:'))st.dash.k='custom';
+  delete st.dash.len;delete st.dash.gap;
+  syncDashUI();dashCommitSoon(st);
+  if(commit&&!pathEditStrokeId){pushHist();scheduleAutosave();}
+}
+function dashApply(st,spec){
+  if(!spec)delete st.dash;else st.dash={k:spec.k,seq:spec.seq.slice(),off:0,cap:spec.cap||'round'};
   syncDashUI();rebuildLayer(st.layerId);refreshSelStrokeView(st);redraw();
   if(!pathEditStrokeId){pushHist();scheduleAutosave();}
-});
-document.querySelectorAll('.dash-gap').forEach(g=>{
-  g.oninput=e=>{const st=curCapStroke();if(!st||!st.dash)return;st.dash.gap=+e.target.value;syncDashUI();rebuildLayer(st.layerId);refreshSelStrokeView(st);redraw();};
-  g.onchange=()=>{if(!pathEditStrokeId){pushHist();scheduleAutosave();}};
+}
+document.querySelectorAll('.dashBox').forEach(box=>{
+  const sel=box.querySelector('.dash-sel');
+  sel.onchange=e=>{
+    const st=curCapStroke();if(!st)return;const v=e.target.value;
+    if(!v){dashUserActive=null;dashApply(st,null);return;}
+    const b=DASH_BUILT.find(x=>x[0]===v);
+    if(b){dashUserActive=null;dashApply(st,{k:b[0],seq:b[2],cap:b[3]});return;}
+    if(v==='custom'){if(!st.dash)dashApply(st,{k:'custom',seq:DASH_BUILT[0][2],cap:'round'});return;}
+    if(v.startsWith('u:')){const p=dashPresets.find(x=>'u:'+x.id===v);if(p){dashUserActive=p.id;box.querySelector('.dash-name').value=p.name;dashApply(st,{k:v,seq:p.seq,cap:p.cap});}
+    }
+  };
+  box.addEventListener('input',e=>{
+    const t=e.target,i=t.dataset&&t.dataset.i;
+    if(i!==undefined&&i!==''&&(t.type==='range'||t.type==='number')){const v=Math.max(0,Math.min(60,+t.value||0));dashEdit(d=>{d.seq[+i]=v;},false);}
+    else if(t.classList.contains('dash-off')||t.classList.contains('dash-off-n')){const v=Math.max(-60,Math.min(60,+t.value||0));dashEdit(d=>{d.off=v;},false);}
+  });
+  box.addEventListener('change',e=>{
+    const t=e.target;
+    if((t.dataset&&t.dataset.i!==undefined&&t.dataset.i!=='')||t.classList.contains('dash-off')||t.classList.contains('dash-off-n')){const st=curCapStroke();if(st&&!pathEditStrokeId){pushHist();scheduleAutosave();}}
+  });
+  box.addEventListener('click',e=>{
+    const t=e.target.closest('button');if(!t)return;
+    const st=curCapStroke();
+    if(t.classList.contains('dash-cap')){dashEdit(d=>{d.cap=t.dataset.v;},true);}
+    else if(t.classList.contains('dash-add')){dashEdit(d=>{d.seq.push(3,2);},true);}
+    else if(t.classList.contains('dash-pdelrow')){dashEdit(d=>{d.seq.splice(+t.dataset.k*2,2);},true);}
+    else if(t.classList.contains('dash-psave')&&st&&st.dash){
+      let nm=(box.querySelector('.dash-name').value||'').trim().slice(0,40);if(!nm){let n=1;while(dashPresets.some(p=>p.name==='Custom '+String(n).padStart(2,'0')))n++;nm='Custom '+String(n).padStart(2,'0');}
+      const p={id:'dp'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name:nm,seq:dashSeq(st.dash),cap:st.dash.cap||'round'};
+      dashPresets.push(p);dashUserActive=p.id;dashSavePresets();st.dash.k='u:'+p.id;box.querySelector('.dash-name').value='';syncDashUI();setStatus('Saved dash preset “'+nm+'”.');
+    }
+    else if(t.classList.contains('dash-pupd')){const p=dashPresets.find(x=>x.id===dashUserActive);if(p&&st&&st.dash){p.seq=dashSeq(st.dash);p.cap=st.dash.cap||'round';dashSavePresets();syncDashUI();setStatus('Updated “'+p.name+'”.');}}
+    else if(t.classList.contains('dash-pren')){const p=dashPresets.find(x=>x.id===dashUserActive),v=(box.querySelector('.dash-name').value||'').trim();if(p&&v){p.name=v.slice(0,40);dashSavePresets();syncDashUI();}else setStatus('Type a new name in the box first.');}
+    else if(t.classList.contains('dash-pdel')){const i=dashPresets.findIndex(x=>x.id===dashUserActive);if(i>=0){dashPresets.splice(i,1);dashUserActive=null;dashSavePresets();syncDashUI();}}
+  });
 });
 
 // ---- Width tool: on-canvas handles + Width panel + saved profiles ----
@@ -11808,6 +11954,10 @@ function svgColor(c){c=String(c||'#000000');if(/^rgba?\(/i.test(c)){const m=c.ma
 function svgPoly(pts){return 'M'+pts.map(p=>svgNum(p.x)+' '+svgNum(p.y)).join('L')+'Z';}
 function svgStrokeOutline(stroke,settings,brush){
   {const r=wpApply(stroke,settings);if(r){stroke=r.stroke;settings=r.settings;}}
+  if(stroke.dash&&(stroke.dash.seq||stroke.dash.len>0)&&stroke.points&&stroke.points.length>=2&&!(brush&&brush.stamp)){
+    const unit=Math.max(.5,stroke._bs||+settings.size||6),parts=dashPieces(stroke.points,stroke.dash,unit,stroke.closed).map(pc=>svgStrokeOutline(dashSubStroke(stroke,stroke.dash,pc),settings,brush)).filter(Boolean);
+    if(!parts.length)return null;return {d:parts.map(q=>q.d).join(''),opacity:parts[0].opacity};
+  }
   if(brush&&brush.stamp)return null; // motif-brush strokes are pictures, not vector outlines
   const pts=BrushEngine.resample(stroke.points,Math.max(1,(settings.spacing/100)*Math.max(4,settings.size)));
   const n=pts.length;if(!n)return null;
@@ -16106,7 +16256,7 @@ window.__sketchpadDescribe=(a,b)=>describeChange(a,b);
 window.__sketchpadPush=()=>{rebuildAllLayers();pushHist();redraw();};
 window.__sketchpadBlurTest={filterOK:()=>blurFilterOK(),force:v=>{_blurFilterOK=v;},semi:()=>{updateComposite();const d=compositeCtx.getImageData(0,0,W,H).data;let semi=0,solid=0;for(let i=3;i<d.length;i+=4){if(d[i]>8&&d[i]<200)semi++;else if(d[i]>=200)solid++;}return [semi,solid];},hi:async n=>{const c=await buildHiRes(n,true);const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let semi=0;for(let i=3;i<d.length;i+=4)if(d[i]>8&&d[i]<200)semi++;return semi;}};
 window.__sketchpadCollection={get:()=>coll,history:()=>({n:history.length,i:hIndex}),colNew,colDuplicate,colDupRevert,colMoveTo,liquifyPresent:()=>liquifyPresent(strokes),colSwitch,colMove,colDelete,colRename,colRevertPattern,colExportAll,buildDocObject,applyDocObject,liquifyRevertLayers:()=>liquifyRevertLayers(layers,'test')};
-window.__sketchpadInternals=()=>({wpApply,setMulti,syncStrokeSelectionUI,pushHist,undo,redo,blendInstall,blendSpecOf,radialSync,layers,strokes,rebuildAllLayers,pixTotal,segVerBump:()=>{segVer++;compositeDirty=true;redraw();}});
+window.__sketchpadInternals=()=>({wpApply,dashPieces,dashSeq,svgStrokeOutline,setMulti,syncStrokeSelectionUI,pushHist,undo,redo,blendInstall,blendSpecOf,radialSync,layers,strokes,rebuildAllLayers,pixTotal,segVerBump:()=>{segVer++;compositeDirty=true;redraw();}});
 window.__sketchpadLayerInfo=()=>{updateDisplayComposite();updateComposite();
   const cmp=document.createElement('canvas');cmp.width=W/4;cmp.height=H/4;const c=cmp.getContext('2d');
   c.drawImage(displayCanvas,0,0,cmp.width,cmp.height);const a=c.getImageData(0,0,cmp.width,cmp.height).data;
