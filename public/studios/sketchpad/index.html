@@ -1377,6 +1377,8 @@ html.in-suite .suite-only{display:block!important}
         <label style="display:flex;gap:8px;align-items:center;margin:4px 0;"><input type="checkbox" id="bmMono"> Uniform monoline (constant width; ignores pressure and the options above)</label>
       </div>
 <div class="bmGrid">
+      <div class="slider-row"><label>Width profile</label><select id="bmWProf" style="flex:1;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);"></select></div>
+      <div id="bmWNote" class="hint" style="display:none;"></div>
       <div class="slider-row"><label>Taper — start</label><input id="bmTaperS" type="range" min="0" max="60" value="0"><span id="bmTaperSVal"></span></div>
       <div class="slider-row"><label>Taper — end</label><input id="bmTaperE" type="range" min="0" max="60" value="0"><span id="bmTaperEVal"></span></div>
       <div class="hint">Taper length is a percentage of the stroke. A tapered monoline is drawn as a solid brush.</div>
@@ -1452,7 +1454,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v337'; // keep in step with CACHE in sw.js
+const APP_V='v338'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -2743,7 +2745,7 @@ function wpApply(stroke,settings){
   // Profile only (default): the thickness comes from the profile alone, so a saved profile always draws the same shape.
   // Profile + Pressure (stroke.wpP): the Pencil's pressure, smoothed and centred on "normal" (0.5, which is also what a finger or mouse gives),
   // varies the thickness by up to about +/-45% on top of the profile; the extra headroom is added to the brush size.
-  const usePr=!!stroke.wpP,Mx=M*(usePr?1.45:1);
+  const sp=stroke.wpP===true?1:Math.max(0,Math.min(1,+stroke.wpP||0)),usePr=sp>0,Mx=M*(1+.45*sp);
   const size=Math.max(.5,+settings.size||6),step=Math.max(.75,size*Mx*.2,info.total/3000);
   const out=[],ws=[],pp=[];
   for(let i=0;i<pts.length-1;i++){
@@ -2756,7 +2758,7 @@ function wpApply(stroke,settings){
   const z=pts[pts.length-1];out.push({x:z.x,y:z.y});ws.push(wpAt(a,1));pp.push(z.pressure==null?.5:z.pressure);
   let sm=pp;
   if(usePr){sm=pp.map((v,i)=>{let t=0,c=0;for(let k=Math.max(0,i-5);k<=Math.min(pp.length-1,i+5);k++){t+=pp[k];c++;}return t/c;});}
-  out.forEach((q,i)=>{const f=usePr?Math.max(.25,Math.min(1.45,1+.9*(sm[i]-.5))):1;q.pressure=Math.max(.02,Math.min(1,ws[i]*f/Mx));});
+  out.forEach((q,i)=>{const f=usePr?Math.max(1-.45*sp,Math.min(1+.45*sp,1+.9*sp*(sm[i]-.5))):1;q.pressure=Math.max(.02,Math.min(1,ws[i]*f/Mx));});
   return {stroke:Object.assign({},stroke,{points:out,wp:null,_bs:size}),settings:Object.assign({},settings,{size:size*Mx,pressureWidth:100,pressureOpacity:0})};
 }
 // Monoline ("path") brushes draw one constant-width line, so a width profile is drawn as a filled ribbon instead.
@@ -2783,7 +2785,10 @@ function renderBrushStrokeW(ctx,stroke,brush,settings,alphaMul){
   renderBrushStroke(ctx,stroke,brush,settings,alphaMul);
 }
 function renderBrushStrokeCapped(ctx,stroke,brush,settings,alphaMul){
-  if(stroke.wp&&stroke.wp.length){const r=wpApply(stroke,settings);if(r){r.stroke._ribbon=!!(brush&&brush.path);renderBrushStrokeCapped(ctx,r.stroke,brush,r.settings,alphaMul);return;}}
+  if(stroke.wp&&stroke.wp.length){const r=wpApply(stroke,settings);if(r){r.stroke._ribbon=!!(brush&&brush.path);
+    // the width profile IS the taper: switch the brush's own Taper start/end off so the two never stack
+    const b2=(brush&&(brush.taperS||brush.taperE||(brush.taper&&brush.taper!=='none')))?Object.assign({},brush,{taperS:0,taperE:0,taper:'none'}):brush;
+    renderBrushStrokeCapped(ctx,r.stroke,b2,r.settings,alphaMul);return;}}
   if(stroke.dash&&(stroke.dash.seq||stroke.dash.len>0)&&stroke.points&&stroke.points.length>=2){renderDashed(ctx,stroke,brush,settings,alphaMul);return;}
   const pts=stroke.points;
   if(!((stroke.capS==='flat'||stroke.capE==='flat')&&pts&&pts.length>=2&&!stroke.closed)){renderBrushStrokeW(ctx,stroke,brush,settings,alphaMul);return;}
@@ -4061,7 +4066,12 @@ canvas.addEventListener('pointerup',e=>{
       const pts=currentPoints.map(pt=>{const t=tf(pt);return{x:t.x,y:t.y,pressure:pt.pressure};});
       const stroke={id:crypto.randomUUID(),brushId:activeBrushId,layerId:activeLayerId,atop:!!((layers.find(l=>l.id===activeLayerId)||{}).alphaLock),color:currentColor,settings:Object.assign({},settingsSnapshot),points:pts,nodes:null,closed:committedClosed,clipStrokeId,shape:(idx===0&&committedShape)?committedShape:null};
       if(symGid){stroke.symId=symGid;stroke.symM=symMatrixOf(tf);}
-      {const np=(typeof wpNewPts==='function')?wpNewPts():null;if(np&&!committedClosed&&!committedShape&&activeBrushId!=='eraser'&&pts.length>=2){stroke.wp=wpFrom(np);if(wpPress==='both')stroke.wpP=1;}}
+      if(!committedClosed&&!committedShape&&activeBrushId!=='eraser'&&pts.length>=2){
+        const bo=BrushEngine.getBrush(activeBrushId),bw=bo&&bo.custom&&bo.def&&bo.def.wprof;
+        if(bw&&bw.pts&&bw.pts.length>=2){ // a custom brush with its own width profile: Pressure -> width says how much the Pencil may vary it
+          stroke.wp=wpFrom(bw.pts);const pw=Math.max(0,Math.min(100,+settingsSnapshot.pressureWidth||0))/100;if(pw>0)stroke.wpP=pw;
+        }else{const np=(typeof wpNewPts==='function')?wpNewPts():null;if(np){stroke.wp=wpFrom(np);if(wpPress==='both')stroke.wpP=1;}}
+      }
       strokes.push(stroke);appendStrokeToLayer(stroke);
     });
     BrushEngine.touchRecent(activeBrushId);syncRecents();
@@ -11060,7 +11070,7 @@ async function registerCustomDefs(list,thenRebuild){
 }
 function stripDef(d){const c={...d};delete c.tipImg;delete c.grainImg;delete c.dualImg;return c;}
 function serialCustomDefs(){return customDefs.map(stripDef);}
-let bmEditId=null,bmTipSrc=null,bmTipImg=null,bmGrainPreset=null,bmGrainSrc=null,bmGrainImg=null,bmDualSrc=null,bmDualImg=null;
+let bmWP=null,bmEditId=null,bmTipSrc=null,bmTipImg=null,bmGrainPreset=null,bmGrainSrc=null,bmGrainImg=null,bmDualSrc=null,bmDualImg=null;
 function bmDef(){
   const g=id=>+$(id).value;
   return {id:bmEditId||('custom:'+crypto.randomUUID()),name:($('bmName').value||'').trim()||'My brush',
@@ -11071,7 +11081,8 @@ function bmDef(){
       grain:{depth:g('bmGDepth'),scale:g('bmGScale'),contrast:g('bmGContrast'),invert:$('bmGInvert').checked,moving:$('bmGMoving').checked},
       blend:$('bmBlend').value,color:{h:g('bmCH'),s:g('bmCS'),b:g('bmCB')},
       dual:{on:$('bmDualOn').checked,size:g('bmDSize'),spacing:g('bmDSpacing'),scatter:g('bmDScatter'),count:g('bmDCount'),soft:g('bmDSoft')}},
-    defaults:{size:g('bmSize'),opacity:g('bmOpacity'),smoothing:30,pressureWidth:g('bmPW'),pressureOpacity:g('bmPO'),spacing:g('bmSpacing')}};
+    defaults:{size:g('bmSize'),opacity:g('bmOpacity'),smoothing:30,pressureWidth:g('bmPW'),pressureOpacity:g('bmPO'),spacing:g('bmSpacing')},
+    wprof:bmWP?JSON.parse(JSON.stringify(bmWP)):null};
 }
 const bmThumbSrc=new WeakMap();
 function bmThumb(id,img){
@@ -11093,7 +11104,7 @@ function bmShowVals(){
   $('bmGrainName').textContent=bmGrainSrc?'image loaded':'';
 }
 function bmRefresh(){
-  bmShowVals();
+  bmShowVals();bmWSync();
   const d=bmDef();let b=null;
   try{b=BrushEngine.makeCustomBrush(d);}catch(e){}
   if(!b)return;
@@ -11102,6 +11113,36 @@ function bmRefresh(){
   bmPadRedraw(b,st);
 }
 // ---- try-out pad: scribble or stamp with the brush as it is being edited; marks stay and re-render as you tweak sliders ----
+// ---- Width profile in the brush maker: a copy of the profile's shape travels with the brush (later edits or deletion of the saved profile never change it) ----
+function bmFillWProf(){
+  const sel=$('bmWProf');if(!sel)return;
+  const saved=wpProfiles.map(p=>'<option value="p:'+p.id+'">'+String(p.name).replace(/[<>&"]/g,'')+'</option>').join('');
+  const keep=(bmWP&&bmWP.mode==='saved'&&!wpProfiles.some(p=>p.id===bmWP.src))?'<option value="keep">'+String(bmWP.name||'Saved profile').replace(/[<>&"]/g,'')+' (saved with this brush)</option>':'';
+  const keepC=(bmWP&&bmWP.mode==='custom')?'<option value="keep">'+String(bmWP.name||'Custom profile').replace(/[<>&"]/g,'')+' (saved with this brush)</option>':'';
+  sel.innerHTML='<option value="">None / brush default</option><option value="uniform">Uniform</option><option value="custom">Custom: copy from the selected line</option>'+keep+keepC+(saved?'<optgroup label="Saved width profiles">'+saved+'</optgroup>':'');
+  sel.value=!bmWP?'':bmWP.mode==='uniform'?'uniform':(bmWP.mode==='saved'&&wpProfiles.some(p=>p.id===bmWP.src))?'p:'+bmWP.src:'keep';
+  if(!sel.value&&bmWP)sel.value='';
+}
+function bmWSync(){
+  const on=!!bmWP;
+  ['bmTaperS','bmTaperE'].forEach(id=>{const e=$(id);if(e){e.disabled=on;e.parentElement.style.opacity=on?.45:1;}});
+  const n=$('bmWNote');if(!n)return;n.style.display=on?'':'none';
+  if(on)n.textContent='“'+(bmWP.name||'Width profile')+'” sets the taper, so Taper start / end are switched off to avoid tapering twice. Size sets the thickest part. Pressure → width sets how much the Pencil may vary the profile (0% = always the same shape).';
+}
+$('bmWProf').onchange=e=>{
+  const v=e.target.value;
+  if(!v){bmWP=null;}
+  else if(v==='uniform'){bmWP={mode:'uniform',name:'Uniform',pts:[{t:0,w:1},{t:1,w:1}]};}
+  else if(v==='keep'){/* keep what is already saved with this brush */}
+  else if(v==='custom'){
+    const st=strokes.find(x=>x.id===selectedStrokeId);
+    if(st&&st.wp&&st.wp.length>=2&&!st.closed)bmWP={mode:'custom',name:'Custom profile',pts:wpNormPts(st.wp)};
+    else{setStatus('Select a line that has a width profile (use the Width tool) and choose Custom again.');bmFillWProf();return;}
+  }else if(v.startsWith('p:')){
+    const p=wpProfiles.find(x=>'p:'+x.id===v);if(p)bmWP={mode:'saved',src:p.id,name:p.name,pts:wpNormPts(p.pts)};
+  }
+  bmFillWProf();bmRefresh();
+};
 const bmPad={strokes:[],mode:'draw',cur:null,k:1};
 function bmPadRedraw(b,st){
   const c=$('bmPad');if(!c||!c.clientWidth)return;
@@ -11116,7 +11157,15 @@ function bmPadRedraw(b,st){
   g.save();g.scale(k,k);
   const all=bmPad.strokes.concat(bmPad.cur?[bmPad.cur]:[]);
   if(!all.length){g.restore();g.fillStyle='rgba(120,110,130,.55)';g.font='600 12px system-ui,sans-serif';g.textAlign='center';g.fillText('Draw here with your Pencil to try the brush',cssW/2,cssH/2+4);return;}
-  all.forEach((s,i)=>{try{BrushEngine.renderStroke(g,{id:'pad'+i,brushId:b.id,color:col,points:s.points},b,st);}catch(e){}});
+  all.forEach((s,i)=>{
+    const o={id:'pad'+i,brushId:b.id,color:col,points:s.points};
+    try{
+      if(bmWP&&bmWP.pts&&s!==bmPad.cur&&s.points.length>=2){ // same drawing path as the canvas: the profile is applied when the line is finished
+        o.wp=wpFrom(bmWP.pts);const pw=Math.max(0,Math.min(100,+st.pressureWidth||0))/100;if(pw>0)o.wpP=pw;renderBrushStrokeCapped(g,o,b,st,1);
+      }else if(bmWP){BrushEngine.renderStroke(g,o,Object.assign({},b,{taperS:0,taperE:0,taper:'none'}),st);}
+      else BrushEngine.renderStroke(g,o,b,st);
+    }catch(e){}
+  });
   g.restore();
 }
 (function(){
@@ -11145,6 +11194,7 @@ function bmPadRedraw(b,st){
   });
 })();
 function bmLoad(def){
+  if('wprof' in def)bmWP=def.wprof||null;
   $('bmName').value=def.name||'';
   $('bmSoft').value=def.softness==null?100:def.softness;$('bmGrain').value=def.grain||0;$('bmWobble').value=def.wobble||0;
   $('bmMono').checked=!!def.mono;
@@ -11161,7 +11211,7 @@ function bmLoad(def){
   $('bmSize').value=d.size!=null?d.size:20;$('bmOpacity').value=d.opacity!=null?d.opacity:100;$('bmSpacing').value=d.spacing!=null?d.spacing:8;
   $('bmPW').value=d.pressureWidth||0;$('bmPO').value=d.pressureOpacity||0;
   bmTipSrc=def.tipSrc||null;bmTipImg=def.tipImg||null;
-  bmRefresh();
+  bmFillWProf();bmRefresh();
 }
 function bmFillFrom(){
   const sel=$('bmFrom');sel.innerHTML='<option value="">— Plain round brush —</option>';
@@ -11188,7 +11238,7 @@ function bmRenderList(){
   });
 }
 function openBrushMaker(){
-  bmEditId=null;bmTipSrc=null;bmTipImg=null;bmGrainPreset=null;bmGrainSrc=null;bmGrainImg=null;bmDualSrc=null;bmDualImg=null;$('bmSave').textContent='💾 Save brush';
+  bmWP=null;bmEditId=null;bmTipSrc=null;bmTipImg=null;bmGrainPreset=null;bmGrainSrc=null;bmGrainImg=null;bmDualSrc=null;bmDualImg=null;$('bmSave').textContent='💾 Save brush';
   bmFillFrom();
   const cur=BrushEngine.getBrush(activeBrushId);
   const base=cur.stamp&&!cur.custom?BrushEngine.getBrush('smoothPen'):cur;
@@ -16275,7 +16325,7 @@ window.__sketchpadDescribe=(a,b)=>describeChange(a,b);
 window.__sketchpadPush=()=>{rebuildAllLayers();pushHist();redraw();};
 window.__sketchpadBlurTest={filterOK:()=>blurFilterOK(),force:v=>{_blurFilterOK=v;},semi:()=>{updateComposite();const d=compositeCtx.getImageData(0,0,W,H).data;let semi=0,solid=0;for(let i=3;i<d.length;i+=4){if(d[i]>8&&d[i]<200)semi++;else if(d[i]>=200)solid++;}return [semi,solid];},hi:async n=>{const c=await buildHiRes(n,true);const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let semi=0;for(let i=3;i<d.length;i+=4)if(d[i]>8&&d[i]<200)semi++;return semi;}};
 window.__sketchpadCollection={get:()=>coll,history:()=>({n:history.length,i:hIndex}),colNew,colDuplicate,colDupRevert,colMoveTo,liquifyPresent:()=>liquifyPresent(strokes),colSwitch,colMove,colDelete,colRename,colRevertPattern,colExportAll,buildDocObject,applyDocObject,liquifyRevertLayers:()=>liquifyRevertLayers(layers,'test')};
-window.__sketchpadInternals=()=>({wpApply,dashPieces,dashSeq,svgStrokeOutline,setMulti,syncStrokeSelectionUI,pushHist,undo,redo,blendInstall,blendSpecOf,radialSync,layers,strokes,rebuildAllLayers,pixTotal,segVerBump:()=>{segVer++;compositeDirty=true;redraw();}});
+window.__sketchpadInternals=()=>({wpApply,renderBrushStrokeCapped,dashPieces,dashSeq,svgStrokeOutline,setMulti,syncStrokeSelectionUI,pushHist,undo,redo,blendInstall,blendSpecOf,radialSync,layers,strokes,rebuildAllLayers,pixTotal,segVerBump:()=>{segVer++;compositeDirty=true;redraw();}});
 window.__sketchpadLayerInfo=()=>{updateDisplayComposite();updateComposite();
   const cmp=document.createElement('canvas');cmp.width=W/4;cmp.height=H/4;const c=cmp.getContext('2d');
   c.drawImage(displayCanvas,0,0,cmp.width,cmp.height);const a=c.getImageData(0,0,cmp.width,cmp.height).data;
