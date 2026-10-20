@@ -838,12 +838,12 @@ html.in-suite .suite-only{display:block!important}
       <div class="efHost"></div>
       <div class="slider-row"><label>Layer</label><select id="strokeLayerSelect" style="flex:1;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);"></select></div>
       <div class="slider-row"><label>Width</label><input id="strokeWidthCtl" class="sel-width" type="range" min="0.05" step="0.05" max="120" value="6"><span id="strokeWidthVal" class="sel-width-val">6</span></div>
-      <div id="capRow" style="margin:8px 0 2px;">
+      <div class="capRow" style="margin:8px 0 2px;">
         <div class="slider-row" style="margin:0 0 4px;"><label>Start</label><div style="display:flex;gap:6px;flex:1;"><button type="button" class="btn mini cap-btn" data-cap="capS" data-v="round" style="flex:1;">● Round</button><button type="button" class="btn mini cap-btn" data-cap="capS" data-v="flat" style="flex:1;">■ Square</button></div></div>
         <div class="slider-row" style="margin:0;"><label>End</label><div style="display:flex;gap:6px;flex:1;"><button type="button" class="btn mini cap-btn" data-cap="capE" data-v="round" style="flex:1;">● Round</button><button type="button" class="btn mini cap-btn" data-cap="capE" data-v="flat" style="flex:1;">■ Square</button></div></div>
-        <div class="hint" id="capHint" style="display:none;">Closed shapes have no ends.</div>
-        <div class="slider-row" style="margin:8px 0 0;"><label>Dash</label><select id="dashSel" style="flex:1;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);"><option value="">Solid</option><option value="dashed">Dashed</option><option value="long">Long dashes</option><option value="dotted">Dotted</option></select></div>
-        <div class="slider-row" id="dashGapRow" style="display:none;margin:4px 0 0;"><label>Gap</label><input id="dashGap" type="range" min="0.3" max="8" step="0.1" value="2"><span id="dashGapVal">2</span></div>
+        <div class="hint capHint" style="display:none;">Closed shapes have no ends.</div>
+        <div class="slider-row" style="margin:8px 0 0;"><label>Dash</label><select class="dash-sel" style="flex:1;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);"><option value="">Solid</option><option value="dashed">Dashed</option><option value="long">Long dashes</option><option value="dotted">Dotted</option></select></div>
+        <div class="slider-row" class="dash-gap-row" style="display:none;margin:4px 0 0;"><label>Gap</label><input class="dash-gap" type="range" min="0.3" max="8" step="0.1" value="2"><span class="dash-gap-val">2</span></div>
       </div>
       <div class="row" style="margin-top:6px;flex-wrap:wrap;">
         <button id="useThisBrushBtn" class="btn mini" style="flex:1 1 45%;">Use This Brush</button>
@@ -1143,6 +1143,13 @@ html.in-suite .suite-only{display:block!important}
       <div class="slider-row has-size" id="fpPointsRow" style="display:none;"><label>Points</label><input id="fpPoints" type="range" min="3" max="24" value="5"><span id="fpPointsVal" style="min-width:26px;text-align:right;">5</span></div>
       <div class="slider-row has-size" id="fpInnerRow" style="display:none;"><label>Depth</label><input id="fpInner" type="range" min="5" max="95" value="50"><span id="fpInnerVal" style="min-width:34px;text-align:right;">50%</span></div>
     </div>
+    <div class="capRow" style="margin:8px 0 2px;">
+      <div class="slider-row" style="margin:0 0 4px;"><label>Start</label><div style="display:flex;gap:6px;flex:1;"><button type="button" class="btn mini cap-btn" data-cap="capS" data-v="round" style="flex:1;">● Round</button><button type="button" class="btn mini cap-btn" data-cap="capS" data-v="flat" style="flex:1;">■ Square</button></div></div>
+      <div class="slider-row" style="margin:0;"><label>End</label><div style="display:flex;gap:6px;flex:1;"><button type="button" class="btn mini cap-btn" data-cap="capE" data-v="round" style="flex:1;">● Round</button><button type="button" class="btn mini cap-btn" data-cap="capE" data-v="flat" style="flex:1;">■ Square</button></div></div>
+      <div class="hint capHint" style="display:none;">Closed shapes have no ends.</div>
+      <div class="slider-row" style="margin:8px 0 0;"><label>Dash</label><select class="dash-sel" style="flex:1;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);"><option value="">Solid</option><option value="dashed">Dashed</option><option value="long">Long dashes</option><option value="dotted">Dotted</option></select></div>
+      <div class="slider-row" class="dash-gap-row" style="display:none;margin:4px 0 0;"><label>Gap</label><input class="dash-gap" type="range" min="0.3" max="8" step="0.1" value="2"><span class="dash-gap-val">2</span></div>
+    </div>
     <div class="hint">Drag the stroke to move it. Fill and layers are under 🖊️ Stroke tools.</div>
     <div class="row" style="margin-top:6px;">
       <button id="shapeSmallerBtn" class="btn mini" style="flex:1">🔍− Smaller</button>
@@ -1382,7 +1389,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v332'; // keep in step with CACHE in sw.js
+const APP_V='v333'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -7567,40 +7574,39 @@ document.querySelectorAll('.sel-width').forEach(el=>{
   el.addEventListener('change',()=>{if(!pathEditStrokeId){pushHist();scheduleAutosave();}});
 });
 
+function curCapStroke(){return strokes.find(x=>x.id===(pathEditStrokeId||selectedStrokeId));}
 function syncCapUI(){
-  const st=strokes.find(x=>x.id===(pathEditStrokeId||selectedStrokeId));
+  const st=curCapStroke();
   document.querySelectorAll('.cap-btn').forEach(b=>{
     const cur=(st&&st[b.dataset.cap]==='flat')?'flat':'round';
     b.classList.toggle('primary',!!st&&cur===b.dataset.v);b.disabled=!st||!!st.closed||!!st.text;
   });
-  const h=$('capHint');if(h)h.style.display=(st&&st.closed)?'':'none';
+  document.querySelectorAll('.capHint').forEach(h=>{h.style.display=(st&&st.closed)?'':'none';});
 }
 document.querySelectorAll('.cap-btn').forEach(b=>b.addEventListener('click',()=>{
-  const st=strokes.find(x=>x.id===(pathEditStrokeId||selectedStrokeId));if(!st||st.closed)return;
+  const st=curCapStroke();if(!st||st.closed)return;
   if(b.dataset.v==='flat')st[b.dataset.cap]='flat';else delete st[b.dataset.cap];
-  syncCapUI();refreshSelStrokeView(st);
+  syncCapUI();rebuildLayer(st.layerId);refreshSelStrokeView(st);redraw();
   if(!pathEditStrokeId){pushHist();scheduleAutosave();}
 }));
 const DASH_PRE={dashed:{len:3,gap:2},long:{len:6,gap:3},dotted:{len:.02,gap:1.6}};
 function syncDashUI(){
-  const st=strokes.find(x=>x.id===(pathEditStrokeId||selectedStrokeId)),d=st&&st.dash;
-  const sel=$('dashSel');if(!sel)return;
-  sel.value=d?d.k:'';sel.disabled=!st||!!st.text;
-  $('dashGapRow').style.display=d?'':'none';
-  if(d){$('dashGap').value=d.gap;$('dashGapVal').textContent=(+d.gap).toFixed(1);}
+  const st=curCapStroke(),d=st&&st.dash;
+  document.querySelectorAll('.dash-sel').forEach(sel=>{sel.value=d?d.k:'';sel.disabled=!st||!!st.text;});
+  document.querySelectorAll('.dash-gap-row').forEach(r=>{r.style.display=d?'':'none';});
+  if(d)document.querySelectorAll('.dash-gap').forEach(g=>{g.value=d.gap;});
+  if(d)document.querySelectorAll('.dash-gap-val').forEach(g=>{g.textContent=(+d.gap).toFixed(1);});
 }
-$('dashSel').onchange=e=>{
-  const st=strokes.find(x=>x.id===(pathEditStrokeId||selectedStrokeId));if(!st)return;
+document.querySelectorAll('.dash-sel').forEach(sel=>sel.onchange=e=>{
+  const st=curCapStroke();if(!st)return;
   const k=e.target.value;if(k)st.dash=Object.assign({k},DASH_PRE[k]);else delete st.dash;
   syncDashUI();rebuildLayer(st.layerId);refreshSelStrokeView(st);redraw();
   if(!pathEditStrokeId){pushHist();scheduleAutosave();}
-};
-$('dashGap').oninput=e=>{
-  const st=strokes.find(x=>x.id===(pathEditStrokeId||selectedStrokeId));if(!st||!st.dash)return;
-  st.dash.gap=+e.target.value;$('dashGapVal').textContent=(+e.target.value).toFixed(1);
-  rebuildLayer(st.layerId);refreshSelStrokeView(st);redraw();
-};
-$('dashGap').onchange=()=>{if(!pathEditStrokeId){pushHist();scheduleAutosave();}};
+});
+document.querySelectorAll('.dash-gap').forEach(g=>{
+  g.oninput=e=>{const st=curCapStroke();if(!st||!st.dash)return;st.dash.gap=+e.target.value;syncDashUI();rebuildLayer(st.layerId);refreshSelStrokeView(st);redraw();};
+  g.onchange=()=>{if(!pathEditStrokeId){pushHist();scheduleAutosave();}};
+});
 // ---- Size: fractional sizes + number box + preset dropdown ----
 const SIZE_PRESETS=[0.1,0.25,0.5,0.75,1,1.5,2,3,4,5,6,8,10,12,16,20,24,32,48,64,100,150,200,300,400];
 function fmtSize(v){v=+v;if(!isFinite(v))return'';return v>=10?String(Math.round(v)):String(Math.round(v*100)/100);}
