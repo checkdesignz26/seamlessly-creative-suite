@@ -635,6 +635,8 @@ html.in-suite .suite-only{display:block!important}
       <details open><summary class="wp-sub" style="cursor:pointer;">New lines</summary>
         <button type="button" id="wpUseBtn" class="btn mini" style="width:100%;" disabled>Use selected profile for new lines</button>
         <label class="hint" style="display:flex;gap:8px;align-items:center;margin:6px 0 0;"><input type="checkbox" id="wpNewChk"> Draw new lines with the chosen profile <span id="wpNewName" style="opacity:.8"></span></label>
+        <div class="slider-row" style="margin:8px 0 0;"><label>Pressure</label><select id="wpPressSel" style="flex:1;padding:6px;border-radius:8px;border:1px solid var(--btnBorder);background:var(--btnBg);color:var(--text);"><option value="profile">Profile only</option><option value="both">Profile + Pencil pressure</option></select></div>
+        <div class="hint">The brush width is the thickest part of the stroke, so the same profile can be fine at width 2 and bold at width 8. Profile only draws the same shape every time; Profile + Pencil pressure lets the Pencil vary it a little on top.</div>
         <button type="button" id="wpUniformBtn" class="btn mini" style="width:100%;margin-top:6px;">Return to uniform width</button></details>
     </section>
     <section class="section" id="tplSection"><div class="section-title">📐 Pattern Templates</div>
@@ -1450,7 +1452,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v336'; // keep in step with CACHE in sw.js
+const APP_V='v337'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -2738,17 +2740,24 @@ function wpApply(stroke,settings){
   if(!wp||!wp.length||!pts||pts.length<2||!settings)return null;
   const a=wpSort(wp),info=wpPathInfo(pts);if(info.total<1e-6)return null;
   let M=WP_MIN;a.forEach(q=>{if(q.w>M)M=q.w;});
-  const size=Math.max(.5,+settings.size||6),step=Math.max(.75,size*M*.2,info.total/3000);
-  const out=[];
+  // Profile only (default): the thickness comes from the profile alone, so a saved profile always draws the same shape.
+  // Profile + Pressure (stroke.wpP): the Pencil's pressure, smoothed and centred on "normal" (0.5, which is also what a finger or mouse gives),
+  // varies the thickness by up to about +/-45% on top of the profile; the extra headroom is added to the brush size.
+  const usePr=!!stroke.wpP,Mx=M*(usePr?1.45:1);
+  const size=Math.max(.5,+settings.size||6),step=Math.max(.75,size*Mx*.2,info.total/3000);
+  const out=[],ws=[],pp=[];
   for(let i=0;i<pts.length-1;i++){
-    const p0=pts[i],p1=pts[i+1],len=info.cum[i+1]-info.cum[i],n=Math.max(1,Math.ceil(len/step));
+    const p0=pts[i],p1=pts[i+1],len=info.cum[i+1]-info.cum[i],n=Math.max(1,Math.ceil(len/step)),r0=p0.pressure==null?.5:p0.pressure,r1=p1.pressure==null?.5:p1.pressure;
     for(let k=0;k<n;k++){
       const u=k/n,t=(info.cum[i]+len*u)/info.total;
-      out.push({x:p0.x+(p1.x-p0.x)*u,y:p0.y+(p1.y-p0.y)*u,pressure:Math.max(.02,Math.min(1,wpAt(a,t)/M))});
+      out.push({x:p0.x+(p1.x-p0.x)*u,y:p0.y+(p1.y-p0.y)*u});ws.push(wpAt(a,t));pp.push(r0+(r1-r0)*u);
     }
   }
-  const z=pts[pts.length-1];out.push({x:z.x,y:z.y,pressure:Math.max(.02,Math.min(1,wpAt(a,1)/M))});
-  return {stroke:Object.assign({},stroke,{points:out,wp:null,_bs:size}),settings:Object.assign({},settings,{size:size*M,pressureWidth:100,pressureOpacity:0})};
+  const z=pts[pts.length-1];out.push({x:z.x,y:z.y});ws.push(wpAt(a,1));pp.push(z.pressure==null?.5:z.pressure);
+  let sm=pp;
+  if(usePr){sm=pp.map((v,i)=>{let t=0,c=0;for(let k=Math.max(0,i-5);k<=Math.min(pp.length-1,i+5);k++){t+=pp[k];c++;}return t/c;});}
+  out.forEach((q,i)=>{const f=usePr?Math.max(.25,Math.min(1.45,1+.9*(sm[i]-.5))):1;q.pressure=Math.max(.02,Math.min(1,ws[i]*f/Mx));});
+  return {stroke:Object.assign({},stroke,{points:out,wp:null,_bs:size}),settings:Object.assign({},settings,{size:size*Mx,pressureWidth:100,pressureOpacity:0})};
 }
 // Monoline ("path") brushes draw one constant-width line, so a width profile is drawn as a filled ribbon instead.
 function renderWidthRibbon(ctx,stroke,settings,alphaMul){
@@ -4052,7 +4061,7 @@ canvas.addEventListener('pointerup',e=>{
       const pts=currentPoints.map(pt=>{const t=tf(pt);return{x:t.x,y:t.y,pressure:pt.pressure};});
       const stroke={id:crypto.randomUUID(),brushId:activeBrushId,layerId:activeLayerId,atop:!!((layers.find(l=>l.id===activeLayerId)||{}).alphaLock),color:currentColor,settings:Object.assign({},settingsSnapshot),points:pts,nodes:null,closed:committedClosed,clipStrokeId,shape:(idx===0&&committedShape)?committedShape:null};
       if(symGid){stroke.symId=symGid;stroke.symM=symMatrixOf(tf);}
-      {const np=(typeof wpNewPts==='function')?wpNewPts():null;if(np&&!committedClosed&&!committedShape&&activeBrushId!=='eraser'&&pts.length>=2)stroke.wp=wpFrom(np);}
+      {const np=(typeof wpNewPts==='function')?wpNewPts():null;if(np&&!committedClosed&&!committedShape&&activeBrushId!=='eraser'&&pts.length>=2){stroke.wp=wpFrom(np);if(wpPress==='both')stroke.wpP=1;}}
       strokes.push(stroke);appendStrokeToLayer(stroke);
     });
     BrushEngine.touchRecent(activeBrushId);syncRecents();
@@ -7855,7 +7864,7 @@ document.querySelectorAll('.dashBox').forEach(box=>{
 // stroke.wp = [{id,t,w}]: t = 0..1 along the line (in drawing direction), w = thickness multiplier of the stroke's base size.
 // The ends always use the ids 'ws' / 'we'. Handles are kept (never rebuilt) while dragging, so a drag cannot be cut short by a refresh.
 window.__wpOn=false;let wpSelId=null,wpHandlesOn=true,wpDrag=null,wpProfActive=null;
-const WP_PRE={even:null,both:[{t:0,w:.08},{t:.5,w:1},{t:1,w:.08}],start:[{t:0,w:.08},{t:.6,w:1},{t:1,w:1}],end:[{t:0,w:1},{t:.4,w:1},{t:1,w:.08}],swell:[{t:0,w:.4},{t:.5,w:1.8},{t:1,w:.4}],pinch:[{t:0,w:1.4},{t:.5,w:.35},{t:1,w:1.4}]};
+const WP_PRE={even:null,both:[{t:0,w:.08},{t:.5,w:1},{t:1,w:.08}],start:[{t:0,w:.08},{t:.6,w:1},{t:1,w:1}],end:[{t:0,w:1},{t:.4,w:1},{t:1,w:.08}],swell:[{t:0,w:.22},{t:.5,w:1},{t:1,w:.22}],pinch:[{t:0,w:1},{t:.5,w:.25},{t:1,w:1}]};
 function wpNewId(t){return t<=0?'ws':t>=1?'we':'w'+Math.random().toString(36).slice(2,8);}
 function wpFrom(pts){return pts.map(q=>({id:wpNewId(q.t),t:q.t,w:Math.max(WP_MIN,Math.min(WP_MAX,q.w))}));}
 function wpDefault(){return wpFrom([{t:0,w:1},{t:1,w:1}]);}
@@ -7884,11 +7893,15 @@ function wpCommit(st){rebuildLayer(st.layerId);refreshSelStrokeView(st);redraw()
 let wpRaf=0;function wpCommitSoon(st){if(wpRaf)return;wpRaf=requestAnimationFrame(()=>{wpRaf=0;wpCommit(st);});}
 // --- saved profiles (stored on this device; independent of any drawing) ---
 let wpProfiles=[];try{const j=JSON.parse(localStorage.getItem('sp-width-profiles-v1')||'[]');if(Array.isArray(j))wpProfiles=j.filter(p=>p&&p.id&&p.name&&Array.isArray(p.pts)&&p.pts.length>=2);}catch(e){}
+let wpPress='profile';try{if(localStorage.getItem('sp-width-press-v1')==='both')wpPress='both';}catch(e){}
 let wpNewId0=null;try{wpNewId0=localStorage.getItem('sp-width-new-v1')||null;}catch(e){}
 function wpSaveProfiles(){try{localStorage.setItem('sp-width-profiles-v1',JSON.stringify(wpProfiles));}catch(e){}}
 function wpSaveNew(){try{if(wpNewId0)localStorage.setItem('sp-width-new-v1',wpNewId0);else localStorage.removeItem('sp-width-new-v1');}catch(e){}}
-function wpProfPts(st){const a=wpSort(st.wp||[]).map(q=>({t:Math.round(q.t*1e4)/1e4,w:Math.round(q.w*1e3)/1e3}));return a;}
-function wpNewPts(){const p=wpNewId0&&wpProfiles.find(x=>x.id===wpNewId0);return p?p.pts:null;}
+// A saved profile is a SHAPE: its thickest point is always 1, so the brush width you pick is the thickest part of the stroke
+// (width 2 = fine, 8 = bold, same taper). Profiles saved by older versions are scaled the same way when they are used; the saved copy is left untouched.
+function wpNormPts(pts){const a=wpSort(pts||[]);let M=0;a.forEach(q=>{if(q.w>M)M=q.w;});if(M<=0)M=1;return a.map(q=>({t:Math.round(q.t*1e4)/1e4,w:Math.max(WP_MIN,Math.round(q.w/M*1e3)/1e3)}));}
+function wpProfPts(st){return wpNormPts(st.wp||[]);}
+function wpNewPts(){const p=wpNewId0&&wpProfiles.find(x=>x.id===wpNewId0);return p?wpNormPts(p.pts):null;}
 window.__wpNewPts=wpNewPts; // used when a new line is drawn
 function wpThumb(cv,pts){
   const w=cv.width,h=cv.height,g=cv.getContext('2d'),a=wpSort(pts);g.clearRect(0,0,w,h);
@@ -7923,6 +7936,7 @@ function wpSyncUI(){
   const ub=$('wpUpdateBtn');if(ub)ub.disabled=!(act&&st&&st.wp);
   const ap=$('wpApplyBtn');if(ap&&act)ap.disabled=!st;
   const chk=$('wpNewChk');if(chk)chk.checked=!!wpNewPts();
+  const ps=$('wpPressSel');if(ps)ps.value=wpPress;
   const nn=$('wpNewName');if(nn){const p=wpProfiles.find(x=>x.id===wpNewId0);nn.textContent=p?'Using: '+p.name:'';}
 }
 // --- on-canvas handles ---
@@ -7999,7 +8013,7 @@ function wpAddAt(st,t){
 }
 // Tapping the line (with the tool on) adds a point there, selects it, and keeps the line's thickness at that spot.
 $('canvasWrap').addEventListener('pointerdown',e=>{
-  if(!window.__wpOn||!e.isPrimary||!isPen(e))return;
+  if(!window.__wpOn||mode!=='edit'||!e.isPrimary||!isPen(e))return; // never grab a touch while drawing
   if(e.target.closest&&e.target.closest('.wp-h'))return;
   const st=wpStroke();if(!st)return;
   const info=wpPathInfo(st.points);if(info.total<1e-6)return;
@@ -8018,7 +8032,7 @@ window.__wpPanel=function(open){
 };
 function wpApplyPts(st,pts,label){
   if(!st)return;
-  st.wp=pts?wpFrom(pts):null;wpSelId=null;wpCommit(st);pushHist();scheduleAutosave();renderWidthOverlay();
+  st.wp=pts?wpFrom(pts):null;if(pts&&wpPress==='both')st.wpP=1;else delete st.wpP;wpSelId=null;wpCommit(st);pushHist();scheduleAutosave();renderWidthOverlay();
   if(label)setStatus('↔ '+label);
 }
 document.querySelectorAll('.wp-pre').forEach(b=>b.onclick=()=>{
@@ -8037,16 +8051,21 @@ function wpName(){const v=($('wpNameInput').value||'').trim();if(v)return v.slic
 $('wpSaveBtn').onclick=()=>{
   const st=wpStroke();if(!st)return;
   const pts=st.wp&&st.wp.length?wpProfPts(st):[{t:0,w:1},{t:1,w:1}];
-  const p={id:'wp'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name:wpName(),v:1,interp:'smooth',pts};
+  const p={id:'wp'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name:wpName(),v:2,interp:'smooth',pts};
   wpProfiles.push(p);wpProfActive=p.id;wpSaveProfiles();$('wpNameInput').value='';wpRenderProfiles();wpSyncUI();setStatus('↔ Saved width profile “'+p.name+'”.');
 };
 $('wpUpdateBtn').onclick=()=>{const st=wpStroke(),p=wpProfiles.find(x=>x.id===wpProfActive);if(!st||!st.wp||!p)return;p.pts=wpProfPts(st);wpSaveProfiles();wpRenderProfiles();wpSyncUI();setStatus('↔ Updated “'+p.name+'” from this line.');};
-$('wpApplyBtn').onclick=()=>{const st=wpStroke(),p=wpProfiles.find(x=>x.id===wpProfActive);if(!st||!p)return;wpApplyPts(st,p.pts,'Applied “'+p.name+'”.');};
+$('wpApplyBtn').onclick=()=>{const st=wpStroke(),p=wpProfiles.find(x=>x.id===wpProfActive);if(!st||!p)return;wpApplyPts(st,wpNormPts(p.pts),'Applied “'+p.name+'”.');};
 $('wpRenameBtn').onclick=()=>{const p=wpProfiles.find(x=>x.id===wpProfActive),v=($('wpNameInput').value||'').trim();if(!p||!v){setStatus('↔ Type a new name in the box first.');return;}p.name=v.slice(0,40);wpSaveProfiles();wpRenderProfiles();wpSyncUI();};
 $('wpDupBtn').onclick=()=>{const p=wpProfiles.find(x=>x.id===wpProfActive);if(!p)return;const c={id:'wp'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name:p.name+' copy',v:1,interp:'smooth',pts:p.pts.map(q=>({t:q.t,w:q.w}))};wpProfiles.push(c);wpProfActive=c.id;wpSaveProfiles();wpRenderProfiles();wpSyncUI();};
 $('wpDelBtn').onclick=()=>{const i=wpProfiles.findIndex(x=>x.id===wpProfActive);if(i<0)return;if(wpNewId0===wpProfiles[i].id){wpNewId0=null;wpSaveNew();}wpProfiles.splice(i,1);wpProfActive=null;wpSaveProfiles();wpRenderProfiles();wpSyncUI();};
 $('wpUseBtn').onclick=()=>{const p=wpProfiles.find(x=>x.id===wpProfActive);if(!p)return;wpNewId0=p.id;wpSaveNew();wpRenderProfiles();wpSyncUI();setStatus('↔ New lines will use “'+p.name+'”. Existing lines are not changed.');};
 $('wpNewChk').onchange=e=>{if(!e.target.checked){wpNewId0=null;wpSaveNew();wpRenderProfiles();wpSyncUI();}else if(wpProfActive){$('wpUseBtn').click();}else{e.target.checked=false;setStatus('↔ Pick a saved profile first.');}};
+$('wpPressSel').onchange=e=>{
+  wpPress=e.target.value==='both'?'both':'profile';try{localStorage.setItem('sp-width-press-v1',wpPress);}catch(err){}
+  const st=wpStroke();if(st&&st.wp){if(wpPress==='both')st.wpP=1;else delete st.wpP;wpCommit(st);pushHist();scheduleAutosave();}
+  setStatus(wpPress==='both'?'↔ Pencil pressure now varies the thickness on top of the profile.':'↔ Profile only: pressure no longer changes the thickness.');
+};
 $('wpUniformBtn').onclick=()=>{wpNewId0=null;wpSaveNew();wpRenderProfiles();wpSyncUI();setStatus('↔ New lines are drawn with an even width again.');};
 // ---- Size: fractional sizes + number box + preset dropdown ----
 const SIZE_PRESETS=[0.1,0.25,0.5,0.75,1,1.5,2,3,4,5,6,8,10,12,16,20,24,32,48,64,100,150,200,300,400];
