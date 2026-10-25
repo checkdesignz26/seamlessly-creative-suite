@@ -1631,7 +1631,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v518'; // keep in step with CACHE in sw.js
+const APP_V='v519'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -8036,6 +8036,16 @@ function grpApply(base,op,scaleStrokes){
       else s.settings=b.settings;
     }
   });
+  // A shadow / highlight remembers the shape it was made for. When the shape travelled with its shadows (moved, turned or resized together, or a motif
+  // opened for editing at the size it sits at), bring that memory up to date, otherwise the shadows are worked out again from default settings.
+  try{
+    const ids=new Set(base.st.map(b=>b.s.id));
+    base.st.forEach(b=>{const s=b.s;if(!s.shadowOf||!s.shP)return;
+      const par=strokes.find(x=>x.id===s.shadowOf);if(!par)return;
+      const bs=shBase(par),gp=bs&&bs.geo&&bs.geo.points;if(!gp||gp.length<3||!ids.has(bs.geo.id))return;
+      s.shP={n:gp.length,x:gp[0].x,y:gp[0].y,lx:gp[gp.length-1].x,ly:gp[gp.length-1].y};
+      if(s.shOpt&&k&&Math.abs(k-1)>1e-6)s.shOpt={...s.shOpt,size:(s.shOpt.size||28)*k,hsize:(s.shOpt.hsize||10)*k};});
+  }catch(e){console.warn('[sketchpad] shadow memory update failed',e);}
   base.pl.forEach(b=>{
     const p=b.p,n=f(b.x,b.y);p.x=n.x;p.y=n.y;
     let r=(b.r||0)+op.rot;r=((r%360)+540)%360-180;p.r=r;
