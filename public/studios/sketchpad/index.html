@@ -1631,7 +1631,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v517'; // keep in step with CACHE in sw.js
+const APP_V='v518'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -2060,6 +2060,42 @@ function drawLayerMotifs(c,id){
 }
 // Zoomed far in, a placed motif that still has its vector strokes is drawn straight from them, so it stays crisp at any zoom (the cached picture only goes so far).
 // Returns true when it drew the motif (or it is off screen); false means "use the picture". vis is the visible area in the drawing's own units, already shifted for the tile copy.
+// Same as motifSharp, for a motif with shading / blurred / blended / clipped layers: each layer is drawn sharply at the screen's own
+// resolution (only the part of the screen the motif covers), then blended, blurred and clipped exactly the way the canvas does it.
+function motifSharpLayered(c,p,sl,lm,b,ox,oy){
+  const sv=strokes;
+  c.save();
+  try{
+    c.translate(p.x+ox,p.y+oy);c.rotate(p.r*Math.PI/180);c.scale(p.s*(p.fx==null?1:p.fx),p.s*(p.fy==null?1:p.fy));c.scale(p.w/b.w,p.h/b.h);c.translate(-(b.minX+b.w/2),-(b.minY+b.h/2));
+    const M=c.getTransform(),cw=c.canvas.width,ch=c.canvas.height;
+    const sc=Math.sqrt(Math.abs(M.a*M.d-M.b*M.c));if(!(sc>0))return false;
+    const pad=Math.ceil(Math.max(0,...lm.map(l=>l.blur||0))*sc*3)+2;
+    let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+    for(const X of [b.minX,b.minX+b.w])for(const Y of [b.minY,b.minY+b.h]){const px=M.a*X+M.c*Y+M.e,py=M.b*X+M.d*Y+M.f;x0=Math.min(x0,px);y0=Math.min(y0,py);x1=Math.max(x1,px);y1=Math.max(y1,py);}
+    x0=Math.max(0,Math.floor(x0-pad));y0=Math.max(0,Math.floor(y0-pad));x1=Math.min(cw,Math.ceil(x1+pad));y1=Math.min(ch,Math.ceil(y1+pad));
+    const w=x1-x0,h=y1-y0;if(w<2||h<2)return true;
+    if(w*h>2.6e7)return false; // absurdly large: use the stored picture instead of risking the iPad's memory
+    const out=document.createElement('canvas');out.width=w;out.height=h;
+    const tmp=document.createElement('canvas');tmp.width=w;tmp.height=h;
+    const oc=out.getContext('2d'),tc=tmp.getContext('2d'),metas=lm.length?lm:[{id:null,visible:true,opacity:100}],cp=clipPass(true);
+    strokes=sl;
+    try{
+      for(let li=0;li<metas.length;li++){
+        const l=metas[li],st=cp.start(l);if(st==='skip')continue;
+        tc.setTransform(1,0,0,1,0,0);tc.clearRect(0,0,w,h);tc.setTransform(M.a,M.b,M.c,M.d,M.e-x0,M.f-y0);
+        let any=false;
+        sl.forEach(s=>{if(lm.length&&s.layerId!==l.id)return;renderStrokeClipped(tc,s,BrushEngine.getBrush(s.brushId),s.settings||BrushEngine.getSettings(s.brushId));any=true;});
+        if(any&&l.blur>0)blurLayerCanvas(tmp,sc,l.blur,false,null,l);
+        let pic=tmp;const nx=metas[li+1];tc.setTransform(1,0,0,1,0,0);
+        if(st==='base'&&nx&&nx.clip)cp.keep(tmp,w,h);else if(st==='clip')pic=cp.cut(tmp,w,h);
+        if(any){oc.save();oc.globalAlpha=(l.opacity==null?100:l.opacity)/100;oc.globalCompositeOperation=l.blend||'source-over';oc.drawImage(pic,0,0);oc.restore();}
+      }
+    }finally{strokes=sv;cp.free();tmp.width=tmp.height=1;}
+    c.setTransform(1,0,0,1,0,0);c.drawImage(out,x0,y0);out.width=out.height=1;
+    return true;
+  }catch(err){console.warn('[sketchpad] sharp layered motif failed',err);return false;}
+  finally{strokes=sv;c.restore();}
+}
 function motifSharp(c,p,vis,ox,oy){
   try{
     if(!p.motifId||!window.__dScale)return false;
@@ -2070,9 +2106,11 @@ function motifSharp(c,p,vis,ox,oy){
     const src=e.source;
     if(!src._sk){src._sk=JSON.parse(src.strokesJSON);src._lm=src.layersJSON?JSON.parse(src.layersJSON):[];}
     const sl=src._sk,lm=src._lm;
-    if(sl.some(s=>s.brushId==='eraser'||s.brushId==='smudge')||lm.some(l=>(l.opacity!=null&&l.opacity!==100)||(l.blend&&l.blend!=='source-over')||l.blur>0||l.clip))return false;
+    if(sl.some(s=>s.brushId==='eraser'||s.brushId==='smudge'))return false;
+    const layered=lm.some(l=>(l.opacity!=null&&l.opacity!==100)||(l.blend&&l.blend!=='source-over')||l.blur>0||l.clip);
     const bb=motifAABB(p);if(bb&&(bb.x1<vis.x0||bb.x0>vis.x1||bb.y1<vis.y0||bb.y0>vis.y1))return true;
     const b=src.bounds,hid=new Set(lm.filter(l=>l.visible===false).map(l=>l.id));
+    if(layered)return motifSharpLayered(c,p,sl,lm,b,ox,oy);
     const sv=strokes;strokes=sl;
     c.save();
     try{
