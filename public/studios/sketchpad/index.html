@@ -1639,7 +1639,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v528'; // keep in step with CACHE in sw.js
+const APP_V='v529'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -2106,7 +2106,7 @@ function wshImg(p,base){
 function wshGenShapes(p,w){
   try{
     const base=p.img;const W0=base.naturalWidth||base.width,H0=base.naturalHeight||base.height;if(!W0||!H0)return null;
-    const sc=Math.min(1,360/Math.max(W0,H0)),mw=Math.max(8,Math.round(W0*sc)),mh=Math.max(8,Math.round(H0*sc));
+    const sc=Math.min(1,400/Math.max(W0,H0)),mw=Math.max(8,Math.round(W0*sc)),mh=Math.max(8,Math.round(H0*sc));
     const cv=document.createElement('canvas');cv.width=mw;cv.height=mh;const g=cv.getContext('2d');g.drawImage(base,0,0,mw,mh);
     const d=g.getImageData(0,0,mw,mh).data,mask=new Uint8Array(mw*mh);for(let i=0;i<mw*mh;i++)mask[i]=d[i*4+3]>40?1:0;
     // each separate blob of the motif is shaded on its own (label the blobs, trace each outline)
@@ -2117,7 +2117,7 @@ function wshGenShapes(p,w){
     const tot=comps.reduce((q,c)=>q+c.n,0);const use=comps.filter(c=>c.n>=0.01*tot).sort((u,v)=>v.n-u.n).slice(0,6);
     if(!use.length)return null;
     const k=mw/(p.w||mw),lim=Math.min(mw,mh)*0.35,ar=w.a*Math.PI/180,tx=Math.cos(ar),ty=-Math.sin(ar);
-    const eps=Math.max(2.5,0.012*Math.max(mw,mh));
+    const eps0=Math.max(2.5,0.012*Math.max(mw,mh));
     // the highlight is split along the motif's own parts: areas separated by the dark outlines (leaf, top, side, plate...) each get their own piece
     let parts=null;
     try{
@@ -2145,11 +2145,12 @@ function wshGenShapes(p,w){
       if(!regsA.length)return;
       const A={regions:regsA,inverted:false};
       const mkRegs=(dist,dir,minFrac,split)=>{
+        const eps=Math.max(1,Math.min(eps0,dist*0.25));
         const B={regions:A.regions.map(r=>r.map(([x,y])=>[x+tx*dir*dist,y+ty*dir*dist])),inverted:false};
         let res=ctTry(()=>PolyBool.difference(A,B));if(!res||!res.regions.length)return [];
-        const rr=Math.max(1,Math.min(3,dist*0.12));try{const o2=ctTry(()=>ctGrow(ctShrink(res,rr,6),rr,6));if(o2&&o2.regions&&o2.regions.length)res=o2;}catch(e){}
+        const rr=Math.max(0.8,Math.min(3,dist*0.12));if(!(split&&parts)){try{const o2=ctTry(()=>ctGrow(ctShrink(res,rr,6),rr,6));if(o2&&o2.regions&&o2.regions.length)res=o2;}catch(e){}}
         if(split&&parts){const pieces=[];parts.forEach(P=>{try{let ix=ctTry(()=>PolyBool.intersect(res,P));if(!ix||!ix.regions||!ix.regions.length)return;
-            const r2=1.6;try{const o3=ctTry(()=>ctGrow(ctShrink(ix,r2,6),r2,6));if(o3&&o3.regions&&o3.regions.length)ix=o3;}catch(e){}
+            const r2=Math.max(0.7,Math.min(1.6,dist*0.2));try{const o3=ctTry(()=>ctGrow(ctShrink(ix,r2,6),r2,6));if(o3&&o3.regions&&o3.regions.length)ix=o3;}catch(e){}
             ix.regions.forEach(r=>pieces.push(r));}catch(e){}});
           if(pieces.length)res={regions:pieces,inverted:false};}
         let regs=polyBoolRegionsToStrokeRegions(res.regions,1.2).filter(r=>polygonArea(r)>=2);
@@ -19422,8 +19423,8 @@ $('qaDraw').onclick=()=>{quickMoveOn=false;if(mode==='edit')$('drawModeBtn').cli
   g('wshReset').onclick=()=>{const m=target();if(!m||!m.wsh){setStatus('🍰 Shade the whole motif first.');return;}const w=Object.assign({},m.wsh,cur());delete w.sp;delete w.ed;m.wsh=w;const was=wshEd.id===m.id;wshEditStop();refresh(m);pushHist();if(was)wshEditStart(m);else setStatus('↺ Shapes reset to the sliders.');};
   g('wshSharp').addEventListener('input',()=>{g('wshSharpV').textContent=g('wshSharp').value+'%';});
   const regen=m=>{try{if(m.wsh&&m.wsh.sp&&!m.wsh.ed){const sp=wshGenShapes(m,m.wsh);if(sp&&(sp.sh.length||sp.hi.length)){m.wsh.sp=sp;m.wsh.v=(m.wsh.v||0)+1;}}}catch(e){}};
-  let t=null;['shLight','shSize','shHSize','shHLight','shDark','wshSharp'].forEach(id=>g(id).addEventListener('input',()=>{const m=target();if(!m||!m.wsh)return;m.wsh=Object.assign({},m.wsh,cur());clearTimeout(t);t=setTimeout(()=>{regen(m);refresh(m);},150);}));
-  ['shLight','shSize','shHSize','shHLight','shDark','wshSharp'].forEach(id=>g(id).addEventListener('change',()=>{const m=target();if(!m||!m.wsh)return;m.wsh=Object.assign({},m.wsh,cur());regen(m);refresh(m);pushHist();}));
+  let t=null;['shLight','shSize','shHSize','shHLight','shDark','wshSharp'].forEach(id=>g(id).addEventListener('input',()=>{const m=target();if(!m||!m.wsh)return;m.wsh=Object.assign({},m.wsh,cur());clearTimeout(t);t=setTimeout(()=>{refresh(m);},120);}));
+  ['shLight','shSize','shHSize','shHLight','shDark','wshSharp'].forEach(id=>g(id).addEventListener('change',()=>{const m=target();if(!m||!m.wsh)return;m.wsh=Object.assign({},m.wsh,cur());if(id==='shLight'||id==='shSize'||id==='shHSize')regen(m);refresh(m);pushHist();}));
 })();
 function qaOpen(open){
   const p=$('qaPanel');
