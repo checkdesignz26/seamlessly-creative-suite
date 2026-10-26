@@ -1427,7 +1427,7 @@ html.in-suite .suite-only{display:block!important}
     <div class="row" style="margin-top:6px;gap:6px;"><button id="duplicateStrokeBtn" class="btn mini" style="flex:1">⧉ Duplicate</button><button id="openRotatePanelBtn" class="btn mini" style="flex:1">&#8635; Rotate &amp; Repeat</button></div>
     <div class="row" style="margin-top:6px;gap:6px;"><button type="button" class="btn mini xfOpenBtn" style="flex:1" title="Exact size, position, fit and align in pixels">📐 Transform…</button></div><div class="row" style="margin-top:6px;gap:6px;"><button id="strokeActionsUndoBtn" class="btn mini" style="display:none">↩️ Undo</button><button id="openBlendBtn" class="btn mini" style="flex:1" title="Create steps between this shape and another">&#127744; Blend</button><button id="deleteStrokeBtn" class="btn mini danger" style="flex:1">✕ Delete</button></div>
   </div>
-  <div id="motifEditBanner" style="display:none;position:fixed;left:50%;top:84px;transform:translateX(-50%);z-index:9000;background:var(--accentTeal,#5cb8ab);color:#fff;border-radius:16px;padding:8px 10px 8px 16px;box-shadow:0 8px 28px rgba(0,0,0,.35);font-weight:800;font-size:15px;align-items:center;gap:10px;white-space:nowrap;"><span style="display:flex;flex-direction:column;line-height:1.2"><span>✏️ Editing motif: <span id="motifEditBannerName"></span></span><span style="font-size:12px;font-weight:600;opacity:.95">Tap a stroke to change it · Draw to add</span></span><button id="motifEditDoneBtn" class="btn mini primary" style="min-height:40px;padding:6px 16px;">✓ Done</button><button id="motifEditCancelBtn" class="btn mini" style="min-height:40px;padding:6px 14px;">Cancel</button></div>
+  <div id="motifEditBanner" style="display:none;position:fixed;left:50%;top:84px;transform:translateX(-50%);z-index:9000;background:var(--accentTeal,#5cb8ab);color:#fff;border-radius:16px;padding:8px 10px 8px 16px;box-shadow:0 8px 28px rgba(0,0,0,.35);font-weight:800;font-size:15px;align-items:center;gap:10px;white-space:nowrap;"><span title="Drag to move" style="font-size:20px;opacity:.85;cursor:grab;touch-action:none;padding:0 2px">⠿</span><span style="display:flex;flex-direction:column;line-height:1.2"><span>✏️ Editing motif: <span id="motifEditBannerName"></span></span><span style="font-size:12px;font-weight:600;opacity:.95">Tap a stroke to change it · Draw to add</span></span><button id="motifEditDoneBtn" class="btn mini primary" style="min-height:40px;padding:6px 16px;">✓ Done</button><button id="motifEditCancelBtn" class="btn mini" style="min-height:40px;padding:6px 14px;">Cancel</button></div>
   <div class="float-panel" id="xformBar" style="display:none;">
     <div class="float-panel-handle" id="xformBarHandle">
       <span id="xfTitle">📐 Transform</span>
@@ -1639,7 +1639,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v529'; // keep in step with CACHE in sw.js
+const APP_V='v530'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -19440,7 +19440,23 @@ setTimeout(()=>{try{if(localStorage.getItem('sp-qaOpen')!=='0'&&$('qaPanel').sty
 $('qaCloseBtn').onclick=()=>qaOpen(false);
 makeFloatPanelDraggable('qaPanel','qaPanelHandle');
 setInterval(qaSync,500);
-setInterval(()=>{const b=$('motifEditBanner');if(!b)return;const on=!!editingMotifId;if(on){const en=motifs.find(x=>x.id===editingMotifId);$('motifEditBannerName').textContent=en?en.name:'';}b.style.display=on?'flex':'none';},300);
+// The green Editing-motif bar can be dragged out of the way (grab it anywhere that is not a button); it remembers where you left it.
+(function(){
+  const b=$('motifEditBanner');if(!b)return;
+  b.style.touchAction='none';
+  const place=(x,y)=>{const r=b.getBoundingClientRect(),w=r.width||300,h=r.height||60;x=Math.max(4,Math.min(innerWidth-w-4,x));y=Math.max(4,Math.min(innerHeight-h-4,y));b.style.transform='none';b.style.left=x+'px';b.style.top=y+'px';return {x,y};};
+  let saved=null;try{saved=JSON.parse(localStorage.getItem('sp-mebPos')||'null');}catch(e){}
+  window.__mebRestore=()=>{if(saved&&b.dataset.placed!=='1'){b.dataset.placed='1';place(saved.x,saved.y);}};
+  b.addEventListener('pointerdown',e=>{
+    if(e.target.closest('button'))return;
+    e.preventDefault();const r=b.getBoundingClientRect(),dx=e.clientX-r.left,dy=e.clientY-r.top;
+    try{b.setPointerCapture(e.pointerId);}catch(_){}
+    const mv=ev=>{const p=place(ev.clientX-dx,ev.clientY-dy);saved=p;b.dataset.placed='1';};
+    const up=()=>{b.removeEventListener('pointermove',mv);try{localStorage.setItem('sp-mebPos',JSON.stringify(saved));}catch(_){}};
+    b.addEventListener('pointermove',mv);b.addEventListener('pointerup',up,{once:true});b.addEventListener('pointercancel',up,{once:true});
+  });
+})();
+setInterval(()=>{const b=$('motifEditBanner');if(!b)return;const on=!!editingMotifId;if(on&&window.__mebRestore)window.__mebRestore();if(on){const en=motifs.find(x=>x.id===editingMotifId);$('motifEditBannerName').textContent=en?en.name:'';}b.style.display=on?'flex':'none';},300);
 let dblTapLast={t:0,x:0,y:0,sel:null};
 function dblSelSnap(){return {sid:selectedStrokeId,pid:selected,multi:multiSel};}
 function dblTapCheck(e){
