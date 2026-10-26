@@ -1087,6 +1087,8 @@ html.in-suite .suite-only{display:block!important}
         <div class="hint" style="margin:0 0 6px;">Tap a motif on the canvas (Edit mode), then use the sliders below. One shadow and highlight follows the motif's outer shape; outlines stay black.</div>
         <div class="slider-row"><label>Highlight sharpness</label><input id="wshSharp" type="range" min="0" max="100" value="75"><span id="wshSharpV">75%</span></div>
         <div class="row" style="gap:6px;"><button id="wshApply" class="btn primary" style="flex:1">🌓 Shade whole motif</button><button id="wshClear" class="btn" style="flex:1">✖ Remove</button></div>
+        <div class="row" style="gap:6px;margin-top:6px;"><button id="wshEditBtn" class="btn" style="flex:1">✏️ Edit shading shapes</button><button id="wshReset" class="btn" style="flex:1">↺ Reset shapes</button></div>
+        <div class="hint" style="margin:4px 0 0;">Once you edit the shapes, the Light / Size sliders stop reshaping them. Darkness, Highlight brightness and Highlight sharpness still work. Reset shapes makes them again from the sliders.</div>
       </div>
       <div class="hint" style="margin-top:0;">Just tap the coloured area on the canvas. You do not need the Stroke panel.</div>
       <div class="slider-row"><label>Light from</label><input id="shLight" type="range" min="0" max="360" value="135"><span id="shLightV" style="width:68px;height:68px;flex:none"></span></div>
@@ -1637,7 +1639,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v526'; // keep in step with CACHE in sw.js
+const APP_V='v527'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -2062,7 +2064,7 @@ function layerMotifs(id){return placed.filter(p=>p.layerId===id&&p.img&&!pHid(p)
 // ---- Whole-motif shading: ONE shadow + highlight drawn from the motif's outer silhouette (instead of one per piece) ----
 // Stored on the placed motif as p.wsh={a,size,hs,hl,dk}. The picture is shaded once (edge bands that fade inward, no blur filter needed) and cached.
 const wshCache=new Map();
-function wshKey(w){return w?[w.a,w.size,w.hs,w.hl,w.dk,w.hsh||0].join('_'):'';}
+function wshKey(w){return w?[w.a,w.size,w.hs,w.hl,w.dk,w.hsh||0,w.sp?'S'+(w.v||0):''].join('_'):'';}
 function wshImg(p,base){
   try{
     const w=p&&p.wsh;if(!w||!base)return base;
@@ -2076,8 +2078,19 @@ function wshImg(p,base){
     const mk=()=>{const c=document.createElement('canvas');c.width=W;c.height=H;return c;};
     const S=mk(),sc=S.getContext('2d'),T=mk(),tc=T.getContext('2d');
     const band=(d,dir,rgb,alpha,tf)=>{const N=16,i0=Math.max(1,Math.ceil(N*(1-tf))),cnt=N-i0+1;for(let i=i0;i<=N;i++){const dd=d*i/N;tc.globalCompositeOperation='source-over';tc.clearRect(0,0,W,H);tc.drawImage(base,0,0);tc.globalCompositeOperation='destination-out';tc.drawImage(base,tx*dir*dd,ty*dir*dd);tc.globalCompositeOperation='source-in';tc.fillStyle='rgb('+rgb+')';tc.globalAlpha=1;tc.fillRect(0,0,W,H);sc.globalAlpha=alpha/cnt;sc.drawImage(T,0,0);}sc.globalAlpha=1;};
+    if(w.sp){ // hand-editable shapes: the shadow and highlight are polygons you can reshape
+      const kx=W/(p.w||W),ky=H/(p.h||H),OFF=100000;
+      const draw=(regs,rgb,alpha,blur)=>{if(!regs||!regs.length||alpha<=0)return;sc.save();
+        const path=()=>{sc.beginPath();regs.forEach(r=>{const P=r.map(q=>[(q.x*kx)+W/2,(q.y*ky)+H/2]),n=P.length;if(n<3)return;sc.moveTo((P[n-1][0]+P[0][0])/2,(P[n-1][1]+P[0][1])/2);for(let i=0;i<n;i++){const a=P[i],b=P[(i+1)%n];sc.quadraticCurveTo(a[0],a[1],(a[0]+b[0])/2,(a[1]+b[1])/2);}sc.closePath();});};
+        if(blur>0.6){sc.shadowColor='rgba('+rgb+','+alpha+')';sc.shadowBlur=blur;sc.shadowOffsetX=OFF;sc.translate(-OFF,0);path();sc.fillStyle='#000';sc.fill();}
+        else{sc.fillStyle='rgba('+rgb+','+alpha+')';path();sc.fill();}
+        sc.restore();};
+      draw(w.sp.sh,'52,28,66',Math.min(0.9,w.dk),dS*0.45);
+      draw(w.sp.hi,'255,255,255',Math.min(1,w.hl),(1-(w.hsh||0)/100)*dH*0.5);
+    }else{
     band(dS,1,'52,28,66',Math.min(0.9,w.dk),1);        // shadow: the edge away from the light (the picture shifted toward the light uncovers it)
     band(dH,-1,'255,255,255',Math.min(1,w.hl),0.06+0.94*(1-(w.hsh||0)/100));      // highlight: the edge facing the light
+    }
     const R=mk(),rc=R.getContext('2d');rc.drawImage(base,0,0);rc.globalCompositeOperation='source-atop';rc.drawImage(S,0,0);
     // keep the black outlines black: shading only shows on the lighter colours
     try{const o=document.createElement('canvas');o.width=W;o.height=H;const oc=o.getContext('2d');oc.drawImage(base,0,0);
@@ -2088,6 +2101,99 @@ function wshImg(p,base){
     return R;
   }catch(e){return base;}
 }
+
+// Turn the whole-motif shading into shapes with points you can drag. Works on a small copy of the motif's silhouette.
+function wshGenShapes(p,w){
+  try{
+    const base=p.img;const W0=base.naturalWidth||base.width,H0=base.naturalHeight||base.height;if(!W0||!H0)return null;
+    const sc=Math.min(1,360/Math.max(W0,H0)),mw=Math.max(8,Math.round(W0*sc)),mh=Math.max(8,Math.round(H0*sc));
+    const cv=document.createElement('canvas');cv.width=mw;cv.height=mh;const g=cv.getContext('2d');g.drawImage(base,0,0,mw,mh);
+    const d=g.getImageData(0,0,mw,mh).data,mask=new Uint8Array(mw*mh);for(let i=0;i<mw*mh;i++)mask[i]=d[i*4+3]>40?1:0;
+    // each separate blob of the motif is shaded on its own (label the blobs, trace each outline)
+    const lab=new Int32Array(mw*mh),comps=[];let nl=0;
+    for(let i0=0;i0<mw*mh;i0++){if(!mask[i0]||lab[i0])continue;nl++;const st=[i0];lab[i0]=nl;let cnt=0;
+      while(st.length){const i=st.pop();cnt++;const x=i%mw,y=(i/mw)|0;for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const X=x+dx,Y=y+dy;if(X<0||Y<0||X>=mw||Y>=mh)continue;const j=Y*mw+X;if(mask[j]&&!lab[j]){lab[j]=nl;st.push(j);}}}
+      comps.push({id:nl,n:cnt});}
+    const tot=comps.reduce((q,c)=>q+c.n,0);const use=comps.filter(c=>c.n>=0.01*tot).sort((u,v)=>v.n-u.n).slice(0,6);
+    if(!use.length)return null;
+    const k=mw/(p.w||mw),lim=Math.min(mw,mh)*0.35,ar=w.a*Math.PI/180,tx=Math.cos(ar),ty=-Math.sin(ar);
+    const eps=Math.max(2.5,0.012*Math.max(mw,mh));
+    const sh=[],hi=[];
+    use.forEach(cp=>{
+      const m2=new Uint8Array(mw*mh);for(let i=0;i<mw*mh;i++)if(lab[i]===cp.id)m2[i]=1;
+      const loops=traceMaskContour(m2,mw,mh,true);if(!loops||!loops.length)return;
+      const regsA=[];loops.forEach(loop=>{if(loop.length<12)return;let pts=loop.map(q=>({x:q.x,y:q.y}));try{pts=rdpSimplifyClosedLoop(pts,0.9);}catch(e){}if(pts.length>=3)regsA.push(pts.map(q=>[q.x,q.y]));});
+      if(!regsA.length)return;
+      const A={regions:regsA,inverted:false};
+      const mkRegs=(dist,dir,minFrac)=>{
+        const B={regions:A.regions.map(r=>r.map(([x,y])=>[x+tx*dir*dist,y+ty*dir*dist])),inverted:false};
+        let res=ctTry(()=>PolyBool.difference(A,B));if(!res||!res.regions.length)return [];
+        const rr=Math.max(1,Math.min(3,dist*0.12));try{const o2=ctTry(()=>ctGrow(ctShrink(res,rr,6),rr,6));if(o2&&o2.regions&&o2.regions.length)res=o2;}catch(e){}
+        let regs=polyBoolRegionsToStrokeRegions(res.regions,1.2).filter(r=>polygonArea(r)>=2);
+        if(!regs.length)return [];const big=Math.max(...regs.map(r=>polygonArea(r)));regs=regs.filter(r=>polygonArea(r)>=minFrac*big);
+        return regs.map(r=>{let q=r.map(v=>({x:v.x,y:v.y}));try{q=rdpSimplifyClosedLoop(q,eps);}catch(e){}
+          return q.map(v=>({x:(v.x/mw-0.5)*p.w,y:(v.y/mh-0.5)*p.h}));}).filter(r=>r.length>=3);
+      };
+      const dS=Math.min(lim,Math.max(1,w.size*k)),dH=Math.min(lim,Math.max(1,w.hs*k));
+      sh.push(...mkRegs(dS,1,0.1));hi.push(...mkRegs(dH,-1,0.05));
+    });
+    return {sh,hi};
+  }catch(e){console.warn('[wsh] shapes failed',e);return null;}
+}
+// ---- the point editor for whole-motif shading ----
+const wshEd={id:null,tm:null,iv:null};
+function wshPlaced(){return wshEd.id?placed.find(q=>q.id===wshEd.id):null;}
+function wshL2C(p,u,v){const sx=p.s*(p.fx==null?1:p.fx),sy=p.s*(p.fy==null?1:p.fy),a=(p.r||0)*Math.PI/180,X=u*sx,Y=v*sy;return {x:p.x+X*Math.cos(a)-Y*Math.sin(a),y:p.y+X*Math.sin(a)+Y*Math.cos(a)};}
+function wshC2L(p,x,y){const sx=p.s*(p.fx==null?1:p.fx),sy=p.s*(p.fy==null?1:p.fy),a=-(p.r||0)*Math.PI/180,dx=x-p.x,dy=y-p.y;return {x:(dx*Math.cos(a)-dy*Math.sin(a))/sx,y:(dx*Math.sin(a)+dy*Math.cos(a))/sy};}
+function wshApplyNow(p){try{p.wsh.v=(p.wsh.v||0)+1;if(p.layerId)rebuildLayer(p.layerId);compositeDirty=true;redraw();}catch(e){}}
+function wshOverlay(){
+  const p=wshPlaced();let host=document.getElementById('wshOverlay');
+  if(!p||!p.wsh||!p.wsh.sp){if(host)host.remove();return;}
+  if(!host){host=document.createElement('div');host.id='wshOverlay';host.style.cssText='position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:16';const po=document.getElementById('pathNodeOverlay');(po&&po.parentNode?po.parentNode:document.body).appendChild(host);}
+  if(host.dataset.drag==='1')return;
+  let h='<svg width="100%" height="100%" style="position:absolute;left:0;top:0;overflow:visible">';
+  const kinds=[['sh','#7a3fa0'],['hi','#e0a000']];
+  kinds.forEach(([k,col])=>{(p.wsh.sp[k]||[]).forEach((r,i)=>{
+    const sp=r.map(q=>{const c=wshL2C(p,q.x,q.y);return canvasToScreen(c.x,c.y);});
+    {const n=sp.length,m0=[(sp[n-1].x+sp[0].x)/2,(sp[n-1].y+sp[0].y)/2];let d='M'+m0[0].toFixed(1)+','+m0[1].toFixed(1);for(let q=0;q<n;q++){const a=sp[q],b=sp[(q+1)%n];d+=' Q'+a.x.toFixed(1)+','+a.y.toFixed(1)+' '+((a.x+b.x)/2).toFixed(1)+','+((a.y+b.y)/2).toFixed(1);}
+    h+='<path d="'+d+'Z" fill="none" stroke="'+col+'" stroke-width="2" stroke-dasharray="5 3"/>';}
+    sp.forEach((q,j)=>{const n=sp[(j+1)%sp.length];h+='<circle data-k="'+k+'" data-i="'+i+'" data-j="'+j+'" data-m="1" cx="'+((q.x+n.x)/2).toFixed(1)+'" cy="'+((q.y+n.y)/2).toFixed(1)+'" r="4.5" fill="#fff" stroke="'+col+'" stroke-width="1.5" style="pointer-events:all;cursor:copy"/>';});
+    sp.forEach((q,j)=>{h+='<circle data-k="'+k+'" data-i="'+i+'" data-j="'+j+'" cx="'+q.x.toFixed(1)+'" cy="'+q.y.toFixed(1)+'" r="8" fill="'+col+'" stroke="#fff" stroke-width="2" style="pointer-events:all;cursor:grab;touch-action:none"/>';});
+  });});
+  host.innerHTML=h+'</svg>';
+}
+function wshEditStart(p){
+  if(!p||!p.wsh){setStatus('🍰 Shade the whole motif first, then tap Edit shading shapes.');return;}
+  if(!p.wsh.sp){const sp=wshGenShapes(p,p.wsh);if(!sp||(!sp.sh.length&&!sp.hi.length)){setStatus('🍰 Could not make editable shapes for this motif.');return;}p.wsh.sp=sp;wshApplyNow(p);pushHist();}
+  wshEd.id=p.id;wshOverlay();clearInterval(wshEd.iv);wshEd.iv=setInterval(()=>{if(!wshPlaced()||!wshPlaced().wsh)wshEditStop();else wshOverlay();},300);
+  document.getElementById('wshEditBtn').textContent='✓ Done editing shapes';
+  setStatus('✏️ Drag a dot to reshape. Tap a small white dot to add a point. Double-tap a dot to delete it. Purple = shadow, gold = highlight.');
+}
+function wshEditStop(){wshEd.id=null;clearInterval(wshEd.iv);const h=document.getElementById('wshOverlay');if(h)h.remove();const b=document.getElementById('wshEditBtn');if(b)b.textContent='✏️ Edit shading shapes';}
+document.addEventListener('pointerdown',e=>{
+  const t=e.target;if(!t||!t.dataset||t.dataset.k==null||!t.closest||!t.closest('#wshOverlay'))return;
+  const p=wshPlaced();if(!p||!p.wsh||!p.wsh.sp)return;
+  e.preventDefault();e.stopPropagation();
+  const k=t.dataset.k,i=+t.dataset.i;let j=+t.dataset.j;const reg=p.wsh.sp[k][i];if(!reg)return;
+  const host=document.getElementById('wshOverlay');
+  if(t.dataset.m){ // a mid-point: make it a real point, then drag it
+    const c=screenToCanvas(e.clientX,e.clientY),l=wshC2L(p,c.x,c.y);reg.splice(j+1,0,{x:l.x,y:l.y});j=j+1;
+  }
+  host.dataset.drag='1';let moved=false;
+  const mv=ev=>{const c=screenToCanvas(ev.clientX,ev.clientY),l=wshC2L(p,c.x,c.y);reg[j].x=l.x;reg[j].y=l.y;moved=true;
+    clearTimeout(wshEd.tm);wshEd.tm=setTimeout(()=>wshApplyNow(p),40);
+    const sp=wshL2C(p,l.x,l.y),q=canvasToScreen(sp.x,sp.y);
+    // keep the dot under the pointer while dragging
+    const dot=host.querySelector('circle[data-k="'+k+'"][data-i="'+i+'"][data-j="'+j+'"]:not([data-m])');if(dot){dot.setAttribute('cx',q.x);dot.setAttribute('cy',q.y);}};
+  const up=()=>{window.removeEventListener('pointermove',mv,true);window.removeEventListener('pointerup',up,true);window.removeEventListener('pointercancel',up,true);
+    host.dataset.drag='0';clearTimeout(wshEd.tm);if(moved||t.dataset.m){wshApplyNow(p);pushHist();}wshOverlay();};
+  window.addEventListener('pointermove',mv,true);window.addEventListener('pointerup',up,true);window.addEventListener('pointercancel',up,true);
+},true);
+document.addEventListener('dblclick',e=>{
+  const t=e.target;if(!t||!t.dataset||t.dataset.k==null||t.dataset.m||!t.closest||!t.closest('#wshOverlay'))return;
+  const p=wshPlaced();if(!p||!p.wsh||!p.wsh.sp)return;const reg=p.wsh.sp[t.dataset.k][+t.dataset.i];if(!reg||reg.length<=3)return;
+  reg.splice(+t.dataset.j,1);wshApplyNow(p);pushHist();wshOverlay();
+},true);
 function drawLayerMotifs(c,id){
   const list=layerMotifs(id);if(!list.length)return false;
   list.forEach(p=>{if(window.__dVis&&motifSharp(c,p,window.__dVis,0,0))return;c.save();if(p.alpha!=null)c.globalAlpha=Math.max(0,Math.min(1,p.alpha));c.translate(p.x,p.y);c.rotate(p.r*Math.PI/180);c.scale(p.s*(p.fx==null?1:p.fx),p.s*(p.fy==null?1:p.fy));try{const hi=p.motifId?motifHi.get(p.motifId):null;c.drawImage(wshImg(p,(hi&&hi.img===p.img)?hi.canvas:p.img),-p.w/2,-p.h/2,p.w,p.h);}catch(e){}c.restore();});
@@ -10574,7 +10680,7 @@ function insertStrokeBeneathLayerContent(stroke,layerId){
 // adjacency is a reliable way to recover one continuous loop without the directional edge-cases a
 // classic Moore-neighbour tracer has. If the mask has more than one loop (e.g. a thin pinch point),
 // the longest one (the outer boundary) is returned.
-function traceMaskContour(mask,maskW,maskH){
+function traceMaskContour(mask,maskW,maskH,all){
   const filled=(x,y)=>x>=0&&y>=0&&x<maskW&&y<maskH&&mask[y*maskW+x];
   const adj=new Map();
   const vkey=(x,y)=>x+','+y;
@@ -10594,7 +10700,7 @@ function traceMaskContour(mask,maskW,maskH){
   if(!adj.size)return null;
   const visitedEdge=new Set();
   const edgeKey=(a,b)=>a<b?a+'|'+b:b+'|'+a;
-  let bestLoop=null;
+  let bestLoop=null;const allLoops=[];
   for(const startKey of adj.keys()){
     for(const n0 of adj.get(startKey)){
       const ek0=edgeKey(startKey,n0);
@@ -10617,11 +10723,13 @@ function traceMaskContour(mask,maskW,maskH){
         visitedEdge.add(edgeKey(cur,next));
         prev=cur;cur=next;
       }
-      if(cur===startKey&&loopKeys.length>=4&&(!bestLoop||loopKeys.length>bestLoop.length))bestLoop=loopKeys;
+      if(cur===startKey&&loopKeys.length>=4){allLoops.push(loopKeys);if(!bestLoop||loopKeys.length>bestLoop.length)bestLoop=loopKeys;}
     }
   }
   if(!bestLoop)return null;
-  return bestLoop.map(k=>{const p=k.split(',');return {x:+p[0],y:+p[1]};});
+  const cv=k=>{const p=k.split(',');return {x:+p[0],y:+p[1]};};
+  if(all)return allLoops.map(l=>l.map(cv));
+  return bestLoop.map(cv);
 }
 // Runs the actual flood fill + contour trace for a tap at canvas point (px,py). Returns
 // {ok:true,points} with a closed vector path on success, or {ok:false,reason} — 'onLine' (tapped
@@ -19284,12 +19392,14 @@ $('qaDraw').onclick=()=>{quickMoveOn=false;if(mode==='edit')$('drawModeBtn').cli
   const target=()=>{const m=getSel();return m&&m.img&&m.id?m:null;};
   const refresh=m=>{try{rebuildAllLayers();}catch(e){}try{compositeDirty=true;redraw();}catch(e){}};
   g('wshApply').onclick=()=>{const m=target();if(!m){setStatus('🍰 Tap a motif first (Edit mode), then tap Shade whole motif.');return;}
-    m.wsh=cur();refresh(m);pushHist();setStatus('🍰 Whole motif shaded as one. Move the sliders to adjust, or tap Remove.');};
+    wshEditStop();m.wsh=cur();refresh(m);pushHist();setStatus('🍰 Whole motif shaded as one. Move the sliders to adjust, or tap Remove.');};
   g('wshClear').onclick=()=>{const m=target();if(!m||!m.wsh){setStatus('🍰 This motif has no whole-motif shading.');return;}
-    delete m.wsh;refresh(m);pushHist();setStatus('🍰 Whole-motif shading removed.');};
+    wshEditStop();delete m.wsh;refresh(m);pushHist();setStatus('🍰 Whole-motif shading removed.');};
+  g('wshEditBtn').onclick=()=>{if(wshEd.id){wshEditStop();setStatus('✓ Shading shapes saved.');return;}wshEditStart(target());};
+  g('wshReset').onclick=()=>{const m=target();if(!m||!m.wsh){setStatus('🍰 Shade the whole motif first.');return;}const w=Object.assign({},m.wsh,cur());delete w.sp;m.wsh=w;const was=wshEd.id===m.id;wshEditStop();refresh(m);pushHist();if(was)wshEditStart(m);else setStatus('↺ Shapes reset to the sliders.');};
   g('wshSharp').addEventListener('input',()=>{g('wshSharpV').textContent=g('wshSharp').value+'%';});
-  let t=null;['shLight','shSize','shHSize','shHLight','shDark','wshSharp'].forEach(id=>g(id).addEventListener('input',()=>{const m=target();if(!m||!m.wsh)return;m.wsh=cur();clearTimeout(t);t=setTimeout(()=>{refresh(m);},120);}));
-  ['shLight','shSize','shHSize','shHLight','shDark','wshSharp'].forEach(id=>g(id).addEventListener('change',()=>{const m=target();if(!m||!m.wsh)return;m.wsh=cur();refresh(m);pushHist();}));
+  let t=null;['shLight','shSize','shHSize','shHLight','shDark','wshSharp'].forEach(id=>g(id).addEventListener('input',()=>{const m=target();if(!m||!m.wsh)return;m.wsh=Object.assign({},m.wsh,cur());clearTimeout(t);t=setTimeout(()=>{refresh(m);},120);}));
+  ['shLight','shSize','shHSize','shHLight','shDark','wshSharp'].forEach(id=>g(id).addEventListener('change',()=>{const m=target();if(!m||!m.wsh)return;m.wsh=Object.assign({},m.wsh,cur());refresh(m);pushHist();}));
 })();
 function qaOpen(open){
   const p=$('qaPanel');
