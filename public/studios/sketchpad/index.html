@@ -1631,7 +1631,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v519'; // keep in step with CACHE in sw.js
+const APP_V='v520'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -9540,7 +9540,7 @@ $('rcMake').onclick=()=>{
 };
 let drawLock=false,editExplicit=false;try{drawLock=localStorage.getItem('sp-drawLock')==='1';}catch(e){}
 function syncMode(){if(drawLock&&mode==='edit'&&!editExplicit)mode='draw';try{tbToolSync();}catch(e){}try{tbSizeSync();}catch(e){}try{if(penOn&&mode==='edit')penSet(false);if(warpOn&&mode==='edit')warpSet(false);if(cloneOn&&mode==='edit')cloneSet(false);if(smudgeOn&&mode==='edit')smudgeSet(false);}catch(e){}$('drawModeBtn').classList.toggle('active',mode==='draw');$('editModeBtn').classList.toggle('active',mode==='edit');canvas.style.cursor=mode==='draw'?'crosshair':'grab';setStatus(mode==='draw'?'✏️ Draw Mode: Apple Pencil draws, two fingers move the canvas.':'↔️ Edit Mode: tap a motif, then move, scale, rotate or flip.');;if(typeof syncStrokeSelectionUI==='function')syncStrokeSelectionUI();}
-$('drawModeBtn').onclick=()=>{if(pathEditStrokeId)commitEditPath();if(joinPendingStrokeId)endJoinPick();disarmAreaFill();disarmShapeMultiSelect();armedShapeType=null;syncShapeToolUI();mode='draw';selected=null;selectedStrokeId=null;multiSel=null;selAddArmed=false;groupInsideId=null;multiSelectMode=false;multiSelectIds=[];$('multiSelectToggle').textContent='🔢 Multi-Select: Off';$('multiSelectToggle').classList.remove('active');syncAlignUI();syncStrokeSelectionUI();syncMode();redraw()};$('editModeBtn').onclick=()=>{disarmAreaFill();armedShapeType=null;syncShapeToolUI();mode='edit';editExplicit=true;try{syncMode();}finally{editExplicit=false;}};$('captureBtn').onclick=()=>captureMotif();
+$('drawModeBtn').onclick=()=>{if(pathEditStrokeId)commitEditPath();if(joinPendingStrokeId)endJoinPick();disarmAreaFill();disarmShapeMultiSelect();armedShapeType=null;syncShapeToolUI();mode='draw';selected=null;selectedStrokeId=null;multiSel=null;selAddArmed=false;groupInsideId=null;multiSelectMode=false;multiSelectIds=[];$('multiSelectToggle').textContent='🔢 Multi-Select: Off';$('multiSelectToggle').classList.remove('active');syncAlignUI();syncStrokeSelectionUI();syncMode();redraw()};$('editModeBtn').onclick=()=>{try{const P=window.__sketchpadPanels;if(!(areaFillArmed&&P&&P.state().open.includes('fill')))disarmAreaFill();}catch(e){disarmAreaFill();}armedShapeType=null;syncShapeToolUI();mode='edit';editExplicit=true;try{syncMode();}finally{editExplicit=false;}};$('captureBtn').onclick=()=>captureMotif();
 // Capture Area: drag a box on the canvas; only strokes inside it become the motif.
 function setCaptureArea(on){
   captureAreaArmed=on;captureRect=null;if(!on)areaSelectMode=false;
@@ -14106,6 +14106,7 @@ function makeIndependentMotif(){
  setStatus('🔓 This instance now has its own independent motif — editing it won\'t affect the others.');
 }
 function enterEditMotif(){
+ const afWas=areaFillArmed;
  if(editingMotifId){setStatus('✏️ You are already editing a motif. Tap Done (top of the canvas) when finished, or Cancel to discard changes.');return;}
  const m=getSel();if(!m||!m.motifId)return;
  const entry=motifs.find(x=>x.id===m.motifId);
@@ -14148,6 +14149,7 @@ function enterEditMotif(){
  applyLayerMeta(entry.source.layersJSON?JSON.parse(entry.source.layersJSON):[],null);
  rebuildAllLayers();renderLayersList();
  selected=null;selectedStrokeId=null;syncStrokeSelectionUI();
+ if(afWas){try{areaFillArmed=true;syncAreaFillUI();window.__afSeen=performance.now();}catch(e){}} // Area Fill that was on stays on: the first tap in Edit Motif fills
  { // Safety: if the lines did not land on the canvas (or have nothing to draw), put the motif straight back instead of leaving the canvas empty
   let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9,bad=false;
   strokes.forEach(q=>(q.points||[]).forEach(pt=>{if(!isFinite(pt.x)||!isFinite(pt.y)){bad=true;return;}x0=Math.min(x0,pt.x);y0=Math.min(y0,pt.y);x1=Math.max(x1,pt.x);y1=Math.max(y1,pt.y);}));
