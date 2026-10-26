@@ -1631,7 +1631,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v521'; // keep in step with CACHE in sw.js
+const APP_V='v522'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -10471,7 +10471,7 @@ $('fillOpacityCtl').onchange=()=>{pushHist();};
 // mechanism (selection, recolour, opacity, delete, move-to-layer, undo/redo, save/load, motif
 // capture) already applies to it with zero extra plumbing, exactly like Fill Shape's output.
 setInterval(()=>{try{if(!areaFillArmed||window.__afBusy)return;const P=window.__sketchpadPanels;if(!P)return;
-  if(pathEditStrokeId||!P.state().open.includes('fill')){if(window.__afSeen&&performance.now()-window.__afSeen>1500){disarmAreaFill();setStatus('Area Fill switched off.');}}else window.__afSeen=performance.now();}catch(e){}},600); // Area Fill only stays on while its panel is open (and not while editing a path)
+  if(pathEditStrokeId){disarmAreaFill();}}catch(e){}},600); // Area Fill stays on until you tap the pink 'Area Fill is ON' button or its toggle (closing the panel no longer switches it off); it only yields to Edit Path
 function disarmAreaFill(){
   if(!areaFillArmed)return;
   areaFillArmed=false;syncAreaFillUI();
