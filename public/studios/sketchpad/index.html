@@ -1639,7 +1639,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v534'; // keep in step with CACHE in sw.js
+const APP_V='v535'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -1734,7 +1734,10 @@ let liveActive=false;
 let detailReady=false,detailShown=false,detailTimer=0;
 const detailCanvas=document.createElement('canvas'),detailScratch=document.createElement('canvas');
 function hideDetail(){if(detailShown){detailCanvas.style.display='none';detailShown=false;compositeDirty=true;try{redraw();}catch(e){}}try{canvas.style.opacity='';detailCanvas.style.transform='none';}catch(e){}if(!detailNeeded()&&detailCanvas.width>1){detailCanvas.width=1;detailCanvas.height=1;try{detailScratch.width=1;detailScratch.height=1;}catch(e){}}}
-function detailNeeded(){return ctN()<2&&zoom*baseScale*(window.devicePixelRatio||1)>2.15;}
+// Memory-pressure governor (see canvasHealth): after repeated screen wipes by iPad Safari the sharp-zoom layer is switched off (it holds ~30 MB of canvases and replays every stroke each time it is rebuilt),
+// and after more wipes automatic redrawing stops until the person says so, instead of rebuilding forever until the page is killed.
+let memPressure=false;const spHealth={events:[],paused:false,total:0,shed:0,asked:0};window.__spHealth=spHealth;
+function detailNeeded(){return !memPressure&&ctN()<2&&zoom*baseScale*(window.devicePixelRatio||1)>2.15;}
 // While erasing, the crisp detail layer is NOT thrown away on every move (that made the whole screen go blurry). Instead the
 // eraser circle is punched out of it live, and it is re-rendered properly once the finger/pencil lifts.
 function detailPunch(x,y,r){
@@ -14358,6 +14361,11 @@ function cancelEditMotif(){
 }
 function finishEditMotif(){
  if(!editingMotifId)return;
+ { // if Safari has just cleared a layer, draw it again first; if that cannot be done, stay in the motif (nothing is changed, nothing is saved over) rather than make the new picture from a blank layer
+  const bad=()=>layers.some(l=>!l.asleep&&l._sent&&!sentOK(l.canvas));
+  if(bad()){try{rebuildAllLayers();}catch(e){}
+   if(bad()){setStatus('⚠️ Not enough memory to finish this motif right now. Your edits are kept and saved. Close other apps or Safari tabs, then tap Done again.');try{if(projDirty&&activeProject)saveActive({});}catch(e){}return;}}
+ }
  if(pathEditStrokeId)commitEditPath();
  const entry=motifs.find(x=>x.id===editingMotifId);
  const stash=editingMotifStash,frame=editingMotifFrame;
@@ -14388,6 +14396,7 @@ function finishEditMotif(){
    renderTray();
    finish();
   };
+  img.onerror=()=>{setStatus('⚠️ The new motif picture could not be made, so the previous picture was kept. Your edits are saved.');finish();};
   img.src=preview.src;
  }else{
   // Motif was fully erased during editing — keep its OLD source/preview rather than destroying
@@ -15756,6 +15765,8 @@ function blankDoc(lay,tile,phys,preview){
 function docCounts(d){const n=j=>{try{return JSON.parse(j||'[]').length;}catch(e){return 0;}};return {strokes:n(d.strokesJSON),motifs:(d.motifs||[]).length};}
 function makeThumb(){
   try{
+    // never replace a good preview with a wiped (blank / black) one
+    if(spHealth.paused||(spHealth.events.length&&Date.now()-spHealth.events[spHealth.events.length-1]<8000)||layers.some(l=>!l.asleep&&l._sent&&!sentOK(l.canvas)))return null;
     updateComposite();
     const S=240,SW=Math.round(S*TW/TILE),SH=Math.round(S*TH/TILE),c=document.createElement('canvas');c.width=SW;c.height=SH;const o=c.getContext('2d');
     o.fillStyle='#fff';o.fillRect(0,0,SW,SH);
@@ -19543,8 +19554,45 @@ window.__sketchpadLayerInfo=()=>{updateDisplayComposite();updateComposite();
   let diff=0,ink=0;for(let i=0;i<a.length;i+=4){const d=Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2])+Math.abs(a[i+3]-b[i+3]);if(d>24)diff++;if(a[i+3]>0&&(a[i]<250||a[i+1]<250))ink++;}
   return {diff,ink,awake:layers.filter(l=>!l.asleep).length,n:layers.length,segs:segCache.filter(e=>e.key).length};};
 window.__sketchpadClip={copy:()=>copySelectionToClipboard(),paste:()=>pasteFromClipboard()};
+function healthWiped(){ // which canvases iPad Safari has cleared (changes nothing)
+  const w=[];
+  try{
+    if(detailShown&&detailNeeded()&&!sentOK(detailCanvas))w.push('detail');
+    layers.forEach(l=>{if(l.asleep||!l._sent)return;if(!sentOK(l.canvas)||(l.dcanvas!==l.canvas&&!sentOK(l.dcanvas)))w.push('layer '+l.name);});
+    segCache.forEach(e=>{if(e.key&&!sentOK(e.cv))w.push('flattened picture');});
+    if(!sentOK(displayCanvas))w.push('display');
+    {const g=canvas.getContext('2d');const k=canvas.width/W;if(g.getImageData(Math.floor(W/2*k),Math.floor(H/2*k),1,1).data[3]===0)w.push('main canvas');}
+  }catch(e){}
+  return w;
+}
+// Returns false when redrawing must NOT be attempted right now. The drawing itself is strokes (never pixels), so a wipe can only ever cost the view, not the artwork;
+// still, the strokes are written out first, and nothing here replaces saved data.
+function healthGovern(wiped){
+  const now=Date.now();spHealth.total++;
+  spHealth.events=spHealth.events.filter(t=>now-t<60000);spHealth.events.push(now);
+  crumb('wipe '+spHealth.events.length+': '+wiped.join(', '));
+  if(spHealth.events.length>=2&&!memPressure){
+    memPressure=true;spHealth.shed++;
+    try{if(projDirty&&activeProject)saveActive({});}catch(e){}
+    try{clearTimeout(detailTimer);hideDetail();}catch(e){}
+    setStatus('⚠️ iPad is short of memory, so Safari cleared the screen. Your drawing is saved. Sharp zoom is switched off to free memory (reopen the app to get it back).');
+  }
+  if(spHealth.events.length>=4){
+    spHealth.paused=true;spHealth.asked++;
+    try{if(projDirty&&activeProject)saveActive({});}catch(e){}
+    projAsk({title:'⚠️ iPad is short of memory',message:'Safari cleared the screen several times in a row, so I stopped redrawing it to avoid a crash. Your drawing is safe and saved. Closing other apps or Safari tabs helps. Tap Redraw to draw the screen again.',ok:'Redraw',cancel:'Not now'}).then(r=>{
+      spHealth.events=[];
+      if(r){spHealth.paused=false;compositeDirty=true;setTimeout(canvasHealth,50);}
+      else addEventListener('pointerdown',()=>{spHealth.paused=false;},{once:true,capture:true}); // the next touch asks for one redraw
+    });
+    return false;
+  }
+  return true;
+}
 function canvasHealth(){
   if(drawing||liveActive||document.hidden||redraw._q)return;
+  if(spHealth.paused)return;
+  {const w=healthWiped();if(!w.length)return;if(!healthGovern(w))return;}
   let fixed=false;
   try{
     if(detailShown&&detailNeeded()&&!sentOK(detailCanvas)){crumb('detail was wiped -> redraw');fixed=true;clearTimeout(detailTimer);renderDetail();}
