@@ -1639,7 +1639,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v537'; // keep in step with CACHE in sw.js
+const APP_V='v538'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -15711,7 +15711,8 @@ function buildDocObject(){
     groupsJSON:JSON.stringify(groups),motifsHidden,
     motifs:motifs.map(m=>({id:m.id,src:m.src,name:m.name,source:m.source||null})),
     editingMotifId,
-    editingMotifStash:editingMotifStash?JSON.stringify(editingMotifStash):null,
+    editingMotifFrame:(editingMotifId&&editingMotifFrame)?editingMotifFrame:null, // where the open motif's copy sits (position/size/turn): needed to put the strokes back in the motif's own space if the app closes mid-edit
+    editingMotifStash:editingMotifStash?JSON.stringify((()=>{const {hist,hIdx,mOld,...keep}=editingMotifStash;return keep;})()):null, // only what recovering after a crash needs (the pattern's strokes, layers, mode). The undo history and the motif's old copy stay in memory: they were doubling every save (~22 MB each time)
     bgSrc:bgImg?bgImg.src:null,bgOpacity,bgShown,
     tracesJSON:tracesToJSON(),
     traceLocked,
@@ -15860,7 +15861,7 @@ async function listBackups(){
   return out;
 }
 let autosaveTimer=null;
-function scheduleAutosave(){crumb('autosave queued');if(autosaveBlocked||!activeProject)return;projDirty=true;setSaveStatus('dirty');clearTimeout(autosaveTimer);autosaveTimer=setTimeout(runAutosave,editingMotifId?(bigDoc()?2500:400):1200);} // inside Edit Motif the work only exists in this session until Done, so it is saved sooner
+function scheduleAutosave(){crumb('autosave queued');if(autosaveBlocked||!activeProject)return;projDirty=true;setSaveStatus('dirty');clearTimeout(autosaveTimer);autosaveTimer=setTimeout(runAutosave,editingMotifId?400:1200);} // inside Edit Motif the work only exists in this session until Done, so it is saved sooner
 // A very big motif (an illustration with 10-20 MB of stroke data) makes every save copy that data several times over (~60 MB of short-lived memory). Saving in the middle of the next stroke
 // stacked that on top of the live painting buffers, so for big drawings saves wait for the pen to be up and are batched a little more.
 function bigDoc(){try{if(editingMotifStash&&(editingMotifStash.strokesJSON||'').length>8e6)return true;return motifs.some(m=>m.source&&(m.source.strokesJSON||'').length>8e6);}catch(e){return false;}}
@@ -16480,11 +16481,13 @@ async function applyDocObject(doc,opts){
     if(doc.editingMotifId&&doc.editingMotifStash){
       const entry=motifs.find(m=>m.id===doc.editingMotifId);
       const stash=JSON.parse(doc.editingMotifStash);
+      const rframe=doc.editingMotifFrame||null;
       if(entry){
+        if(rframe){try{grpApply(grpSnapshotOf(strokes,[]),rframe.inv,true);rebuildAllLayers();}catch(e){}} // same step Done takes: the strokes were saved where the copy sits on the canvas; without this a scaled / turned motif came back squashed
         const preview=renderCurrentArtworkPreview();
         if(preview){
           entry.source={strokesJSON:strokesToJSON(),layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip,shadowLayer:!!l.shadowLayer,autoObj:!!l.autoObj,tpl:l.tpl||0,arHide:l.arHide||0,lg:l.lg||undefined,lgn:l.lg?l.lgn:undefined,lgc:l.lg&&l.lgc?1:undefined}))),bounds:preview.bounds};
-          await new Promise(res=>{const img=new Image();img.onload=()=>{entry.img=img;entry.src=preview.src;placed.forEach(p=>{if(p.motifId===entry.id)p.img=img;});res();};img.onerror=res;img.src=preview.src;});
+          await new Promise(res=>{const img=new Image();img.onload=()=>{entry.img=img;entry.src=preview.src;placed.forEach(p=>{if(p.motifId===entry.id)p.img=img;});if(rframe){try{const mi=placed.find(p=>p.id===rframe.id);if(mi){const nb=preview.bounds,c=opPoint(rframe.fwd,nb.minX+nb.w/2,nb.minY+nb.h/2);mi.x=c.x;mi.y=c.y;mi.w=nb.w*rframe.rw;mi.h=nb.h*rframe.rh;}}catch(e){}}res();};img.onerror=res;img.src=preview.src;});
         }
       }
       strokes=JSON.parse(stash.strokesJSON||'[]');
