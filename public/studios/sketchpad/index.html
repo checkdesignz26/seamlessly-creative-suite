@@ -1084,7 +1084,7 @@ html.in-suite .suite-only{display:block!important}
       <div id="shMsg" class="hint" style="min-height:1.2em;margin:0 0 6px;"></div>
       <div style="margin:0 0 8px;padding:8px;border:1px solid rgba(0,0,0,.14);border-radius:10px;">
         <div class="hint" style="margin:0 0 4px;font-weight:700;">🍰 Shade the whole motif as one</div>
-        <div class="hint" style="margin:0 0 6px;">Tap a motif on the canvas (Edit mode), then use the sliders below. One shadow and highlight follows the motif's outer shape; outlines stay black.</div>
+        <div class="hint" style="margin:0 0 6px;">Tap a motif on the canvas (Edit mode), then use the sliders below. The shadow follows the motif's overall shape, and the highlight is split into pieces along its inner parts (the areas the black outlines divide). Outlines stay black.</div>
         <div class="slider-row"><label>Highlight sharpness</label><input id="wshSharp" type="range" min="0" max="100" value="75"><span id="wshSharpV">75%</span></div>
         <div class="row" style="gap:6px;"><button id="wshApply" class="btn primary" style="flex:1">🌓 Shade whole motif</button><button id="wshClear" class="btn" style="flex:1">✖ Remove</button></div>
         <div class="row" style="gap:6px;margin-top:6px;"><button id="wshEditBtn" class="btn" style="flex:1">✏️ Edit shading shapes</button><button id="wshReset" class="btn" style="flex:1">↺ Reset shapes</button></div>
@@ -1639,7 +1639,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v530'; // keep in step with CACHE in sw.js
+const APP_V='v531'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
