@@ -1639,7 +1639,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v535'; // keep in step with CACHE in sw.js
+const APP_V='v537'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -1872,7 +1872,9 @@ function liveDraw0(draw,clear,bb){
   // Live repeats: paint the stroke ONCE into a small sheet and copy that sheet to every repeat position. (Drawing the whole
   // stroke again for each of the ~9-13 repeats made heavy brushes several times slower, and brushes that keep live state,
   // like watercolour, only came out right on the first copy.) Copies are placed on whole screen pixels.
-  if(offs.length>1&&bb){
+  // Zoomed in, only ONE repeat is on screen: the shared sheet (up to 32 MB) and its copy would add nothing, so the stroke is drawn straight onto the preview. Same pixels, far less memory and work.
+  const nVis=(offs.length>1&&bb)?offs.filter(([ox,oy])=>{let x0=1e12,y0=1e12,x1=-1e12,y1=-1e12;[[bb.x0,bb.y0],[bb.x1,bb.y0],[bb.x0,bb.y1],[bb.x1,bb.y1]].forEach(([x,y])=>{const X=M[0]*(x+ox)+M[2]*(y+oy)+M[4],Y=M[1]*(x+ox)+M[3]*(y+oy)+M[5];if(X<x0)x0=X;if(X>x1)x1=X;if(Y<y0)y0=Y;if(Y>y1)y1=Y;});return !(x1<0||y1<0||x0>pw||y0>ph);}).length:0;
+  if(offs.length>1&&bb&&nVis>1){
     let X0=1e12,Y0=1e12,X1=-1e12,Y1=-1e12;
     [[bb.x0,bb.y0],[bb.x1,bb.y0],[bb.x0,bb.y1],[bb.x1,bb.y1]].forEach(([x,y])=>{const X=M[0]*x+M[2]*y+M[4],Y=M[1]*x+M[3]*y+M[5];if(X<X0)X0=X;if(X>X1)X1=X;if(Y<Y0)Y0=Y;if(Y>Y1)Y1=Y;});
     X0=Math.floor(X0)-2;Y0=Math.floor(Y0)-2;const sw=Math.ceil(X1)+2-X0,sh=Math.ceil(Y1)+2-Y0;
@@ -3613,7 +3615,7 @@ function snapshot(){
 // Undo steps keep a full copy of the drawing each; with very detailed drawings 100 of them add up to hundreds of MB of memory,
 // so the oldest steps are dropped once they pass a size budget (always keeping the last few).
 function histSize(){let n=0;history.forEach(h=>{n+=(h.strokesJSON||'').length+(h.placed||'').length+(h.groupsJSON||'').length+(h.layersJSON||'').length;});return n;}
-function histTrim(){while(history.length>4&&histSize()>48e6)history.shift();}
+function histTrim(){const big=history.length&&((history[history.length-1].strokesJSON||'').length>8e6);const floor=big?3:4;while(history.length>floor&&histSize()>48e6)history.shift();} // a huge illustration/motif makes every undo step 10-20 MB: keep fewer of those rather than fill iPad memory
 // Empty layers left behind by "a layer for each object" (a stroke that was undone, erased, deleted or joined leaves its layer empty) are tidied away.
 // 'auto' = only layers made this session, never the one you are on; 'named' = also layers an earlier session made, found by their names (Stroke 7, Circle 2...).
 const AUTO_LAYER_NAME=/^(Fills?|Shadow|Highlight|Stroke|Shape|Circle|Ellipse|Rectangle|Rounded rectangle|Triangle|Line|Star|Polygon|Diamond|Heart|Arrow)( \d+)?$/;
@@ -15858,8 +15860,11 @@ async function listBackups(){
   return out;
 }
 let autosaveTimer=null;
-function scheduleAutosave(){crumb('autosave queued');if(autosaveBlocked||!activeProject)return;projDirty=true;setSaveStatus('dirty');clearTimeout(autosaveTimer);autosaveTimer=setTimeout(runAutosave,editingMotifId?400:1200);} // inside Edit Motif the work only exists in this session until Done, so it is saved sooner
-function runAutosave(){return saveActive();}
+function scheduleAutosave(){crumb('autosave queued');if(autosaveBlocked||!activeProject)return;projDirty=true;setSaveStatus('dirty');clearTimeout(autosaveTimer);autosaveTimer=setTimeout(runAutosave,editingMotifId?(bigDoc()?2500:400):1200);} // inside Edit Motif the work only exists in this session until Done, so it is saved sooner
+// A very big motif (an illustration with 10-20 MB of stroke data) makes every save copy that data several times over (~60 MB of short-lived memory). Saving in the middle of the next stroke
+// stacked that on top of the live painting buffers, so for big drawings saves wait for the pen to be up and are batched a little more.
+function bigDoc(){try{if(editingMotifStash&&(editingMotifStash.strokesJSON||'').length>8e6)return true;return motifs.some(m=>m.source&&(m.source.strokesJSON||'').length>8e6);}catch(e){return false;}}
+function runAutosave(){if((drawing||liveActive)&&bigDoc()){clearTimeout(autosaveTimer);autosaveTimer=setTimeout(runAutosave,1200);return Promise.resolve(true);}return saveActive();}
 function commitPendingEdits(){try{if(pathEditStrokeId)commitEditPath();}catch(e){}}
 // Explicit Save: bypasses the debounce and always writes.
 async function quickSaveNow(){
@@ -17643,7 +17648,7 @@ function tlLine(){
 function memoryReport(){
   const mb=c=>c?(c.width*c.height*4/1048576):0;
   let lay=0;layers.forEach(l=>{lay+=mb(l.canvas)+(l.dcanvas!==l.canvas?mb(l.dcanvas):0);});
-  const other=segCache.reduce((a,e)=>a+mb(e.cv),0)+mb(canvas)+mb(displayCanvas)+mb(compositeCanvas)+mb(liveLayer)+mb(detailCanvas)+mb(detailScratch)+mb(segScratch)+mb(segScratchC);
+  const other=segCache.reduce((a,e)=>a+mb(e.cv),0)+(()=>{try{return mb(liveOv)+mb(penOv);}catch(e){return 0;}})()+mb(canvas)+mb(displayCanvas)+mb(compositeCanvas)+mb(liveLayer)+mb(detailCanvas)+mb(detailScratch)+mb(segScratch)+mb(segScratchC);
   let pts=0;strokes.forEach(st=>{pts+=(st.points?st.points.length:0);});
   window.__memParts=(()=>{const o={};const d=(n,c)=>{if(c)o[n]=c.width+'x'+c.height+'='+Math.round(mb(c)*10)/10;};d('canvas',canvas);d('display',displayCanvas);d('composite',compositeCanvas);d('liveLayer',liveLayer);d('detail',detailCanvas);d('detailScratch',detailScratch);o.seg=segCache.map(e=>e.cv.width+'x'+e.cv.height+'='+Math.round(mb(e.cv)*10)/10).join(',');return o;})();
   let mpx=0,msrc=0,msrcStrokes=0,mred=0,mfull=0;motifs.forEach(m=>{if(m.img&&motifIsReduced(m)){mred++;mfull+=(m.img._fullW||0)*(m.img._fullH||0)*4/1048576;}if(m.img)mpx+=(m.img.naturalWidth||m.img.width||0)*(m.img.naturalHeight||m.img.height||0)*4/1048576;msrc+=(m.src||'').length/1e6;if(m.source)msrcStrokes+=((m.source.strokesJSON||'').length)/1e6;});
@@ -17739,6 +17744,7 @@ function penBezValid(stroke){
   }catch(e){return false;}
 }
 function penOverlayRender(){
+  if(!penOn){if(penOv.width>1||penOv.height>1){penOv.width=1;penOv.height=1;}return;} // the Pen tool's drawing sheet is a full-screen canvas (10-15 MB): only keep it while the Pen tool is in use
   const r=wrap.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
   const w=Math.max(1,Math.round(r.width*dpr)),h=Math.max(1,Math.round(r.height*dpr));
   if(penOv.width!==w||penOv.height!==h){penOv.width=w;penOv.height=h;}
