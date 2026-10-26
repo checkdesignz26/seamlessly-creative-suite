@@ -1082,6 +1082,11 @@ html.in-suite .suite-only{display:block!important}
       <div class="section-title">🌓 Inner shadow</div>
       <div id="shTgt" class="hint" style="font-weight:700;margin:0 0 4px;">Tap a colour on the canvas to shade it.</div>
       <div id="shMsg" class="hint" style="min-height:1.2em;margin:0 0 6px;"></div>
+      <div style="margin:0 0 8px;padding:8px;border:1px solid rgba(0,0,0,.14);border-radius:10px;">
+        <div class="hint" style="margin:0 0 4px;font-weight:700;">🍰 Shade the whole motif as one</div>
+        <div class="hint" style="margin:0 0 6px;">Tap a motif on the canvas (Edit mode), then use the sliders below. One shadow and highlight follows the motif's outer shape; outlines stay black.</div>
+        <div class="row" style="gap:6px;"><button id="wshApply" class="btn primary" style="flex:1">🌓 Shade whole motif</button><button id="wshClear" class="btn" style="flex:1">✖ Remove</button></div>
+      </div>
       <div class="hint" style="margin-top:0;">Just tap the coloured area on the canvas. You do not need the Stroke panel.</div>
       <div class="slider-row"><label>Light from</label><input id="shLight" type="range" min="0" max="360" value="135"><span id="shLightV" style="width:68px;height:68px;flex:none"></span></div>
       <div class="slider-row"><label>Size</label><input id="shSize" type="range" min="4" max="120" value="28"><span id="shSizeV">28</span></div>
@@ -1631,7 +1636,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v524'; // keep in step with CACHE in sw.js
+const APP_V='v525'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -2053,9 +2058,38 @@ let motifsHidden=false,motifsOpen=false;function pHid(p){return motifsHidden||p.
 // A motif with no layer (older projects, template slots) stays in the loose group drawn above every layer.
 function pBaked(p){return !!(p.img&&p.layerId&&layers.some(l=>l.id===p.layerId));}
 function layerMotifs(id){return placed.filter(p=>p.layerId===id&&p.img&&!pHid(p));}
+// ---- Whole-motif shading: ONE shadow + highlight drawn from the motif's outer silhouette (instead of one per piece) ----
+// Stored on the placed motif as p.wsh={a,size,hs,hl,dk}. The picture is shaded once (edge bands that fade inward, no blur filter needed) and cached.
+const wshCache=new Map();
+function wshKey(w){return w?[w.a,w.size,w.hs,w.hl,w.dk].join('_'):'';}
+function wshImg(p,base){
+  try{
+    const w=p&&p.wsh;if(!w||!base)return base;
+    const W=base.naturalWidth||base.width,H=base.naturalHeight||base.height;if(!W||!H)return base;
+    const key=wshKey(w)+'|'+W+'x'+H;let ent=wshCache.get(base);
+    if(ent&&ent.key===key)return ent.canvas;
+    const k=W/(p.w||W);                                   // picture pixels per drawing unit
+    const lim=Math.min(W,H)*0.35;
+    const dS=Math.min(lim,Math.max(1,w.size*k)),dH=Math.min(lim,Math.max(1,w.hs*k));
+    const ar=w.a*Math.PI/180,tx=Math.cos(ar),ty=-Math.sin(ar);   // unit vector pointing TOWARD the light (screen y is down)
+    const mk=()=>{const c=document.createElement('canvas');c.width=W;c.height=H;return c;};
+    const S=mk(),sc=S.getContext('2d'),T=mk(),tc=T.getContext('2d');
+    const band=(d,dir,rgb,alpha)=>{const N=10;for(let i=1;i<=N;i++){const dd=d*i/N;tc.globalCompositeOperation='source-over';tc.clearRect(0,0,W,H);tc.drawImage(base,0,0);tc.globalCompositeOperation='destination-out';tc.drawImage(base,tx*dir*dd,ty*dir*dd);tc.globalCompositeOperation='source-in';tc.fillStyle='rgb('+rgb+')';tc.globalAlpha=1;tc.fillRect(0,0,W,H);sc.globalAlpha=alpha/N;sc.drawImage(T,0,0);}sc.globalAlpha=1;};
+    band(dS,1,'52,28,66',Math.min(0.9,w.dk));        // shadow: the edge away from the light (the picture shifted toward the light uncovers it)
+    band(dH,-1,'255,255,255',Math.min(1,w.hl));      // highlight: the edge facing the light
+    const R=mk(),rc=R.getContext('2d');rc.drawImage(base,0,0);rc.globalCompositeOperation='source-atop';rc.drawImage(S,0,0);
+    // keep the black outlines black: shading only shows on the lighter colours
+    try{const o=document.createElement('canvas');o.width=W;o.height=H;const oc=o.getContext('2d');oc.drawImage(base,0,0);
+      const od=oc.getImageData(0,0,W,H),rd=rc.getImageData(0,0,W,H),a=od.data,b=rd.data;
+      for(let i=0;i<a.length;i+=4){const lum=0.3*a[i]+0.59*a[i+1]+0.11*a[i+2];if(lum>=90)continue;const t=lum<=40?0:(lum-40)/50;b[i]=a[i]+(b[i]-a[i])*t;b[i+1]=a[i+1]+(b[i+1]-a[i+1])*t;b[i+2]=a[i+2]+(b[i+2]-a[i+2])*t;}
+      rc.putImageData(rd,0,0);}catch(e){}
+    wshCache.set(base,{key,canvas:R});if(wshCache.size>16)wshCache.delete(wshCache.keys().next().value);
+    return R;
+  }catch(e){return base;}
+}
 function drawLayerMotifs(c,id){
   const list=layerMotifs(id);if(!list.length)return false;
-  list.forEach(p=>{if(window.__dVis&&motifSharp(c,p,window.__dVis,0,0))return;c.save();if(p.alpha!=null)c.globalAlpha=Math.max(0,Math.min(1,p.alpha));c.translate(p.x,p.y);c.rotate(p.r*Math.PI/180);c.scale(p.s*(p.fx==null?1:p.fx),p.s*(p.fy==null?1:p.fy));try{const hi=p.motifId?motifHi.get(p.motifId):null;c.drawImage((hi&&hi.img===p.img)?hi.canvas:p.img,-p.w/2,-p.h/2,p.w,p.h);}catch(e){}c.restore();});
+  list.forEach(p=>{if(window.__dVis&&motifSharp(c,p,window.__dVis,0,0))return;c.save();if(p.alpha!=null)c.globalAlpha=Math.max(0,Math.min(1,p.alpha));c.translate(p.x,p.y);c.rotate(p.r*Math.PI/180);c.scale(p.s*(p.fx==null?1:p.fx),p.s*(p.fy==null?1:p.fy));try{const hi=p.motifId?motifHi.get(p.motifId):null;c.drawImage(wshImg(p,(hi&&hi.img===p.img)?hi.canvas:p.img),-p.w/2,-p.h/2,p.w,p.h);}catch(e){}c.restore();});
   return true;
 }
 // Zoomed far in, a placed motif that still has its vector strokes is drawn straight from them, so it stays crisp at any zoom (the cached picture only goes so far).
@@ -2101,6 +2135,7 @@ function motifSharp(c,p,vis,ox,oy){
     if(!p.motifId||!window.__dScale)return false;
     const e=motifs.find(x=>x.id===p.motifId);if(!e||!e.source||!e.source.bounds||e.img!==p.img)return false;
     if(p.alpha!=null&&p.alpha<1)return false;
+    if(p.wsh)return false;
     const iw=p.img.naturalWidth||p.img.width,ih=p.img.naturalHeight||p.img.height;if(!iw||!ih)return false;
     if(Math.max(p.w/iw,p.h/ih)*Math.abs(p.s||1)*window.__dScale<=3.5)return false;   // the stored hi-res picture is good enough
     const src=e.source;
@@ -2125,7 +2160,7 @@ function imgKey(im){if(!im)return 0;let v=_imgIds.get(im);if(!v){v=++_imgN;_imgI
 function motifSigStr(id){
   let r='';
   for(const p of placed){if(p.layerId!==id||!p.img)continue;if(pHid(p)){r+=p.id+'h,';continue;} // a hidden motif is not drawn, so where it is does not matter
-    r+=p.id+'v'+imgKey(p.img)+((()=>{try{const q=p.motifId&&motifHi.get(p.motifId);return q&&q.img===p.img?'H'+q.B:'';}catch(e){return '';}})())+','+Math.round(p.x*100)+','+Math.round(p.y*100)+','+p.s+','+p.r+','+(p.fx==null?1:p.fx)+(p.fy==null?1:p.fy)+','+p.w+','+p.h+','+(p.alpha==null?1:p.alpha)+';';}
+    r+=p.id+'v'+imgKey(p.img)+((()=>{try{const q=p.motifId&&motifHi.get(p.motifId);return q&&q.img===p.img?'H'+q.B:'';}catch(e){return '';}})())+','+Math.round(p.x*100)+','+Math.round(p.y*100)+','+p.s+','+p.r+','+(p.fx==null?1:p.fx)+(p.fy==null?1:p.fy)+','+p.w+','+p.h+','+(p.alpha==null?1:p.alpha)+(p.wsh?'W'+wshKey(p.wsh):'')+';';}
   return r;
 }
 // Called before every redraw/flatten: a layer whose motifs changed since its picture was made is redrawn (cheap for a layer that is mostly motifs).
@@ -4169,7 +4204,7 @@ function drawShapeToolsHighlights(){
   });
   ctx.restore();
 }
-function drawOne(p,ox=0,oy=0){const hi=p.motifId?motifHi.get(p.motifId):null;ctx.save();if(p.alpha!=null)ctx.globalAlpha=Math.max(0,Math.min(1,p.alpha));ctx.translate(p.x+ox,p.y+oy);ctx.rotate(p.r*Math.PI/180);ctx.scale(p.s*(p.fx==null?1:p.fx),p.s*(p.fy==null?1:p.fy));ctx.drawImage((hi&&hi.img===p.img)?hi.canvas:p.img,-p.w/2,-p.h/2,p.w,p.h);ctx.restore();}
+function drawOne(p,ox=0,oy=0){const hi=p.motifId?motifHi.get(p.motifId):null;ctx.save();if(p.alpha!=null)ctx.globalAlpha=Math.max(0,Math.min(1,p.alpha));ctx.translate(p.x+ox,p.y+oy);ctx.rotate(p.r*Math.PI/180);ctx.scale(p.s*(p.fx==null?1:p.fx),p.s*(p.fy==null?1:p.fy));ctx.drawImage(wshImg(p,(hi&&hi.img===p.img)?hi.canvas:p.img),-p.w/2,-p.h/2,p.w,p.h);ctx.restore();}
 // An unfilled Template slot: a dashed placeholder shape (same idea as Magic Builder's blank
 // skeleton bricks) showing where a motif will land and roughly how big ("hero" slots are the
 // biggest, "accent"/"filler" the smallest) - purely an editing aid, never exported.
@@ -6806,7 +6841,7 @@ function renderLayersList(){
         +'<button type="button" class="layer-vis'+(motifsHidden?'':' on')+'" title="Show/hide all motifs">'+(motifsHidden?'':'✓')+'</button>';
       const cv=mr.querySelector('canvas'),g=cv.getContext('2d'),k=116/TILE;
       g.fillStyle='#fff';g.fillRect(0,0,116,116);
-      try{pm.forEach(p=>{if(p.hidden)return;g.save();g.globalAlpha=p.alpha!=null?p.alpha:1;g.translate((p.x-CX)*k,(p.y-CY)*k);g.rotate(p.r*Math.PI/180);g.scale(p.s*(p.fx||1)*k,p.s*(p.fy||1)*k);g.drawImage(p.img,-p.w/2,-p.h/2,p.w,p.h);g.restore();});}catch(e){}
+      try{pm.forEach(p=>{if(p.hidden)return;g.save();g.globalAlpha=p.alpha!=null?p.alpha:1;g.translate((p.x-CX)*k,(p.y-CY)*k);g.rotate(p.r*Math.PI/180);g.scale(p.s*(p.fx||1)*k,p.s*(p.fy||1)*k);g.drawImage(wshImg(p,p.img),-p.w/2,-p.h/2,p.w,p.h);g.restore();});}catch(e){}
       cv.onclick=e=>{e.stopPropagation();try{layerPreviewOpen('__motifs');}catch(err){}};
       mr.querySelector('.layer-vis').onclick=e=>{e.stopPropagation();motifsHidden=!motifsHidden;compositeDirty=true;renderLayersList();pushHist();redraw();setStatus(motifsHidden?'Motifs hidden — tap ✓ to show them again.':'Motifs shown.');};
       mr.onclick=()=>{motifsOpen=!motifsOpen;renderLayersList();};
@@ -7094,7 +7129,7 @@ function motifPreviewDraw(ov,cv){
   const pw=Math.max(1,Math.round(bw*fit*dpr)),ph=Math.max(1,Math.round(bh*fit*dpr)),k=pw/bw;
   cv.style.width=Math.round(bw*fit)+'px';cv.style.height=Math.round(bh*fit)+'px';cv.width=pw;cv.height=ph;
   const c=cv.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,pw,ph);
-  vis.forEach(p=>{c.save();c.globalAlpha=p.alpha!=null?p.alpha:1;c.translate((p.x-x0)*k,(p.y-y0)*k);c.rotate(p.r*Math.PI/180);c.scale(p.s*(p.fx||1)*k,p.s*(p.fy||1)*k);c.drawImage(p.img,-p.w/2,-p.h/2,p.w,p.h);c.restore();});
+  vis.forEach(p=>{c.save();c.globalAlpha=p.alpha!=null?p.alpha:1;c.translate((p.x-x0)*k,(p.y-y0)*k);c.rotate(p.r*Math.PI/180);c.scale(p.s*(p.fx||1)*k,p.s*(p.fy||1)*k);c.drawImage(wshImg(p,p.img),-p.w/2,-p.h/2,p.w,p.h);c.restore();});
   document.getElementById('lpCap').textContent='Motifs ('+vis.length+')'+(motifsHidden?' (hidden)':'')+'  ·  tap anywhere to close';
   ov.classList.add('show');
 }
@@ -7167,7 +7202,7 @@ function mkFlatten(){
     else if(st==='clip'&&base){const t=document.createElement('canvas');t.width=fw;t.height=fh;const g=t.getContext('2d');g.drawImage(src,0,0);g.globalCompositeOperation='destination-in';g.drawImage(base,0,0);src=t;}
     o.save();o.globalAlpha=l.opacity/100;o.globalCompositeOperation=l.blend||'source-over';o.drawImage(src,0,0);o.restore();
   });
-  try{placed.forEach(p=>{if(!p.img||pHid(p)||pBaked(p))return;o.save();if(p.alpha!=null)o.globalAlpha=p.alpha;o.translate(p.x*kf,p.y*kf);o.rotate(p.r*Math.PI/180);o.scale(p.s*p.fx*kf,p.s*p.fy*kf);o.drawImage(p.img,-p.w/2,-p.h/2,p.w,p.h);o.restore();});}catch(e){}
+  try{placed.forEach(p=>{if(!p.img||pHid(p)||pBaked(p))return;o.save();if(p.alpha!=null)o.globalAlpha=p.alpha;o.translate(p.x*kf,p.y*kf);o.rotate(p.r*Math.PI/180);o.scale(p.s*p.fx*kf,p.s*p.fy*kf);o.drawImage(wshImg(p,p.img),-p.w/2,-p.h/2,p.w,p.h);o.restore();});}catch(e){}
   // one tile, with everything that wraps in from the neighbouring tiles (the project's own repeat layout)
   if(!MK.art||MK.art.width!==aw||MK.art.height!==ah){MK.art=document.createElement('canvas');MK.art.width=aw;MK.art.height=ah;}
   const a=MK.art,g=a.getContext('2d');g.setTransform(1,0,0,1,0,0);g.globalCompositeOperation='source-over';g.clearRect(0,0,aw,ah);
@@ -15031,7 +15066,7 @@ async function buildTileHi_(k,transparent){
     offs.forEach(([ox,oy])=>{
       o.save();if(p.alpha!=null)o.globalAlpha=Math.max(0,Math.min(1,p.alpha));
       o.setTransform(k,0,0,k,(ox-CX)*k,(oy-CY)*k);o.translate(p.x,p.y);o.rotate(p.r*Math.PI/180);o.scale(p.s*(p.fx==null?1:p.fx),p.s*(p.fy==null?1:p.fy));
-      o.drawImage(p.img,-p.w/2,-p.h/2,p.w,p.h);o.restore();
+      o.drawImage(wshImg(p,p.img),-p.w/2,-p.h/2,p.w,p.h);o.restore();
     });
   });
   return out;
@@ -15594,7 +15629,7 @@ function makeThumb(){
     if(bgImg&&bgShown){o.save();o.globalAlpha=bgOpacity;o.drawImage(bgImg,0,0,SW,SH);o.restore();}
     const k=S/TILE;
     o.drawImage(compositeCanvas,CX,CY,TW,TH,0,0,SW,SH);
-    placed.forEach(p=>{if(!p.img||motifsHidden||pBaked(p))return;o.save();if(p.alpha!=null)o.globalAlpha=p.alpha;o.translate((p.x-CX)*k,(p.y-CY)*k);o.rotate(p.r*Math.PI/180);o.scale(p.s*p.fx*k,p.s*p.fy*k);o.drawImage(p.img,-p.w/2,-p.h/2,p.w,p.h);o.restore();});
+    placed.forEach(p=>{if(!p.img||motifsHidden||pBaked(p))return;o.save();if(p.alpha!=null)o.globalAlpha=p.alpha;o.translate((p.x-CX)*k,(p.y-CY)*k);o.rotate(p.r*Math.PI/180);o.scale(p.s*p.fx*k,p.s*p.fy*k);o.drawImage(wshImg(p,p.img),-p.w/2,-p.h/2,p.w,p.h);o.restore();});
     return c.toDataURL('image/jpeg',0.82);
   }catch(e){return null;}
 }
@@ -19240,6 +19275,20 @@ $('qaDup').onclick=()=>{quickDuplicate();qaSync();};
 $('qaDel').onclick=()=>{qaDelete();qaSync();};
 $('qaErase').onclick=()=>{quickMoveOn=false;if(mode==='edit')$('drawModeBtn').click();$('tbEraserBtn').click();setStatus('🧹 Eraser — rub over strokes to erase. Tap again to switch off.');qaSync();};
 $('qaDraw').onclick=()=>{quickMoveOn=false;if(mode==='edit')$('drawModeBtn').click();if(eraserActive)$('tbEraserBtn').click();else $('tbPencilBtn').click();qaSync();};
+
+// Whole-motif shading buttons (use the Inner shadow panel's sliders)
+(function(){
+  const g=id=>document.getElementById(id);
+  const cur=()=>({a:+g('shLight').value,size:+g('shSize').value,hs:+g('shHSize').value,hl:+g('shHLight').value/100,dk:+g('shDark').value/100});
+  const target=()=>{const m=getSel();return m&&m.img&&m.id?m:null;};
+  const refresh=m=>{try{rebuildAllLayers();}catch(e){}try{compositeDirty=true;redraw();}catch(e){}};
+  g('wshApply').onclick=()=>{const m=target();if(!m){setStatus('🍰 Tap a motif first (Edit mode), then tap Shade whole motif.');return;}
+    m.wsh=cur();refresh(m);pushHist();setStatus('🍰 Whole motif shaded as one. Move the sliders to adjust, or tap Remove.');};
+  g('wshClear').onclick=()=>{const m=target();if(!m||!m.wsh){setStatus('🍰 This motif has no whole-motif shading.');return;}
+    delete m.wsh;refresh(m);pushHist();setStatus('🍰 Whole-motif shading removed.');};
+  let t=null;['shLight','shSize','shHSize','shHLight','shDark'].forEach(id=>g(id).addEventListener('input',()=>{const m=target();if(!m||!m.wsh)return;m.wsh=cur();clearTimeout(t);t=setTimeout(()=>{refresh(m);},120);}));
+  ['shLight','shSize','shHSize','shHLight','shDark'].forEach(id=>g(id).addEventListener('change',()=>{const m=target();if(!m||!m.wsh)return;m.wsh=cur();refresh(m);pushHist();}));
+})();
 function qaOpen(open){
   const p=$('qaPanel');
   if(open===undefined)open=p.style.display==='none';
