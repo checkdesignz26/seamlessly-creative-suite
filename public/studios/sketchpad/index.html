@@ -1639,7 +1639,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v532'; // keep in step with CACHE in sw.js
+const APP_V='v533'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -19413,14 +19413,15 @@ $('qaDraw').onclick=()=>{quickMoveOn=false;if(mode==='edit')$('drawModeBtn').cli
 (function(){
   const g=id=>document.getElementById(id);
   const cur=()=>({a:+g('shLight').value,size:+g('shSize').value,hs:+g('shHSize').value,hl:+g('shHLight').value/100,dk:+g('shDark').value/100,hsh:+g('wshSharp').value});
-  const target=()=>{const m=getSel();return m&&m.img&&m.id?m:null;};
+  const target=()=>{let m=getSel();if((!m||!m.img)&&editingMotifId&&editingMotifInst)m=placed.find(q=>q.id===editingMotifInst)||null; // inside Edit Motif the copy you are editing is the target
+    return m&&m.img&&m.id?m:null;};
   const refresh=m=>{try{rebuildAllLayers();}catch(e){}try{compositeDirty=true;redraw();}catch(e){}};
   g('wshApply').onclick=()=>{const m=target();if(!m){setStatus('🍰 Tap a motif first (Edit mode), then tap Shade whole motif.');return;}
     wshEditStop();m.wsh=cur();try{const sp=wshGenShapes(m,m.wsh);if(sp&&(sp.sh.length||sp.hi.length))m.wsh.sp=sp;}catch(e){}m.wsh.v=1;refresh(m);pushHist();setStatus('🍰 Whole motif shaded as one; the highlight is split along its parts. Move the sliders to adjust, or tap Remove.');};
   g('wshClear').onclick=()=>{const m=target();
     if(!m){setStatus('🍰 Nothing is selected. Switch to Edit mode and tap the shaded motif first, then tap Remove.');return;}
     if(!m.wsh){const n=placed.filter(q=>q.motifId===m.motifId&&q.wsh).length;setStatus(n?'🍰 This copy has no whole-motif shading, but '+n+' other cop'+(n===1?'y':'ies')+' of this motif '+(n===1?'has':'have')+' it. Tap one of those copies, then Remove.':'🍰 This motif has no whole-motif shading. (Shading made one piece at a time with the colour tap is removed with Delete shadow / Delete highlight.)');return;}
-    wshEditStop();delete m.wsh;refresh(m);pushHist();setStatus('🍰 Whole-motif shading removed.');};
+    wshEditStop();delete m.wsh;refresh(m);if(!editingMotifId)pushHist();setStatus('🍰 Whole-motif shading removed.');};
   g('wshEditBtn').onclick=()=>{if(wshEd.id){wshEditStop();setStatus('✓ Shading shapes saved.');return;}wshEditStart(target());};
   g('wshReset').onclick=()=>{const m=target();if(!m||!m.wsh){setStatus('🍰 Shade the whole motif first.');return;}const w=Object.assign({},m.wsh,cur());delete w.sp;delete w.ed;m.wsh=w;const was=wshEd.id===m.id;wshEditStop();refresh(m);pushHist();if(was)wshEditStart(m);else setStatus('↺ Shapes reset to the sliders.');};
   g('wshSharp').addEventListener('input',()=>{g('wshSharpV').textContent=g('wshSharp').value+'%';});
