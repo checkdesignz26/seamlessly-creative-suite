@@ -1639,7 +1639,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v538'; // keep in step with CACHE in sw.js
+const APP_V='v539'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -3602,9 +3602,26 @@ function applyMotifVersions(mv){
     const img=new Image();img.onload=()=>{e.img=img;placed.forEach(p=>{if(p.motifId===id)p.img=img;});try{renderTray();}catch(_){}try{redraw();}catch(_){}};img.src=v.src;
   });
 }
+// Undo steps share the JSON text of strokes that did not change since the previous step (strings are immutable, so sharing is safe):
+// a step only costs memory for the strokes that are new or different. `strokesJSON` is still available (built on demand) for restore().
+function strokePartsShared(prev){
+  strokesToJSON(); // rounds numbers once per stroke, exactly as before
+  const pm=new Map();
+  if(prev&&prev._parts){for(let i=0;i<prev._ids.length;i++)pm.set(prev._ids[i],prev._parts[i]);}
+  const parts=new Array(strokes.length),ids=new Array(strokes.length);
+  for(let i=0;i<strokes.length;i++){
+    const st=strokes[i];let j=JSON.stringify(st);if(j===undefined)j='null';
+    const k=(st&&st.id!=null)?'s'+st.id:'i'+i;
+    const o=pm.get(k);
+    parts[i]=(o!==undefined&&o===j)?o:j; ids[i]=k;
+  }
+  return {parts,ids};
+}
 function snapshot(){
+  const sh=strokePartsShared(history[Math.min(hIndex,history.length-1)]);
   return {
-    strokesJSON:strokesToJSON(),
+    _parts:sh.parts,_ids:sh.ids,
+    get strokesJSON(){return '['+this._parts.join(',')+']';},
     layersJSON:JSON.stringify(layers.map(l=>({id:l.id,name:l.name,kind:l.kind,visible:l.visible,locked:l.locked,opacity:l.opacity,blend:l.blend||'source-over',alphaLock:!!l.alphaLock,blur:l.blur||0,clip:!!l.clip,shadowLayer:!!l.shadowLayer,autoObj:!!l.autoObj,tpl:l.tpl||0,arHide:l.arHide||0,lg:l.lg||undefined,lgn:l.lg?l.lgn:undefined,lgc:l.lg&&l.lgc?1:undefined}))),
     activeLayerId,
     placed:JSON.stringify(placed.map(p=>({...p,img:null}))),
@@ -3614,8 +3631,9 @@ function snapshot(){
 }
 // Undo steps keep a full copy of the drawing each; with very detailed drawings 100 of them add up to hundreds of MB of memory,
 // so the oldest steps are dropped once they pass a size budget (always keeping the last few).
-function histSize(){let n=0;history.forEach(h=>{n+=(h.strokesJSON||'').length+(h.placed||'').length+(h.groupsJSON||'').length+(h.layersJSON||'').length;});return n;}
-function histTrim(){const big=history.length&&((history[history.length-1].strokesJSON||'').length>8e6);const floor=big?3:4;while(history.length>floor&&histSize()>48e6)history.shift();} // a huge illustration/motif makes every undo step 10-20 MB: keep fewer of those rather than fill iPad memory
+function histSize(){const seen=new Set();let n=0;history.forEach(h=>{if(h._parts){h._parts.forEach(x=>{if(!seen.has(x)){seen.add(x);n+=x.length+1;}});}else n+=(h.strokesJSON||'').length;n+=(h.placed||'').length+(h.groupsJSON||'').length+(h.layersJSON||'').length;});return n;} // counts shared stroke text once
+function histLast(){const h=history[history.length-1];if(!h)return 0;return h._parts?h._parts.reduce((a,x)=>a+x.length+1,0):(h.strokesJSON||'').length;}
+function histTrim(){const big=history.length&&histLast()>8e6;const floor=big?3:4;while(history.length>floor&&histSize()>48e6)history.shift();} // a huge illustration/motif makes every undo step 10-20 MB: keep fewer of those rather than fill iPad memory
 // Empty layers left behind by "a layer for each object" (a stroke that was undone, erased, deleted or joined leaves its layer empty) are tidied away.
 // 'auto' = only layers made this session, never the one you are on; 'named' = also layers an earlier session made, found by their names (Stroke 7, Circle 2...).
 const AUTO_LAYER_NAME=/^(Fills?|Shadow|Highlight|Stroke|Shape|Circle|Ellipse|Rectangle|Rounded rectangle|Triangle|Line|Star|Polygon|Diamond|Heart|Arrow)( \d+)?$/;
@@ -14272,7 +14290,7 @@ function duplicateMotifInstance(){
 function makeIndependentMotif(){
  const m=getSel();if(!m||!m.motifId)return;
  const entry=motifs.find(x=>x.id===m.motifId);if(!entry)return;
- const clone={id:crypto.randomUUID(),img:entry.img,src:entry.src,name:entry.name+' (independent)',source:entry.source?JSON.parse(JSON.stringify(entry.source)):null};
+ const clone={id:crypto.randomUUID(),img:entry.img,src:entry.src,name:entry.name+' (independent)',source:entry.source?JSON.parse(JSON.stringify(cleanMotifSource(entry.source))):null};
  motifs.push(clone);
  m.motifId=clone.id;
  renderTray();pushHist();redraw();updateSelectedControls();
@@ -15709,7 +15727,7 @@ function buildDocObject(){
     activeLayerId,
     placedJSON:JSON.stringify(placed.map(p=>({...p,img:null}))),
     groupsJSON:JSON.stringify(groups),motifsHidden,
-    motifs:motifs.map(m=>({id:m.id,src:m.src,name:m.name,source:m.source||null})),
+    motifs:motifs.map(m=>({id:m.id,src:m.src,name:m.name,source:cleanMotifSource(m.source)||null})), // never save the zoom cache (_sk/_lm): a parsed copy of the same strokes, rebuilt when needed
     editingMotifId,
     editingMotifFrame:(editingMotifId&&editingMotifFrame)?editingMotifFrame:null, // where the open motif's copy sits (position/size/turn): needed to put the strokes back in the motif's own space if the app closes mid-edit
     editingMotifStash:editingMotifStash?JSON.stringify((()=>{const {hist,hIdx,mOld,...keep}=editingMotifStash;return keep;})()):null, // only what recovering after a crash needs (the pattern's strokes, layers, mode). The undo history and the motif's old copy stay in memory: they were doubling every save (~22 MB each time)
@@ -16452,7 +16470,7 @@ async function applyDocObject(doc,opts){
     // id in load order so placed[] (below) has something stable to resolve against, but leave
     // source null rather than inventing vector data that was never actually captured.
     const sk=doc.strokesJSON||'';const loadNeed={};try{JSON.parse(doc.placedJSON||'[]').forEach(q=>{const id=q.motifId;if(id)loadNeed[id]=Math.max(loadNeed[id]||0,Math.max(q.w||0,q.h||0)*Math.abs(q.s||1));});}catch(_){}
-    for(const m of (doc.motifs||[])){await new Promise(res=>{const img=new Image();img.onload=async()=>{const ent={id:m.id||crypto.randomUUID(),img,src:m.src,name:m.name,source:m.source||null};motifs.push(ent);try{if(!sk.includes(ent.id)){const nd=loadNeed[ent.id]||0;await motifReduce(ent,Math.max(MOTIF_MIN_WORK,Math.ceil(nd*motifExportScale(doc.tilePhys&&doc.tilePhys.w,doc.tileW)*MOTIF_HEADROOM/16)*16));}else ent.pin=true;}catch(_){}res();};img.onerror=()=>{/* keep the motif (and its saved picture) even if this device could not decode it just now, so the next autosave cannot drop it */motifs.push({id:m.id||crypto.randomUUID(),img:null,src:m.src,name:m.name,source:m.source||null,loadFailed:true});res();};img.src=m.src;});}
+    for(const m of (doc.motifs||[])){await new Promise(res=>{const img=new Image();img.onload=async()=>{const ent={id:m.id||crypto.randomUUID(),img,src:m.src,name:m.name,source:cleanMotifSource(m.source)||null};motifs.push(ent);try{if(!sk.includes(ent.id)){const nd=loadNeed[ent.id]||0;await motifReduce(ent,Math.max(MOTIF_MIN_WORK,Math.ceil(nd*motifExportScale(doc.tilePhys&&doc.tilePhys.w,doc.tileW)*MOTIF_HEADROOM/16)*16));}else ent.pin=true;}catch(_){}res();};img.onerror=()=>{/* keep the motif (and its saved picture) even if this device could not decode it just now, so the next autosave cannot drop it */motifs.push({id:m.id||crypto.randomUUID(),img:null,src:m.src,name:m.name,source:m.source||null,loadFailed:true});res();};img.src=m.src;});}
     renderTray();
     // Strokes must be parsed BEFORE applyLayerMeta, since migrating strokes with no valid
     // layerId onto the fallback layer (old, pre-layers documents) happens inside it.
@@ -19353,7 +19371,7 @@ async function qaCopy(){
     if(hasStrokes)copySelectionToClipboard();else{try{localStorage.removeItem('sp-clip');}catch(e){}}
     if(pl.length){
       const ids=[...new Set(pl.map(p=>p.motifId))],ms=[];
-      for(const id of ids){const e=motifs.find(m=>m.id===id);if(e)ms.push({id:e.id,name:e.name,src:qaImgSrc(e),source:e.source||null});}
+      for(const id of ids){const e=motifs.find(m=>m.id===id);if(e)ms.push({id:e.id,name:e.name,src:qaImgSrc(e),source:cleanMotifSource(e.source)||null});}
       const items=pl.filter(p=>ms.some(m=>m.id===p.motifId)).map(p=>{const c=Object.assign({},p);delete c.id;delete c.img;delete c.groupId;delete c.layerId;return c;});
       await qaClipDB.put({v:1,from:(activeProject&&activeProject.id)||'',fromName:(activeProject&&activeProject.name)||'',motifs:ms,placed:items});
       setStatus('📋 Copied '+items.length+' picture'+(items.length===1?'':'s')+(hasStrokes?' and the strokes':'')+'. Open any project and tap Paste.');
@@ -19372,7 +19390,7 @@ async function qaPaste(){
         let e=motifs.find(x=>x.id===m.id&&(same||x.src===m.src))||motifs.find(x=>x.src&&x.src===m.src);
         if(!e){
           const img=await motifLoadImg(m.src);
-          e={id:crypto.randomUUID(),img,src:m.src,name:m.name,source:m.source||null};motifs.push(e);added.push(e);
+          e={id:crypto.randomUUID(),img,src:m.src,name:m.name,source:cleanMotifSource(m.source)||null};motifs.push(e);added.push(e);
         }
         idMap.set(m.id,e);
       }
