@@ -1639,7 +1639,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v539'; // keep in step with CACHE in sw.js
+const APP_V='v540'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -7127,7 +7127,12 @@ function renderLayersList(){
           q.sort((u,v)=>ba(v)-ba(u)); // biggest piece first; tapping the layer again steps to the next piece
           const cur=q.findIndex(x=>x.id===selectedStrokeId),t=q.length?q[(cur+1)%q.length]:null;
           if(t&&pathEditStrokeId&&pathEditStrokeId!==t.id){try{commitEditPath();}catch(e){try{exitEditPath(true);}catch(_){}}} // finish Edit Path first, or it keeps the Stroke panel hidden
-          if(t){selectedStrokeId=t.id;selected=null;multiSel=null;mode='edit';try{syncMode();}catch(e){}try{syncStrokeSelectionUI();updateSelectedControls();}catch(e){}if(q.length>1)setStatus('Piece '+(q.indexOf(t)+1)+' of '+q.length+' on this layer. Tap the layer again for the next piece.');}}
+          if(t){selectedStrokeId=t.id;selected=null;multiSel=null;mode='edit';try{syncMode();}catch(e){}try{syncStrokeSelectionUI();updateSelectedControls();}catch(e){}if(q.length>1)setStatus('Piece '+(q.indexOf(t)+1)+' of '+q.length+' on this layer. Tap the layer again for the next piece.');}
+          else{ // nothing drawn on this layer: select the motif that sits on it, or clear the old selection, instead of leaving a piece from ANOTHER layer selected
+            const pm=placed.filter(x=>x.img&&x.layerId===layer.id&&!x.hidden);
+            if(pm.length){const cur2=pm.findIndex(x=>x.id===selected),pt=pm[(cur2+1)%pm.length]||pm[pm.length-1];selected=pt.id;selectedStrokeId=null;multiSel=null;mode='edit';try{syncMode();}catch(e){}try{syncStrokeSelectionUI();updateSelectedControls();}catch(e){}if(pm.length>1)setStatus('Motif '+(pm.indexOf(pt)+1)+' of '+pm.length+' on this layer. Tap the layer again for the next one.');}
+            else if(selectedStrokeId||selected||multiSel){selectedStrokeId=null;selected=null;multiSel=null;try{syncStrokeSelectionUI();updateSelectedControls();}catch(e){}}
+          }}
       }catch(e){}
       renderLayersList();compositeDirty=true;redraw();};
     if(layerSelMode)row.addEventListener('click',e=>{e.stopPropagation();e.preventDefault();if(layerSel.has(layer.id))layerSel.delete(layer.id);else layerSel.add(layer.id);renderLayersList();},true);
