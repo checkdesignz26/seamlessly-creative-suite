@@ -1639,7 +1639,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v542'; // keep in step with CACHE in sw.js
+const APP_V='v543'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -7016,6 +7016,41 @@ $('layerGroupBtn').onclick=()=>groupLayerIds(new Set(layerSel));
 $('layerMergeBtn').onclick=()=>mergeLayerIds(new Set(layerSel));
 $('layerDelSelBtn').onclick=()=>{const ids=new Set(layers.filter(l=>layerSel.has(l.id)).map(l=>l.id));if(!ids.size)return;const n=strokes.filter(s=>ids.has(s.layerId)).length+placed.filter(p=>ids.has(p.layerId)).length;askYesNo('Delete '+ids.size+' layer'+(ids.size===1?'':'s')+'?',(n?'This removes them and their '+n+' item'+(n===1?'':'s')+'. ':'They are empty. ')+'You can Undo it straight afterwards.','Delete',()=>{deleteLayers(ids);layerSelMode=false;layerSel.clear();layerSelSync();renderLayersList();});};
 $('layerUngroupBtn').onclick=()=>{const gs=new Set(layers.filter(l=>layerSel.has(l.id)&&l.lg).map(l=>l.lg));layers.forEach(l=>{if(layerSel.has(l.id)&&l.lg){l.lg=null;l.lgn='';l.lgc=false;}});renderLayersList();pushHist();setStatus('⛓ Took '+layerSel.size+' layer'+(layerSel.size===1?'':'s')+' out of their group.');};
+// Put each group / piece on a layer of its own (e.g. nine numbers that were drawn on one layer). Pieces that belong together (a group, a fill and its outline,
+// strokes painted inside a shape, linked copies) stay together; the first piece keeps the original layer.
+function splitLayerPieces(id){
+  const L=layers.find(l=>l.id===id);if(!L)return;
+  if(L.locked){setStatus('🔒 "'+L.name+'" is locked. Unlock it first.');return;}
+  if(L.clip||L.alphaLock||L.shadowLayer||L.tpl||(L.kind&&L.kind!=='vector')){setStatus('This layer is clipped, alpha-locked, a shading layer or a template, so it cannot be split safely.');return;}
+  const sts=strokes.filter(q=>q.layerId===id);
+  if(sts.length<2){setStatus('There is only one piece on "'+L.name+'", nothing to split.');return;}
+  const idx=new Map(sts.map((q,i)=>[q.id,i])),par=sts.map((_,i)=>i);
+  const find=i=>{while(par[i]!==i){par[i]=par[par[i]];i=par[i];}return i;},uni=(a,b)=>{a=find(a);b=find(b);if(a!==b)par[Math.max(a,b)]=Math.min(a,b);};
+  const byGroup=new Map();
+  sts.forEach((q,i)=>{
+    if(q.groupId){if(byGroup.has(q.groupId))uni(i,byGroup.get(q.groupId));else byGroup.set(q.groupId,i);}
+    ['fillOf','clipStrokeId','radialOf','contourOf'].forEach(k=>{if(q[k]&&idx.has(q[k]))uni(i,idx.get(q[k]));});
+  });
+  sts.forEach((q,i)=>{['clipStrokeId'].forEach(k=>{});}); // (links are symmetric through uni above)
+  const parts=new Map();sts.forEach((q,i)=>{const r=find(i);if(!parts.has(r))parts.set(r,[]);parts.get(r).push(q);});
+  const list=[...parts.values()];
+  if(list.length<2){setStatus('Everything on "'+L.name+'" belongs together (one group), so there is nothing to split.');return;}
+  if(list.length>60){setStatus('That would make '+list.length+' layers. Select fewer pieces or group them first.');return;}
+  let at=layers.indexOf(L),k=0;const touched=[L.id];
+  list.forEach((part,pi)=>{
+    if(pi===0)return;
+    k++;
+    const t=part.find(q=>q.text&&q.text.str);
+    const nm=t?String(t.text.str).trim().replace(/\s+/g,' ').slice(0,24):(part.some(q=>q.groupId)?'Group ':'Piece ')+(pi+1);
+    const nl=makeLayer(nm);nl.autoObj=true;nl.visible=L.visible;nl.opacity=L.opacity;nl.blend=L.blend;nl.blur=L.blur||0;
+    layers.splice(++at,0,nl);
+    part.forEach(q=>{q.layerId=nl.id;});touched.push(nl.id);
+  });
+  try{touched.forEach(t=>rebuildLayer(t));}catch(e){try{rebuildAllLayers();}catch(_){}}
+  try{syncAwake();}catch(e){}
+  segVer++;compositeDirty=true;renderLayersList();pushHist();redraw();
+  setStatus('🗂 Split "'+L.name+'" into '+list.length+' layers (one per group or piece). Undo puts them back together.');
+}
 function renderLayersList(){
   try{if(layers.length&&computeRenderScale()!==renderScale)applyTransform();}catch(e){}
   const host=$('layersList');if(!host)return;
@@ -7112,6 +7147,7 @@ function renderLayersList(){
       +'<button type="button" class="layer-icon-btn layer-up" title="Move up">↑</button>'
       +'<button type="button" class="layer-icon-btn layer-down" title="Move down">↓</button>'
       +'<button type="button" class="layer-icon-btn layer-mergedn" title="Merge down: join this layer into the one below it">⤵</button>'
+      +'<button type="button" class="layer-icon-btn layer-split" title="Split: put each group or piece on this layer onto a layer of its own">⧉</button>'
       +'<button type="button" class="layer-icon-btn layer-clear" title="Clear this layer (empty it, keep the layer)">🧹</button>'
       +'<button type="button" class="layer-icon-btn layer-del" title="Delete this layer">✕</button>'
       +'</div>'
@@ -7153,6 +7189,7 @@ function renderLayersList(){
     row.querySelector('.layer-down').onclick=e=>{e.stopPropagation();moveLayer(layer.id,-1);};
     row.querySelector('.layer-del').onclick=e=>{e.stopPropagation();askDeleteLayer(layer.id);};
     row.querySelector('.layer-clear').onclick=e=>{e.stopPropagation();askClearLayer(layer.id);};
+    row.querySelector('.layer-split').onclick=e=>{e.stopPropagation();splitLayerPieces(layer.id);};
     row.querySelector('.layer-mergedn').onclick=e=>{e.stopPropagation();if(li<=0){setStatus('⤵ This is the bottom layer: there is nothing below it to merge into.');return;}mergeLayerIds(new Set([layer.id,layers[li-1].id]));};
     row.onclick=()=>{activeLayerId=layer.id;
       try{ // tapping a layer also selects the shape on it (the topmost one), which opens the Stroke panel
