@@ -1639,7 +1639,7 @@ const canvas=document.getElementById('canvas'),mainCtx=canvas.getContext('2d'),w
 try{if(/[?&]suite\b/.test(location.search)||window.self!==window.top)document.documentElement.classList.add('in-suite');}catch(e){}
 if(window.navigator.standalone)document.documentElement.classList.add('is-standalone');
 const W=1800,H=1800,TILE=780,C=(W-TILE)/2;let TW=TILE,TH=TILE,CX=C,CY=C; // TILE = the tile's LONG side (always 780); TW x TH is the real repeat tile (rectangular cards), centred on the canvas
-const APP_V='v540'; // keep in step with CACHE in sw.js
+const APP_V='v541'; // keep in step with CACHE in sw.js
 let viewLocked=(function(){try{return localStorage.getItem('sp-viewLock')==='1';}catch(e){return false;}})(); // Lock view: finger pan / pinch no longer move the canvas
 let rotLocked=(function(){try{return localStorage.getItem('sp-rotLock')!=='0';}catch(e){return true;}})();
 let zoom=1,panX=0,panY=0,rot=0,showTiling=true,showGuides=sessionStorage.getItem('sp-showGuides')==='1',layout='grid',mode='draw';
@@ -4166,6 +4166,27 @@ async function resizeProjectFlow(){
 // Running it again replaces the earlier grid. Delete the layer to remove it.
 // The watermark logo is a motif only so it is saved with the project: it stays out of the tray, the pattern brush list and the Procreate brush set.
 function isWmMotif(e){return !!(e&&e.name==='Watermark logo');}
+// Optional visible grid lines for the Watermark grid: plain straight lines on the Watermark layer (so they can be moved, recoloured or deleted like any line),
+// following the same cells as the copies (staggered rows get brick-style joints). Strength = line opacity.
+function wmGridLines(L,r,cw,ch,x0,y0,cols,rows){
+  if(r.grid!=='yes')return 0;
+  const col=r.gcol==='white'?'#ffffff':r.gcol==='black'?'#000000':'#8a8a8a';
+  const op=Math.round((+r.gop||.2)*100),th={t:1,m:2,k:4}[r.gw]||2,size=Math.max(1,Math.round(TW/600*th*10)/10);
+  const base=Object.assign({},BrushEngine.getSettings('smoothPen'),{size,opacity:op,pressureWidth:0,pressureOpacity:0});
+  let n=0;
+  const add=(ax,ay,bx,by)=>{strokes.push({id:crypto.randomUUID(),brushId:'smoothPen',layerId:L.id,atop:false,color:col,settings:Object.assign({},base),points:[{x:ax,y:ay,pressure:.5},{x:bx,y:by,pressure:.5}],nodes:null,closed:false,clipStrokeId:null,shape:null});n++;};
+  const stag=r.stag==='yes';
+  for(let j=0;j<=rows;j++)add(x0,y0+j*ch,x0+TW,y0+j*ch); // horizontal lines, including the pattern edges
+  for(let j=0;j<rows;j++){
+    const odd=stag&&j%2===1&&cols>1;
+    for(let k=0;k<=cols;k++){
+      if(odd&&k===cols)continue; // staggered rows have joints half a cell across
+      const x=x0+(odd?(k+.5):k)*cw;if(x>x0+TW+0.5)continue;
+      add(x,y0+j*ch,x,y0+(j+1)*ch);
+    }
+  }
+  return n;
+}
 async function watermarkLogoGrid(r,old){
   const cols=Math.round(+r.cols),rows=Math.round(+r.rows),ang=(+r.ang||0),rad=ang*Math.PI/180;
   let src;
@@ -4192,6 +4213,7 @@ async function watermarkLogoGrid(r,old){
     if(r.stag==='yes'&&j%2&&i===cols-1&&cols>1)continue;
     placed.push({id:crypto.randomUUID(),motifId:entry.id,img,x:x0+(i+.5+((r.stag==='yes'&&j%2)?.5:0))*cw,y:y0+(j+.5)*ch,w:iw*f,h:ih*f,s:1,r:ang,fx:1,fy:1,layerId:L.id,alpha:+r.op});
   }
+  const gl=wmGridLines(L,r,cw,ch,x0,y0,cols,rows);
   selected=null;
   try{rebuildLayer(L.id);renderLayersList();}catch(e){}
   try{renderTray();}catch(e){}
@@ -4214,7 +4236,11 @@ async function watermarkGridFlow(){
     {key:'size',label:'Text size',type:'chips',value:'m',options:[['s','Small'],['m','Medium'],['l','Large']]},
     {key:'op',label:'Strength',type:'chips',value:'.3',options:[['.15','Faint'],['.3','Medium'],['.5','Strong']]},
     {key:'col',label:'Colour',type:'chips',value:'grey',options:[['grey','Grey'],['white','White'],['black','Black'],['cur','Current colour']],showIf:v=>v.kind!=='logo'},
-    {key:'stag',label:'Rows',type:'chips',value:'yes',options:[['yes','Staggered'],['no','Straight']]}],
+    {key:'stag',label:'Rows',type:'chips',value:'yes',options:[['yes','Staggered'],['no','Straight']]},
+    {key:'grid',label:'Grid lines',type:'chips',value:'no',options:[['no','No lines'],['yes','Add grid lines']]},
+    {key:'gop',label:'Grid line strength',type:'chips',value:'.2',options:[['.1','Faint'],['.2','Medium'],['.4','Strong']],showIf:v=>v.grid==='yes'},
+    {key:'gw',label:'Grid line thickness',type:'chips',value:'m',options:[['t','Thin'],['m','Medium'],['k','Thick']],showIf:v=>v.grid==='yes'},
+    {key:'gcol',label:'Grid line colour',type:'chips',value:'grey',options:[['grey','Grey'],['white','White'],['black','Black']],showIf:v=>v.grid==='yes'}],
     note:(old?'There is already a Watermark layer. Adding again replaces it. ':'')+'Each copy is normal text on a layer named Watermark, so you can still move, recolour or delete it. The grid fits inside the pattern area, so it repeats cleanly if the pattern tiles.',
     ok:old?'Replace watermark':'Add watermark',
     validate:v=>{if(v.kind==='logo'){if(!v.logo&&!wmEnt)return 'Choose your logo picture.';}else if(!String(v.txt).trim())return 'Type the watermark text.';const c=+v.cols,rw=+v.rows;if(!(c>=1&&c<=12&&rw>=1&&rw<=12))return 'Use 1 to 12 copies across and down.';if(!isFinite(+v.ang))return 'Enter an angle such as -30.';return '';}});
@@ -4245,11 +4271,12 @@ async function watermarkGridFlow(){
     txSetFrame(st,[cs,sv,-sv,cs,cx-(cs*m.bw/2-sv*m.bh/2),cy-(sv*m.bw/2+cs*m.bh/2)],m.bw,m.bh);
     strokes.push(st);
   }
+  wmGridLines(L,r,cw,ch,x0,y0,cols,rows);
   selectedStrokeId=null;
   try{rebuildLayer(L.id);renderLayersList();}catch(e){}
   try{syncStrokeSelectionUI();}catch(e){}
   redraw();pushHist();try{txRefreshEmbeds();}catch(e){}try{scheduleAutosave();}catch(e){}
-  setStatus('🔲 Watermark grid added on the "Watermark" layer ('+strokes.filter(s=>s.layerId===L.id).length+' copies). Run it again to change it, or delete the layer to remove it.');
+  setStatus('🔲 Watermark grid added on the "Watermark" layer ('+strokes.filter(s=>s.layerId===L.id&&s.text).length+' copies'+(r.grid==='yes'?' + grid lines':'')+'). Run it again to change it, or delete the layer to remove it.');
 }
 function offsets(){
   const arr=[[0,0]];if(!showTiling)return arr;
