@@ -144,6 +144,7 @@
       id, name, family: 'stamp', renderMode: 'vector', stamp: true, stampImg: img, stampCanvas: c, tinted: {},
       defaults: { size: 90, opacity: 100, smoothing: 35, pressureWidth: 0, pressureOpacity: 0, spacing: 100, follow: 0, tint: 0 },
       hardness: 1, jitter: 0, streaky: 0, taper: 'none',
+      lock: { pressureOpacity: 0 }, // Apple Pencil pressure never changes a stamp's opacity
     };
     if (noRegister) return brush;
     if (old) { BRUSHES[BRUSHES.indexOf(old)] = brush; } else { BRUSHES.push(brush); }
@@ -236,6 +237,30 @@
   function setSettings(brushId, patch) {
     settingsStore[brushId] = Object.assign({}, getSettings(brushId), patch);
     saveJSON(LS_SETTINGS, settingsStore);
+  }
+  // Back to the brush's own factory settings (size, opacity, smoothing, watercolour effects...).
+  // Before any reset the current settings are copied aside, so a reset tapped by mistake can be undone (restoreSettingsBackup).
+  const LS_SETTINGS_BAK = 'pkmBrushSettingsBackupV1';
+  function backupSettings() { try { if (Object.keys(settingsStore).length) localStorage.setItem(LS_SETTINGS_BAK, JSON.stringify({ at: Date.now(), store: settingsStore })); } catch (err) {} }
+  function resetSettings(brushId) { backupSettings(); delete settingsStore[brushId]; saveJSON(LS_SETTINGS, settingsStore); }
+  function resetAllSettings() { backupSettings(); settingsStore = {}; saveJSON(LS_SETTINGS, settingsStore); }
+  function restoreSettingsBackup() {
+    const b = loadJSON(LS_SETTINGS_BAK, null); if (!b || !b.store) return 0;
+    let n = 0; Object.keys(b.store).forEach((id) => { if (byId.has(id)) { settingsStore[id] = b.store[id]; n++; } });
+    saveJSON(LS_SETTINGS, settingsStore); return n;
+  }
+  // Settings travel with the project file too, so clearing the browser's storage cannot lose them for good.
+  function exportSettings() { try { return JSON.parse(JSON.stringify(settingsStore)); } catch (err) { return {}; } }
+  function mergeSettings(o) { // only fills brushes that have no saved settings here; never overwrites
+    if (!o || typeof o !== 'object') return 0; let n = 0;
+    Object.keys(o).forEach((id) => { if (!settingsStore[id] && byId.has(id) && o[id] && typeof o[id] === 'object') { settingsStore[id] = o[id]; n++; } });
+    if (n) saveJSON(LS_SETTINGS, settingsStore); return n;
+  }
+  // Rebuild brush settings from a drawing: each brush gets the settings of the last stroke drawn with it.
+  function settingsFromStrokes(list) {
+    const last = {}; (list || []).forEach((s) => { if (s && s.brushId && s.brushId !== 'smudge' && s.settings && byId.has(s.brushId)) last[s.brushId] = s.settings; });
+    let n = 0; Object.keys(last).forEach((id) => { const st = Object.assign({}, last[id]); Object.keys(st).forEach((k) => { if (k.charAt(0) === '_') delete st[k]; }); settingsStore[id] = st; n++; });
+    if (n) saveJSON(LS_SETTINGS, settingsStore); return n;
   }
   function touchRecent(brushId) {
     recents = [brushId].concat(recents.filter((id) => id !== brushId)).slice(0, RECENTS_MAX);
@@ -531,7 +556,7 @@
         img = tintedTip(brush, src, variants[Math.floor(rv() * 8)]);
       }
       const sz = settings.size * pressureFactor(pt.pressure, settings.pressureWidth) * taperAt(brush, i, pts.length);
-      const op = (settings.opacity / 100) * pressureFactor(pt.pressure, settings.pressureOpacity) * alphaMul;
+      const op = (settings.opacity / 100) * alphaMul; // stamps ignore pen pressure for opacity (also for strokes drawn before this was locked)
       if (sz <= 0.5 || op <= 0) continue;
       const k = sz / longest, w = src.width * k, h = src.height * k;
       ctx.globalAlpha = Math.max(0, Math.min(1, op));
@@ -637,14 +662,27 @@
     const narrow = Math.max(0.35, 1 - settings.pressureWidth / 100);
     spacingPx = Math.max(0.2, Math.min(spacingPx, settings.size * narrow * 0.6));
     spacingPx = Math.max(spacingPx, Math.min(settings.size * 0.25, 6)); // the scratch buffer saturates anyway, so fewer dabs look the same
-    const pts = resample(stroke.points, spacingPx);
+    let pts = resample(stroke.points, spacingPx);
     const rand = seededRandom(stroke.id || 'live');
-    const n = pts.length, dabs = [];
+    const n = pts.length, dabs = []; let tmulR = null;
+    if (!(brush.jitter > 0) && !(brush.streaky > 0) && n > 1) { // keep the line joined where a taper or light pressure shrinks the dab below the dab spacing
+      const P2 = [], T2 = [];
+      for (let i = 0; i < n; i++) {
+        const pt = pts[i], tm = taperAt(brush, i, n), r = (settings.size / 2) * pressureFactor(pt.pressure, settings.pressureWidth) * tm;
+        if (i > 0) {
+          const q = pts[i - 1], qm = T2[T2.length - 1], rq = (settings.size / 2) * pressureFactor(q.pressure, settings.pressureWidth) * qm;
+          const gap = Math.hypot(pt.x - q.x, pt.y - q.y), need = Math.max(0.15, 0.35 * Math.min(r, rq));
+          if (gap > need) { const k = Math.min(60, Math.ceil(gap / need)); for (let j = 1; j < k; j++) { const f = j / k; P2.push({ x: q.x + (pt.x - q.x) * f, y: q.y + (pt.y - q.y) * f, pressure: q.pressure + (pt.pressure - q.pressure) * f }); T2.push(qm + (tm - qm) * f); } }
+        }
+        P2.push(pt); T2.push(tm);
+      }
+      pts = P2; tmulR = T2;
+    }
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity, pSum = 0;
     pts.forEach((pt, i) => {
       const widthMul = pressureFactor(pt.pressure, settings.pressureWidth);
       const opMul = pressureFactor(pt.pressure, settings.pressureOpacity);
-      let radius = (settings.size / 2) * widthMul * taperAt(brush, i, n);
+      let radius = (settings.size / 2) * widthMul * (tmulR ? tmulR[i] : taperAt(brush, i, n));
       let op = opMul;
       if (brush.jitter > 0) { radius *= (1 - brush.jitter * 0.3) + rand() * brush.jitter * 0.6; op *= (1 - brush.jitter * 0.2) + rand() * brush.jitter * 0.4; }
       if (brush.streaky > 0 && rand() < brush.streaky) return;
@@ -779,6 +817,7 @@
   // dabs and refreshes the small rectangle around them, so a long stroke costs the same per move as a
   // short one. A saved stroke is built the same way in one go, so the live look and the final look match.
   const _wcSets = { live: null, doc: null }, _wcLive = { key: null };
+  const _wcCache = new Map(); let _wcTrimT = 0;
   function wcSet(which, pw, ph) {
     let st = _wcSets[which];
     if (!st) { st = _wcSets[which] = { M: document.createElement('canvas'), I: document.createElement('canvas'), I2: document.createElement('canvas'), B: document.createElement('canvas'), O: document.createElement('canvas'), T: document.createElement('canvas') }; st.M.width = st.M.height = 1; ['I', 'I2', 'B', 'O', 'T'].forEach((k) => { st[k].width = st[k].height = 1; }); }
@@ -803,6 +842,7 @@
     const pts = resample(stroke.points, spacing);
     if (!pts.length) return;
     const rand = live ? null : seededRandom(stroke.id || 'wc');
+    const drHint = !live && global.BrushEngine ? global.BrushEngine.drawRegion : null;
     // region the buffers cover (user space)
     let bx, by, bx1, by1;
     if (live) { bx = 0; by = 0; bx1 = Math.ceil(U.canvas.width / (U.sx || 1)); by1 = Math.ceil(U.canvas.height / (U.sy || 1)); }
@@ -819,6 +859,8 @@
           bx1 = Math.min(bx1, Math.ceil(Math.max.apply(null, xs)) + 2); by1 = Math.min(by1, Math.ceil(Math.max.apply(null, ys)) + 2);
         }
       } catch (e) {}
+      const DR = drHint; // set by a caller that only repaints a small rectangle (the eraser): build just that part of the stroke
+      if (DR) { const pad = Math.ceil(size * 0.1) + 8; bx = Math.max(bx, Math.floor(DR.x0 - pad)); by = Math.max(by, Math.floor(DR.y0 - pad)); bx1 = Math.min(bx1, Math.ceil(DR.x1 + pad)); by1 = Math.min(by1, Math.ceil(DR.y1 + pad)); }
     }
     const bw = bx1 - bx, bh = by1 - by;
     if (bw < 1 || bh < 1) return;
@@ -827,12 +869,26 @@
     const pw = Math.max(1, Math.ceil(bw * se)), ph = Math.max(1, Math.ceil(bh * se));
     const color = stroke.color || '#000000';
     const sig = [size, color, edge, soft, settings.pressureWidth, settings.pressureOpacity, bx, by, bw, bh, se.toFixed(3), spacing.toFixed(2)].join('|');
+    // A saved stroke that is drawn again unchanged (the eraser rebuilds every stroke it touches, on every frame) is served from a small cache
+    // of finished results instead of being rebuilt from scratch: that rebuild is what made erasing near watercolour slow and memory hungry.
+    let ckey = null;
+    if (!live && stroke.id && stroke.id !== 'brush-preview') { // (only real, saved strokes are cached: the brush preview and other throwaway renders would just churn canvases)
+      let h = 0; for (let i = 0; i < pts.length; i++) h = (h * 31 + Math.round(pts[i].x * 8) * 7 + Math.round(pts[i].y * 8) + Math.round((pts[i].pressure || 0) * 50)) | 0;
+      ckey = sig + '|' + gran + '|' + pts.length + '|' + h;
+      const hit = _wcCache.get(ckey);
+      if (hit) {
+        _wcCache.delete(ckey); _wcCache.set(ckey, hit);
+        ctx.save(); ctx.globalAlpha = Math.max(0, Math.min(1, (settings.opacity / 100) * alphaMul)); ctx.globalCompositeOperation = 'multiply';
+        ctx.drawImage(hit.c, 0, 0, pw, ph, bx, by, pw / se, ph / se); ctx.restore();
+        return;
+      }
+    }
     let S = null, firstDab = 0;
     const st = wcSet(live ? 'live' : 'doc', pw, ph);
     if (live) {
       const L = _wcLive;
       const same = L.key === stroke.liveKey && L.sig === sig && L.n <= pts.length + 1 && L.p0 && pts[0].x === L.p0.x && pts[0].y === L.p0.y;
-      if (!same) { L.key = stroke.liveKey; L.sig = sig; L.n = 0; L.p0 = { x: pts[0].x, y: pts[0].y }; L.rand = seededRandom(String(stroke.liveKey)); L.bb = null; L.cleared = false; }
+      if (!same) { L.key = stroke.liveKey; L.sig = sig; L.n = 0; L.p0 = { x: pts[0].x, y: pts[0].y }; L.rand = seededRandom(String(stroke.liveKey)); L.bb = null; L.cleared = false; L.rs = null; L.pp = null; }
       S = L; firstDab = L.n;
     }
     const ctxs = {};
@@ -847,45 +903,77 @@
     const rgb = parseRgb(color), solid = 'rgb(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ')', clear0 = 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',0)';
     const hard = 1 - soft * 0.25; // only the outer part of the wash feathers; the middle stays an even tone
     let vv = live ? (S.v == null ? 1 : S.v) : 1; // slow wander in how much pigment the brush carries
+    // The OUTLINE (M = outer shape, I / I2 = slightly smaller copies used for the pooled rim) is one continuous chain of round-capped segments
+    // with a smoothly eased radius, not a stack of separate discs with their own random sizes. Separate discs gave a scalloped edge and made
+    // the rim follow every dab; a chain has a single smooth boundary, so pooling follows the overall stroke shape. The wash (B) keeps its
+    // per-dab size and pigment variation, and draws the random numbers in the same order as before.
+    let rs = live ? S.rs : null, pp = live ? S.pp : null; // eased outline radius, and the previous point of the chain
+    const chain = (g, x, y, rad) => {
+      if (rad <= 0) return;
+      g.fillStyle = '#fff'; g.strokeStyle = '#fff';
+      if (pp) { g.lineWidth = rad * 2; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath(); g.moveTo(pp.x, pp.y); g.lineTo(x, y); g.stroke(); }
+      else { g.beginPath(); g.arc(x, y, rad, 0, 6.2832); g.fill(); }
+    };
     for (let i = firstDab; i < lastIdx; i++) {
       const pt = pts[i];
-      const r = (size / 2) * pressureFactor(pt.pressure, settings.pressureWidth) * (1 - 0.04 + R() * 0.08);
+      const rraw = (size / 2) * pressureFactor(pt.pressure, settings.pressureWidth);
+      const r = rraw * (1 - 0.04 + R() * 0.08); // wash dab radius (varies a little, as before)
       vv = Math.max(0.78, Math.min(1.12, vv + (R() - 0.5) * 0.07));
       const op = Math.max(0.05, pressureFactor(pt.pressure, settings.pressureOpacity)) * vv;
-      if (r <= 0.3) continue;
-      const x = pt.x, y = pt.y, ri = Math.max(0, r - Math.max(1.4, r * 0.24)), ri2 = Math.max(0, r - Math.max(0.7, r * 0.08));
+      if (r <= 0.3) { pp = null; continue; }
+      rs = rs == null ? rraw : rs + (rraw - rs) * 0.35;
+      const x = pt.x, y = pt.y, ro = rs, ri = Math.max(0, rs - Math.max(1.4, rs * 0.22)), ri2 = Math.max(0, rs - Math.max(0.7, rs * 0.07));
       ctxs.M.setTransform(se, 0, 0, se, -bx * se, -by * se); ctxs.I.setTransform(se, 0, 0, se, -bx * se, -by * se); ctxs.I2.setTransform(se, 0, 0, se, -bx * se, -by * se); ctxs.B.setTransform(se, 0, 0, se, -bx * se, -by * se);
-      ctxs.M.fillStyle = '#fff'; ctxs.M.beginPath(); ctxs.M.arc(x, y, r, 0, 6.2832); ctxs.M.fill();
-      ctxs.I.fillStyle = '#fff'; ctxs.I.beginPath(); ctxs.I.arc(x, y, ri, 0, 6.2832); ctxs.I.fill();
-      ctxs.I2.fillStyle = '#fff'; ctxs.I2.beginPath(); ctxs.I2.arc(x, y, ri2, 0, 6.2832); ctxs.I2.fill();
+      chain(ctxs.M, x, y, ro); chain(ctxs.I, x, y, ri); chain(ctxs.I2, x, y, ri2);
       const g = ctxs.B.createRadialGradient(x, y, r * hard * 0.9, x, y, r);
       g.addColorStop(0, solid); g.addColorStop(1, clear0);
       ctxs.B.globalAlpha = Math.min(1, op * 0.4); ctxs.B.fillStyle = g; ctxs.B.beginPath(); ctxs.B.arc(x, y, r, 0, 6.2832); ctxs.B.fill(); ctxs.B.globalAlpha = 1;
-      if (x - r < dx0) dx0 = x - r; if (x + r > dx1) dx1 = x + r; if (y - r < dy0) dy0 = y - r; if (y + r > dy1) dy1 = y + r;
+      const qx = pp ? pp.x : x, qy = pp ? pp.y : y, rr = Math.max(r, ro) + 1;
+      if (Math.min(x, qx) - rr < dx0) dx0 = Math.min(x, qx) - rr; if (Math.max(x, qx) + rr > dx1) dx1 = Math.max(x, qx) + rr;
+      if (Math.min(y, qy) - rr < dy0) dy0 = Math.min(y, qy) - rr; if (Math.max(y, qy) + rr > dy1) dy1 = Math.max(y, qy) + rr;
+      pp = { x, y };
     }
-    if (live) { S.n = Math.max(firstDab, lastIdx); S.v = vv; }
+    if (live) { S.n = Math.max(firstDab, lastIdx); S.v = vv; S.rs = rs; S.pp = pp; }
     // refresh the result O inside the rectangle that changed
     if (isFinite(dx0)) {
-      let rx0 = Math.max(0, Math.floor((dx0 - bx) * se) - 2), ry0 = Math.max(0, Math.floor((dy0 - by) * se) - 2);
-      let rx1 = Math.min(pw, Math.ceil((dx1 - bx) * se) + 2), ry1 = Math.min(ph, Math.ceil((dy1 - by) * se) + 2);
+      // The pooled rim is softened (see below), which spreads it a little past the new dabs, so the refreshed rectangle is padded by that much.
+      const nom = Math.max(0.6, size / 2);
+      const rho1 = Math.max(0.7, 0.45 * Math.max(1.4, nom * 0.22) * se), rho2 = Math.max(0.5, 0.45 * Math.max(0.7, nom * 0.07) * se);
+      const mg = Math.ceil(Math.max(rho1, rho2)) + 1;
+      let rx0 = Math.max(0, Math.floor((dx0 - bx) * se) - 2 - mg), ry0 = Math.max(0, Math.floor((dy0 - by) * se) - 2 - mg);
+      let rx1 = Math.min(pw, Math.ceil((dx1 - bx) * se) + 2 + mg), ry1 = Math.min(ph, Math.ceil((dy1 - by) * se) + 2 + mg);
       const rw = rx1 - rx0, rh = ry1 - ry0;
       if (rw > 0 && rh > 0) {
-        if (st.T.width < rw || st.T.height < rh) { st.T.width = Math.max(st.T.width, rw); st.T.height = Math.max(st.T.height, rh); }
+        // T holds a ring over the refreshed rectangle plus a margin, so the softened copies at the rectangle's edge still see the ring just outside it
+        const tx0 = Math.max(0, rx0 - mg), ty0 = Math.max(0, ry0 - mg), tw = Math.min(pw, rx1 + mg) - tx0, th = Math.min(ph, ry1 + mg) - ty0;
+        if (st.T.width < tw || st.T.height < th) { st.T.width = Math.max(st.T.width, tw); st.T.height = Math.max(st.T.height, th); }
         const T = st.T.getContext('2d'), O = ctxs.O;
-        const ring = (inner) => { // M minus a smaller disc set = a ring round the outline, tinted
-          T.setTransform(1, 0, 0, 1, 0, 0); T.globalCompositeOperation = 'source-over'; T.clearRect(0, 0, rw, rh);
-          T.drawImage(st.M, rx0, ry0, rw, rh, 0, 0, rw, rh);
-          T.globalCompositeOperation = 'destination-out'; T.drawImage(inner, rx0, ry0, rw, rh, 0, 0, rw, rh);
-          T.globalCompositeOperation = 'source-in'; T.fillStyle = solid; T.fillRect(0, 0, rw, rh);
+        const ring = (inner) => { // M minus a smaller shape = a ring round the OVERALL outline, tinted
+          T.setTransform(1, 0, 0, 1, 0, 0); T.globalCompositeOperation = 'source-over'; T.clearRect(0, 0, tw, th);
+          T.drawImage(st.M, tx0, ty0, tw, th, 0, 0, tw, th);
+          T.globalCompositeOperation = 'destination-out'; T.drawImage(inner, tx0, ty0, tw, th, 0, 0, tw, th);
+          T.globalCompositeOperation = 'source-in'; T.fillStyle = solid; T.fillRect(0, 0, tw, th);
           T.globalCompositeOperation = 'source-over';
         };
-        O.setTransform(1, 0, 0, 1, 0, 0); O.globalCompositeOperation = 'source-over'; O.clearRect(rx0, ry0, rw, rh);
+        // the ring laid down as several slightly shifted copies: its inner edge fades smoothly instead of ending in a hard step (no banding)
+        const softRing = (alpha, rho) => {
+          O.save(); O.beginPath(); O.rect(rx0, ry0, rw, rh); O.clip();
+          O.globalAlpha = Math.min(1, alpha) / 8;
+          for (let k = 0; k < 8; k++) { const a = k * 0.7853982; O.drawImage(st.T, 0, 0, tw, th, tx0 + Math.cos(a) * rho, ty0 + Math.sin(a) * rho, tw, th); }
+          O.restore();
+        };
+        O.setTransform(1, 0, 0, 1, 0, 0); O.globalCompositeOperation = 'source-over'; O.globalAlpha = 1; O.clearRect(rx0, ry0, rw, rh);
         O.globalAlpha = 0.6; O.drawImage(st.B, rx0, ry0, rw, rh, rx0, ry0, rw, rh);
         if (edge > 0) {
-          ring(st.I); O.globalAlpha = 0.06 + 0.3 * edge; O.drawImage(st.T, 0, 0, rw, rh, rx0, ry0, rw, rh);
-          ring(st.I2); O.globalAlpha = 0.08 + 0.45 * edge; O.drawImage(st.T, 0, 0, rw, rh, rx0, ry0, rw, rh);
+          ring(st.I); softRing((0.06 + 0.3 * edge) * 1.35, rho1);
+          ring(st.I2); softRing((0.08 + 0.45 * edge) * 1.35, rho2);
         }
         O.globalAlpha = 1;
+        // keep everything inside the overall stroke shape, so the outer edge stays one clean line
+        // destination-in acts on the WHOLE canvas, not just the drawn rectangle, so without the clip every earlier part of a live stroke was wiped
+        O.save(); O.beginPath(); O.rect(rx0, ry0, rw, rh); O.clip();
+        O.globalCompositeOperation = 'destination-in'; O.drawImage(st.M, rx0, ry0, rw, rh, rx0, ry0, rw, rh); O.globalCompositeOperation = 'source-over';
+        O.restore();
         if (gran > 0) {
           O.save(); O.beginPath(); O.rect(rx0, ry0, rw, rh); O.clip();
           O.setTransform(se, 0, 0, se, -bx * se, -by * se);
@@ -895,6 +983,25 @@
         }
         if (S) { S.bb = S.bb ? { x0: Math.min(S.bb.x0, rx0), y0: Math.min(S.bb.y0, ry0), x1: Math.max(S.bb.x1, rx1), y1: Math.max(S.bb.y1, ry1) } : { x0: rx0, y0: ry0, x1: rx1, y1: ry1 }; }
       }
+    }
+    if (!live) {
+      try {
+        if (ckey && pw * ph <= 2500000 && !drHint) { // (a result built for a small repaint rectangle is not the whole stroke, so it is not kept)
+          // A bounded set of canvases is reused for ever: iPad Safari does not give canvases back when they are dropped, and creating a fresh one for
+          // every result eventually used up its canvas memory (the whole canvas then drew black).
+          let tot = 0; _wcCache.forEach((v) => { tot += v.c.width * v.c.height; });
+          let ent = null;
+          if (_wcCache.size >= 24 || tot + pw * ph > 12000000) { const k0 = _wcCache.keys().next().value; ent = _wcCache.get(k0); _wcCache.delete(k0); }
+          while ((_wcCache.size >= 24 || tot + pw * ph > 12000000) && _wcCache.size > 0) { const k1 = _wcCache.keys().next().value, v1 = _wcCache.get(k1); tot -= v1.c.width * v1.c.height; v1.c.width = 1; v1.c.height = 1; _wcCache.delete(k1); }
+          if (!ent) ent = { c: document.createElement('canvas') };
+          if (ent.c.width < pw || ent.c.height < ph) { ent.c.width = Math.max(ent.c.width, pw); ent.c.height = Math.max(ent.c.height, ph); }
+          const cg2 = ent.c.getContext('2d'); cg2.setTransform(1, 0, 0, 1, 0, 0); cg2.globalCompositeOperation = 'source-over'; cg2.globalAlpha = 1; cg2.clearRect(0, 0, ent.c.width, ent.c.height);
+          cg2.drawImage(st.O, 0, 0, pw, ph, 0, 0, pw, ph);
+          _wcCache.set(ckey, ent);
+        }
+      } catch (e) {}
+      // the big working buffers are only needed while strokes are being built: give the memory back once drawing has been idle for a moment
+      clearTimeout(_wcTrimT); _wcTrimT = setTimeout(() => { const d = _wcSets.doc; if (d) ['M', 'I', 'I2', 'B', 'O', 'T'].forEach((k) => { d[k].width = 1; d[k].height = 1; }); }, 1500);
     }
     // lay the result on the target at the stroke opacity (multiply, like real transparent paint)
     let sx0 = 0, sy0 = 0, sx1 = pw, sy1 = ph;
@@ -913,18 +1020,20 @@
   // iPad Safari keeps every canvas it has ever been given until memory runs out (then canvases go black),
   // so the four small working canvases are reused between strokes instead of created fresh each time.
   const BrushEngine_skipSmudge = { on: false, until: 0, hit: false }; // until: a time limit (performance.now) for replaying smudge / liquify strokes while a project opens
-  let _smPool = null, _smBusy = false;
-  function makeSmudger(ctx, radius, strength, brush) {
+  let _smPool = null, _smBusy = false, _smBl = null;
+  function makeSmudger(ctx, radius, strength, brush, mode) {
     const m = ctx.getTransform ? ctx.getTransform() : { a: 1, d: 1, e: 0, f: 0 };
     const sc = Math.max(0.05, Math.abs(m.a));
     let R = Math.max(1, radius * sc);
     const MAXR = 300; // a finger bigger than this just becomes slow and memory hungry
     const shrink = R > MAXR ? MAXR / R : 1; R *= shrink;
     const D = Math.max(4, Math.ceil(R * 2) + 2);
-    const pooled = !_smBusy; if (pooled) { _smBusy = true; if (!_smPool) _smPool = [0, 1, 2, 3].map(() => document.createElement('canvas')); }
+    const isBlend = mode === 'blend';
+    // Blend works on the pixels directly (see to()), so it only needs the footprint mask, and only for a moment: no working canvases are kept.
+    const pooled = !isBlend && !_smBusy; if (pooled) { _smBusy = true; if (!_smPool) _smPool = [0, 1, 2, 3].map(() => document.createElement('canvas')); }
     const mk = (w, h, i) => { const c = pooled ? _smPool[i] : document.createElement('canvas'); c.width = w; c.height = h; return c; }; // setting the size also clears it
-    const carry = mk(D, D, 0), pick = mk(D, D, 1), laid = mk(D, D, 2), mask = mk(D, D, 3);
-    const cg = carry.getContext('2d'), pg = pick.getContext('2d'), lg = laid.getContext('2d'), mg = mask.getContext('2d');
+    const carry = isBlend ? null : mk(D, D, 0), pick = isBlend ? null : mk(D, D, 1), laid = isBlend ? null : mk(D, D, 2), mask = mk(D, D, 3);
+    const cg = carry && carry.getContext('2d'), pg = pick && pick.getContext('2d'), lg = laid && laid.getContext('2d'), mg = mask.getContext('2d');
     // The footprint of the finger comes from the chosen brush: its tip picture (stamp brushes), its edge
     // softness (a hard brush smudges with a hard edge) and its texture (a dry or grainy brush smears in streaks).
     const tip = brush && brush.stamp ? (brush.stampCanvas || brush.stampImg) : null;
@@ -946,14 +1055,76 @@
         mg.fillStyle = mg.createPattern(grainTile(), 'repeat'); mg.fillRect(0, 0, D / Math.max(0.6, sc), D / Math.max(0.6, sc)); mg.restore();
       }
     }
+    if (mode === 'blend') { // a blender always has a soft round footprint, whatever brush shape is chosen
+      mg.setTransform(1, 0, 0, 1, 0, 0); mg.globalCompositeOperation = 'source-over'; mg.globalAlpha = 1; mg.clearRect(0, 0, D, D);
+      const sg = mg.createRadialGradient(D / 2, D / 2, 0, D / 2, D / 2, R);
+      sg.addColorStop(0, 'rgba(0,0,0,1)'); sg.addColorStop(0.5, 'rgba(0,0,0,0.6)'); sg.addColorStop(1, 'rgba(0,0,0,0)');
+      mg.fillStyle = sg; mg.fillRect(0, 0, D, D);
+    }
+    let maskA = null; // blend: the footprint's alpha as plain numbers, read once per stroke instead of once per step
+    if (isBlend) { try { const md = mg.getImageData(0, 0, D, D).data; maskA = new Uint8Array(D * D); for (let q = 0; q < maskA.length; q++) maskA[q] = md[q * 4 + 3]; } catch (e) { maskA = null; } mask.width = mask.height = 1; }
     const s01 = Math.max(0.05, Math.min(1, strength));
     const lay = Math.min(1, 0.3 + 0.45 * s01), keep = 0.45 + 0.5 * s01;
     let has = false;
+    // BLEND, one step. The colours under the brush are mixed with a soft blur of their neighbours (a weighted average, worked out per pixel),
+    // only where paint already is, and only through the brush footprint; going over a spot again blends it more. Everything happens on one
+    // small patch: ONE read of the patch from the layer, a blur on a handful of block averages, and ONE write of just the rectangle that changed.
+    // No canvas is created, drawn on or resized per step, and the mask is not read again.
+    const bLev = Math.max(1, Math.min(4, Math.floor(Math.log2(D / 6)))), bF = 1 << bLev, bN = Math.ceil(D / bF);
+    const bS = isBlend ? new Float32Array(bN * bN * 4) : null; // block sums of premultiplied colour (r,g,b,a)
+    const bK = Math.min(1, 0.1 + 0.4 * s01);
+    const cw = ctx.canvas.width, chh = ctx.canvas.height;
+    function blendStep(sx, sy) {
+      if (!maskA || sx >= cw || sy >= chh || sx + D <= 0 || sy + D <= 0) return;
+      let pd; try { pd = ctx.getImageData(sx, sy, D, D); } catch (e) { return; } // a patch that cannot be read is simply skipped
+      const o = pd.data; bS.fill(0);
+      for (let py = 0; py < D; py++) {
+        const rowB = ((py / bF) | 0) * bN;
+        for (let px = 0, q = py * D * 4; px < D; px++, q += 4) {
+          const a = o[q + 3]; if (!a) continue;
+          const bi = (rowB + ((px / bF) | 0)) * 4, af = a / 255;
+          bS[bi] += o[q] * af; bS[bi + 1] += o[q + 1] * af; bS[bi + 2] += o[q + 2] * af; bS[bi + 3] += af;
+        }
+      }
+      // soften the block grid with a [1 2 1] pass each way: the block averages alone blur a little less than the two-stage shrink/enlarge this replaces
+      if (bN > 2) {
+        for (let pass = 0; pass < 2; pass++) {
+          for (let j = 0; j < bN; j++) for (let ch = 0; ch < 4; ch++) {
+            let prev = bS[(j * bN) * 4 + ch], cur = prev;
+            for (let i = 0; i < bN; i++) { const nx = i + 1 < bN ? bS[(j * bN + i + 1) * 4 + ch] : cur; bS[(j * bN + i) * 4 + ch] = (prev + 2 * cur + nx) * 0.25; prev = cur; cur = nx; }
+          }
+          for (let i = 0; i < bN; i++) for (let ch = 0; ch < 4; ch++) {
+            let prev = bS[i * 4 + ch], cur = prev;
+            for (let j = 0; j < bN; j++) { const nx = j + 1 < bN ? bS[((j + 1) * bN + i) * 4 + ch] : cur; bS[(j * bN + i) * 4 + ch] = (prev + 2 * cur + nx) * 0.25; prev = cur; cur = nx; }
+          }
+        }
+      }
+      const inv = 1 / (bF * bF); let x0 = D, y0 = D, x1 = -1, y1 = -1;
+      for (let py = 0; py < D; py++) {
+        const fy = (py + 0.5) / bF - 0.5, j0 = Math.max(0, Math.floor(fy)), j1 = Math.min(bN - 1, j0 + 1), ty = Math.min(1, Math.max(0, fy - j0));
+        for (let px = 0; px < D; px++) {
+          const mi = py * D + px, q = mi * 4, mw = maskA[mi]; if (!mw || !o[q + 3]) continue;
+          const w = (mw / 255) * bK; if (w < 0.01) continue;
+          const fx = (px + 0.5) / bF - 0.5, i0 = Math.max(0, Math.floor(fx)), i1 = Math.min(bN - 1, i0 + 1), tx = Math.min(1, Math.max(0, fx - i0));
+          const b00 = (j0 * bN + i0) * 4, b10 = (j0 * bN + i1) * 4, b01 = (j1 * bN + i0) * 4, b11 = (j1 * bN + i1) * 4;
+          const w00 = (1 - tx) * (1 - ty), w10 = tx * (1 - ty), w01 = (1 - tx) * ty, w11 = tx * ty;
+          const pa = (bS[b00 + 3] * w00 + bS[b10 + 3] * w10 + bS[b01 + 3] * w01 + bS[b11 + 3] * w11) * inv;
+          if (pa * 255 < 8) continue;
+          const k = 1 / (pa * bF * bF);
+          const pr = (bS[b00] * w00 + bS[b10] * w10 + bS[b01] * w01 + bS[b11] * w11) * k, pg2 = (bS[b00 + 1] * w00 + bS[b10 + 1] * w10 + bS[b01 + 1] * w01 + bS[b11 + 1] * w11) * k, pb = (bS[b00 + 2] * w00 + bS[b10 + 2] * w10 + bS[b01 + 2] * w01 + bS[b11 + 2] * w11) * k;
+          o[q] = Math.round(o[q] + (pr - o[q]) * w); o[q + 1] = Math.round(o[q + 1] + (pg2 - o[q + 1]) * w); o[q + 2] = Math.round(o[q + 2] + (pb - o[q + 2]) * w);
+          if (px < x0) x0 = px; if (px > x1) x1 = px; if (py < y0) y0 = py; if (py > y1) y1 = py;
+        }
+      }
+      if (x1 < 0) return;
+      try { ctx.putImageData(pd, sx, sy, x0, y0, x1 - x0 + 1, y1 - y0 + 1); } catch (e) { }
+    }
     return {
       done() { if (pooled) { _smBusy = false; _smPool.forEach((c) => { c.width = c.height = 1; }); } },
-      step: Math.max(1.2 / sc, radius * 0.22),
+      step: Math.max(1.2 / sc, radius * (mode === 'blend' ? 0.14 : 0.22)),
       to(x, y) {
         const cx = m.a * x + m.e, cy = m.d * y + m.f, sx = Math.round(cx - D / 2), sy = Math.round(cy - D / 2);
+        if (isBlend) { blendStep(sx, sy); return; }
         pg.setTransform(1, 0, 0, 1, 0, 0); pg.globalCompositeOperation = 'source-over'; pg.globalAlpha = 1; pg.clearRect(0, 0, D, D);
         try { pg.drawImage(ctx.canvas, sx, sy, D, D, 0, 0, D, D); } catch (e) { return; }
         if (!has) { cg.setTransform(1, 0, 0, 1, 0, 0); cg.clearRect(0, 0, D, D); cg.drawImage(pick, 0, 0); has = true; return; }
@@ -1440,9 +1611,9 @@
     if (st.clone) return cloneStroke(ctx, stroke);
     if (st.liquify) return liquifyStroke(ctx, stroke);
     const sb = st.sb ? byId.get(st.sb) : null;
-    const sm = makeSmudger(ctx, Math.max(1, (st.size || 30) / 2), (st.opacity == null ? 70 : st.opacity) / 100, sb && sb.id !== 'eraser' ? sb : null);
-    let pts = resample(stroke.points, sm.step * 1.5);
-    if (pts.length > 500) { const k = pts.length / 500; pts = Array.from({ length: 500 }, (_, i) => pts[Math.min(pts.length - 1, Math.floor(i * k))]); }
+    const sm = makeSmudger(ctx, Math.max(1, (st.size || 30) / 2), (st.opacity == null ? 70 : st.opacity) / 100, sb && sb.id !== 'eraser' ? sb : null, st.blend ? 'blend' : null);
+    let pts = resample(stroke.points, st.blend ? sm.step : sm.step * 1.5); // blend is replayed at the spacing it was drawn with, so it looks the same after lifting
+    if (pts.length > (st.blend ? 4000 : 500)) { const cap = st.blend ? 4000 : 500; const k = pts.length / cap; pts = Array.from({ length: cap }, (_, i) => pts[Math.min(pts.length - 1, Math.floor(i * k))]); }
     try { for (let i = 0; i < pts.length; i++) sm.to(pts[i].x, pts[i].y); } finally { sm.done(); }
   }
   function renderStroke(ctx, stroke, brush, settings, alphaMul) {
@@ -1452,6 +1623,9 @@
     if (alphaMul === undefined) alphaMul = 1;
     if (alphaMul <= 0) return; // fully hidden — skip dabs entirely rather than stamp at opacity 0
     if (brush.id === 'watercolour' && settings && settings.engine === 'raster') { try { renderWatercolour(ctx, stroke, brush, settings, alphaMul); } catch (e) { try { renderBase(ctx, stroke, brush, settings, alphaMul); } catch (e2) {} } return; }
+    // Raster solid ink with no dryness and no wet mix is just a solid line: Raster paints dabs into a buffer that saturates to one flat colour, so the continuous
+    // outline gives the identical result (same size, taper and Pencil-pressure width) without the bead edges and broken tips that spaced dabs leave.
+    if (settings && settings.engine === 'raster' && !(settings.dryness > 0) && !(settings.wetMix > 0) && brush.id !== 'eraser' && brush.id !== 'watercolour' && outlineInk(brush, Object.assign({}, settings, { pressureOpacity: 0 }))) { renderBase(ctx, stroke, brush, Object.assign({}, settings, { pressureOpacity: 0 }), alphaMul); return; }
     if (settings && settings.engine === 'raster' && !brush.stamp && !brush.nib && !brush.path && !brush.fx && brush.id !== 'eraser') { try { renderRaster(ctx, stroke, brush, settings, alphaMul); } catch (e) { try { renderBase(ctx, stroke, brush, settings, alphaMul); } catch (e2) {} } return; }
     if (brush.fx && fxActive(brush)) { renderWithFx(ctx, stroke, brush, settings, alphaMul); return; }
     renderBase(ctx, stroke, brush, settings, alphaMul);
@@ -1465,21 +1639,38 @@
     // when light pressure shrinks it), so the stroke breaks into visible dots, worst when zoomed in.
     // Cap the gap to a fraction of the dab's narrowest width; sizes of ~3.5+ are unchanged.
     const narrow = Math.max(0.35, 1 - settings.pressureWidth / 100);
-    spacingPx = Math.max(0.2, Math.min(spacingPx, settings.size * narrow * 0.6));
+    const solidInk = brush.family === 'inking' && brush.hardness >= 0.98 && !(brush.jitter > 0) && !(brush.streaky > 0) && !hasCdyn(brush);
+    spacingPx = Math.max(0.2, Math.min(spacingPx, settings.size * narrow * (solidInk ? 0.3 : 0.6)));
     // A width-profiled stroke (settings._wpFine): spacing follows the dab's own width, so tapered tips stay solid lines.
     const pts = settings._wpFine
       ? resampleVar(stroke.points, pr => Math.max(0.12, Math.min(spacingPx, settings.size * pressureFactor(pr, settings.pressureWidth) * 0.22)))
       : resample(stroke.points, spacingPx);
+    if (outlineInk(brush, settings)) { renderOutlineInk(ctx, pts, stroke, brush, settings, alphaMul); return; }
     const rand = seededRandom(stroke.id || 'live');
     const baseHsl = hasCdyn(brush) ? hexToHsl(stroke.color || '#000000') : null;
     const cdyn = !!baseHsl, rand2 = cdyn ? seededRandom((stroke.id || 'live') + 'c') : null;
     const n = pts.length;
     const hold = Math.max(1, Math.round(settings.size * 0.2 / spacingPx));
     let curCol = stroke.color || '#000000';
-    pts.forEach((pt, i) => {
+    // Solid ink: where a taper or light pressure shrinks the dab, the fixed spacing leaves it wider than the dab itself and the line breaks into separate dots.
+    // Add in-between dabs (position, pressure and taper all blended) so the line stays joined down to its finest point.
+    let dabs = pts, tmul = null;
+    if (solidInk) {
+      dabs = []; tmul = [];
+      for (let i = 0; i < n; i++) {
+        const pt = pts[i], tm = taperAt(brush, i, n), r = (settings.size / 2) * pressureFactor(pt.pressure, settings.pressureWidth) * tm;
+        if (i > 0) {
+          const q = pts[i - 1], qm = tmul[tmul.length - 1], rq = (settings.size / 2) * pressureFactor(q.pressure, settings.pressureWidth) * qm;
+          const gap = Math.hypot(pt.x - q.x, pt.y - q.y), need = Math.max(0.15, 0.35 * Math.min(r, rq));
+          if (gap > need) { const k = Math.min(60, Math.ceil(gap / need)); for (let j = 1; j < k; j++) { const f = j / k; dabs.push({ x: q.x + (pt.x - q.x) * f, y: q.y + (pt.y - q.y) * f, pressure: q.pressure + (pt.pressure - q.pressure) * f }); tmul.push(qm + (tm - qm) * f); } }
+        }
+        dabs.push(pt); tmul.push(tm);
+      }
+    }
+    dabs.forEach((pt, i) => {
       const widthMul = pressureFactor(pt.pressure, settings.pressureWidth);
       const opMul = pressureFactor(pt.pressure, settings.pressureOpacity);
-      const taperMul = taperAt(brush, i, n);
+      const taperMul = tmul ? tmul[i] : taperAt(brush, i, n);
       let radius = (settings.size / 2) * widthMul * taperMul;
       let opacity = (settings.opacity / 100) * opMul * alphaMul;
       if (brush.jitter > 0) {
@@ -1495,6 +1686,56 @@
       }
       stampDab(ctx, x, y, radius, opacity, (cdyn && i % hold === 0 ? (curCol = dynColor(baseHsl, brush.cdyn, rand2)) : curCol), brush.hardness);
     });
+  }
+
+  // ---- Solid ink as ONE continuous outline ----
+  // Tapered Ink (and Technical Pen) used to be built from hundreds of overlapping round dabs, each painted at the stroke's opacity. Where dabs overlap the
+  // opacity piles up, so a 57% navy stroke came out as full-strength navy (nearly black), and at high zoom the edge showed a row of beads. The same dabs are
+  // now joined into a single outline (a circle at every sample plus the smooth shape joining each neighbouring pair) and filled once, so the opacity is
+  // exactly what was chosen, the edge is smooth at any zoom, and the shape is the same one the dabs covered.
+  function outlineInk(brush, settings) {
+    return brush.family === 'inking' && !brush.stamp && !brush.nib && !brush.path && !brush.fx && brush.hardness >= 0.98 && !(brush.jitter > 0) && !(brush.streaky > 0) && !hasCdyn(brush) && !(settings.pressureOpacity > 20); // a light Pencil-pressure→opacity setting (up to 20%) is applied as the stroke's average
+  }
+  function renderOutlineInk(ctx, pts, stroke, brush, settings, alphaMul) {
+    let opM = 1;
+    if (settings.pressureOpacity > 0 && pts.length) { let t = 0; for (let i = 0; i < pts.length; i++) t += pressureFactor(pts[i].pressure, settings.pressureOpacity); opM = t / pts.length; }
+    const op = Math.max(0, Math.min(1, (settings.opacity / 100) * alphaMul * opM));
+    if (!pts.length || op <= 0) return;
+    // The dabs were laid ~0.6 px apart, far closer than a joined outline needs. Keep a sample only once it is about 0.3 of a dab radius from the last
+    // kept one (always keeping the ends, and every sample where the stroke is tightly curved), so the path stays small and fast.
+    const n0 = pts.length, R0 = new Array(n0);
+    for (let i = 0; i < n0; i++) R0[i] = (settings.size / 2) * pressureFactor(pts[i].pressure, settings.pressureWidth) * taperAt(brush, i, n0);
+    const keep = [0]; let lh = null; // lh: heading of the last kept step
+    for (let i = 1; i < n0 - 1; i++) {
+      const k = keep[keep.length - 1], l = pts[k], dx = pts[i].x - l.x, dy = pts[i].y - l.y, dd = Math.hypot(dx, dy);
+      if (dd < Math.max(0.4, 0.2 * R0[i])) continue;
+      let turn = 0; if (lh !== null) { turn = Math.abs(Math.atan2(dy, dx) - lh); if (turn > Math.PI) turn = 2 * Math.PI - turn; }
+      if (dd >= Math.max(0.4, 0.6 * R0[i]) || turn > 0.06 || Math.abs(R0[i] - R0[k]) > 0.08 * R0[i]) { keep.push(i); lh = Math.atan2(dy, dx); }
+    }
+    if (n0 > 1) keep.push(n0 - 1);
+    const n = keep.length, R = keep.map((i) => R0[i]); pts = keep.map((i) => pts[i]);
+    ctx.save();
+    ctx.globalAlpha = op; ctx.fillStyle = stroke.color || '#000000';
+    ctx.beginPath();
+    // A round cap at every kept sample. Leaving them out along "nearly straight" runs looked fine at normal zoom, but two joined pieces meeting at even a tiny
+    // angle leave a thin wedge uncovered on the outside of the turn, which showed as pale seams across the stroke and a stepped edge once zoomed in.
+    for (let i = 0; i < n; i++) {
+      if (!(R[i] > 0)) continue;
+      ctx.moveTo(pts[i].x + R[i], pts[i].y); ctx.arc(pts[i].x, pts[i].y, R[i], 0, Math.PI * 2);
+    }
+    for (let i = 0; i < n - 1; i++) {
+      const r0 = R[i], r1 = R[i + 1]; if (!(r0 > 0) || !(r1 > 0)) continue;
+      const x0 = pts[i].x, y0 = pts[i].y, dx = pts[i + 1].x - x0, dy = pts[i + 1].y - y0, d = Math.hypot(dx, dy);
+      if (d <= Math.abs(r0 - r1) + 1e-6) continue; // one dab sits inside the next: nothing to join
+      const a = Math.atan2(dy, dx), phi = Math.acos((r0 - r1) / d), t1 = a + phi, t2 = a - phi, c1 = Math.cos(t1), s1 = Math.sin(t1), c2 = Math.cos(t2), s2 = Math.sin(t2);
+      const ax = x0 + r0 * c1, ay = y0 + r0 * s1, bx = pts[i + 1].x + r1 * c1, by = pts[i + 1].y + r1 * s1, cx = pts[i + 1].x + r1 * c2, cy = pts[i + 1].y + r1 * s2, ex = x0 + r0 * c2, ey = y0 + r0 * s2;
+      const area = (ax * by - bx * ay) + (bx * cy - cx * by) + (cx * ey - ex * cy) + (ex * ay - ax * ey); // every piece is wound the same way, so one fill adds them up (union)
+      ctx.moveTo(ax, ay);
+      if (area >= 0) { ctx.lineTo(bx, by); ctx.lineTo(cx, cy); ctx.lineTo(ex, ey); } else { ctx.lineTo(ex, ey); ctx.lineTo(cx, cy); ctx.lineTo(bx, by); }
+      ctx.closePath();
+    }
+    ctx.fill('nonzero');
+    ctx.restore();
   }
 
   // ---- Taper (separate start / end lengths, as a fraction of the stroke) ----
@@ -1664,9 +1905,9 @@
   global.BrushEngine = {
     BRUSHES, FAMILY_ORDER, FAMILY_LABEL, ERASER,
     getBrush, isVector, taperAt, registerStampBrush, unregisterStampBrush, makeCustomBrush, registerCustomBrush,
-    getSettings, setSettings,
+    getSettings, setSettings, resetSettings, resetAllSettings, restoreSettingsBackup, exportSettings, mergeSettings, settingsFromStrokes,
     touchRecent, getRecents,
     isFavorite, toggleFavorite, getFavorites,
-    underlay: null, skipSmudge: BrushEngine_skipSmudge, wrap: BrushEngine_wrap, liveEnd, makeSmudger, makeCloner, liquifyStep, liquifyBegin, liquifyCompact, liquifyGL: _lq, pressureFactor, stampDab, colorWithAlpha, resample, renderStroke, smoothPoints, seededRandom,
+    underlay: null, outlineInk, skipSmudge: BrushEngine_skipSmudge, wrap: BrushEngine_wrap, liveEnd, makeSmudger, makeCloner, liquifyStep, liquifyBegin, liquifyCompact, liquifyGL: _lq, pressureFactor, stampDab, colorWithAlpha, resample, renderStroke, smoothPoints, seededRandom,
   };
 })(window);
